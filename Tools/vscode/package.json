@@ -1,0 +1,65 @@
+{
+  "name": "arti-language-support",
+  "displayName": "Arti Language Support",
+  "description": "Static syntax highlighting for the Advanced RimTalk Arti DSL.",
+  "version": "0.1.0",
+  "publisher": "nanaloveyuki",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "arti",
+    "advanced-rimtalk",
+    "rimworld",
+    "syntax-highlighting"
+  ],
+  "scripts": {
+    "package:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/package.ps1"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "arti",
+        "aliases": [
+          "Arti",
+          "arti"
+        ],
+        "extensions": [
+          ".arti"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "arti",
+        "scopeName": "source.arti",
+        "path": "./syntaxes/arti.tmLanguage.json"
+      },
+      {
+        "scopeName": "source.arti.markdown.block",
+        "path": "./syntaxes/arti-markdown-block.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.arti": "arti"
+        }
+      },
+      {
+        "scopeName": "source.arti.markdown.fence",
+        "path": "./syntaxes/arti-markdown-fence.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.arti": "arti"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>PromptChecks</AssemblyName>
+    <RootNamespace>AdvancedRimTalk.PromptChecks</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <OutputPath>..\tmp\prompt-checks\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="ArtiChecks.cs" />
+    <Compile Include="ArtiExecutorChecks.cs" />
+    <Compile Include="ArtiPawnInfoChecks.cs" />
+    <Compile Include="..\Source\Prompt\PromptSnapshot.cs" Link="PromptSnapshot.cs" />
+    <Compile Include="..\Source\Prompt\PromptTemplateExpander.cs" Link="PromptTemplateExpander.cs" />
+    <Compile Include="..\Source\Prompt\SystemInstructionRenderer.cs" Link="SystemInstructionRenderer.cs" />
+    <Compile Include="..\Source\Arti\ArtiSyntax.cs" Link="ArtiSyntax.cs" />
+    <Compile Include="..\Source\Arti\ArtiDiagnostics.cs" Link="ArtiDiagnostics.cs" />
+    <Compile Include="..\Source\Arti\ArtiLexer.cs" Link="ArtiLexer.cs" />
+    <Compile Include="..\Source\Arti\ArtiParser.cs" Link="ArtiParser.cs" />
+    <Compile Include="..\Source\Arti\ArtiAnalyzer.cs" Link="ArtiAnalyzer.cs" />
+    <Compile Include="..\Source\Arti\ArtiExecutor.cs" Link="ArtiExecutor.cs" />
+    <Compile Include="..\Source\Arti\ArtiStringFunctions.cs" Link="ArtiStringFunctions.cs" />
+    <Compile Include="..\Source\Arti\ArtiSymbols.cs" Link="ArtiSymbols.cs" />
+    <Compile Include="..\Source\Arti\ArtiDocumentParser.cs" Link="ArtiDocumentParser.cs" />
+    <Compile Include="..\Source\Integration\RimTalkArtiPawnAgeParts.cs" Link="RimTalkArtiPawnAgeParts.cs" />
+  </ItemGroup>
+</Project>

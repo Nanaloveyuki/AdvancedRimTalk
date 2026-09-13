@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Arti blocks in Markdown",
+  "scopeName": "source.arti.markdown.block",
+  "injectionSelector": "L:text.html.markdown - (comment, string, markup.fenced_code.block.markdown, markup.raw.block.markdown, markup.inline.raw.string.markdown)",
+  "patterns": [
+    {
+      "include": "#arti-block"
+    }
+  ],
+  "repository": {
+    "arti-block": {
+      "name": "meta.embedded.block.arti",
+      "begin": "(\\{\\{%)(?!\\{)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.embedded.begin.arti"
+        }
+      },
+      "end": "(%\\}\\})",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.embedded.end.arti"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.arti"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <AdvancedRimTalk.Settings.PromptIntegrationMode>Prompt integration mode</AdvancedRimTalk.Settings.PromptIntegrationMode>
+  <AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt>Embed Arti into the existing RimTalk prompt</AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt>
+  <AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPromptTooltip>Keep RimTalk's presets, message roles, chat history, and assembler. Evaluate {{% ... %}} Arti blocks when an existing prompt entry is rendered.</AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPromptTooltip>
+  <AdvancedRimTalk.Settings.TakeoverRimTalkPrompt>Advanced RimTalk takes over the RimTalk prompt</AdvancedRimTalk.Settings.TakeoverRimTalkPrompt>
+  <AdvancedRimTalk.Settings.TakeoverRimTalkPromptTooltip>Build the system and user messages from the takeover Arti document. RimTalk still handles triggers, model clients, and responses.</AdvancedRimTalk.Settings.TakeoverRimTalkPromptTooltip>
+  <AdvancedRimTalk.Settings.EnablePlaceholderLayer>Enable dynamic prompt placeholders</AdvancedRimTalk.Settings.EnablePlaceholderLayer>
+  <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>In embed mode, expand Advanced RimTalk placeholders when a prompt is generated.</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
+  <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>Takeover Arti system document</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
+  <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>Only {{% ... %}} Arti blocks execute here. Other text becomes the system message.</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
+  <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>Replace RimTalk prompt builder</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
+  <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>Build request messages with Advanced RimTalk instead of RimTalk presets and Scriban rendering. RimTalk still handles triggers and the model client.</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
+</LanguageData>

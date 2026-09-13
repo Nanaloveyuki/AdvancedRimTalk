@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Arti fenced code blocks in Markdown",
+  "scopeName": "source.arti.markdown.fence",
+  "injectionSelector": "L:markup.fenced_code.block.markdown",
+  "patterns": [
+    {
+      "include": "#arti-code-block"
+    }
+  ],
+  "repository": {
+    "arti-code-block": {
+      "begin": "(?<=[`~])(?i:arti)(\\s+[^`~]*)?$",
+      "end": "(^|\\G)(?=\\s*[`~]{3,}\\s*$)",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.arti",
+          "patterns": [
+            {
+              "include": "source.arti"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
