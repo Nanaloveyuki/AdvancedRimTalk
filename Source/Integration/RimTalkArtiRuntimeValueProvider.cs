@@ -20,7 +20,7 @@ using RimTalkSettingsProvider = RimTalk.Settings;
 
 namespace AdvancedRimTalk.Integration
 {
-    internal sealed class RimTalkArtiRuntimeValueProvider : IArtiRuntimeValueProvider, IArtiCoreModuleProvider
+    internal sealed class RimTalkArtiRuntimeValueProvider : IArtiRuntimeValueProvider, IArtiCoreModuleProvider, IArtiRuntimeModuleProvider
     {
         private readonly PromptContext _context;
         private readonly PromptSnapshot _snapshot;
@@ -39,6 +39,11 @@ namespace AdvancedRimTalk.Integration
         public bool TryGetCoreMember(string member, out object value)
         {
             return _coreModule.TryGetCoreMember(member, out value);
+        }
+
+        public bool TryGetModuleValue(string packageId, ArtiModuleInfo module, out object value)
+        {
+            return RimTalkExpandMemoryArtiBridge.TryCreateModuleValue(packageId, module, _context, out value);
         }
 
         public bool TryGetGlobal(string name, out object value)

@@ -88,15 +88,19 @@ namespace AdvancedRimTalk.Integration
 
             try
             {
-                ModMetaData installed = ModLister.GetModWithIdentifier(packageId, false);
+                string lookupPackageId = RimTalkExpandMemoryArtiBridge.GetCanonicalPackageId(packageId);
+                ModMetaData installed = ModLister.GetModWithIdentifier(lookupPackageId, false);
                 if (installed == null)
                 {
                     return false;
                 }
 
-                ModMetaData active = ModLister.GetActiveModWithIdentifier(packageId, false);
-                bool apiAvailable = string.Equals(packageId, "cj.rimtalk", StringComparison.OrdinalIgnoreCase)
-                    && typeof(RimTalkPromptAPI).GetMethod("RegisterContextVariable") != null;
+                ModMetaData active = ModLister.GetActiveModWithIdentifier(lookupPackageId, false);
+                bool isExpandMemory = RimTalkExpandMemoryArtiBridge.IsMemoryPackage(packageId);
+                bool apiAvailable = isExpandMemory
+                    ? active != null && RimTalkExpandMemoryArtiBridge.IsAvailable
+                    : string.Equals(packageId, "cj.rimtalk", StringComparison.OrdinalIgnoreCase)
+                        && typeof(RimTalkPromptAPI).GetMethod("RegisterContextVariable") != null;
                 module = new ArtiModuleInfo(
                     packageId,
                     true,

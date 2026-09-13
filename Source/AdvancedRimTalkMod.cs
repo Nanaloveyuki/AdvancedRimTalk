@@ -30,6 +30,7 @@ namespace AdvancedRimTalk
             : base(content)
         {
             Settings = GetSettings<AdvancedRimTalkSettings>();
+            RimTalkExpandMemoryArtiBridge.Detect();
             RimTalkArtiPromptRegistration.Register();
             IrisMenusSettingsIntegration.TryRegister(this);
             new Harmony("advancedrimtalk.prompt").PatchAll(Assembly.GetExecutingAssembly());

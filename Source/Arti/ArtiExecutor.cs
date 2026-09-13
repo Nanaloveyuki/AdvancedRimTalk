@@ -67,6 +67,11 @@ namespace AdvancedRimTalk.Arti
         bool TryGetCoreMember(string member, out object value);
     }
 
+    public interface IArtiRuntimeModuleProvider
+    {
+        bool TryGetModuleValue(string packageId, ArtiModuleInfo module, out object value);
+    }
+
     public interface IArtiCallable
     {
         object Invoke(IList<object> positionalArguments, IDictionary<string, object> namedArguments);
@@ -144,6 +149,13 @@ namespace AdvancedRimTalk.Arti
             value = null;
             IArtiCoreModuleProvider provider = ValueProvider as IArtiCoreModuleProvider;
             return provider != null && provider.TryGetCoreMember(member, out value);
+        }
+
+        internal bool TryGetModuleValue(string packageId, ArtiModuleInfo module, out object value)
+        {
+            value = null;
+            IArtiRuntimeModuleProvider provider = ValueProvider as IArtiRuntimeModuleProvider;
+            return provider != null && provider.TryGetModuleValue(packageId, module, out value);
         }
 
         internal bool TryGetIndex(object target, object index, out object value)
@@ -1226,6 +1238,12 @@ namespace AdvancedRimTalk.Arti
             if (module == null)
             {
                 module = new ArtiModuleInfo(packageId, false, false, false, string.Empty);
+            }
+
+            object runtimeValue;
+            if (_context.TryGetModuleValue(packageId, module, out runtimeValue))
+            {
+                return runtimeValue;
             }
 
             return new RuntimeModule(module);

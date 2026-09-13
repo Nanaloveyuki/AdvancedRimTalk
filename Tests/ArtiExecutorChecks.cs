@@ -12,6 +12,7 @@ namespace AdvancedRimTalk.PromptChecks
             EmitsWithoutImplicitNewlines();
             UsesVariableCallbacks();
             ExecutesModulesAndRandomValues();
+            ExecutesRuntimeModuleValues();
             ExecutesStringFunctionsAndMethods();
             ExtendsCoreThroughRuntimeProvider();
             RejectsRuntimeStepOverflow();
@@ -98,6 +99,24 @@ if module.active {
             AssertEqual("4", result.Output, "executor uses the prompt random source");
         }
 
+        private static void ExecutesRuntimeModuleValues()
+        {
+            string source = @"
+use sample.memory as memory
+core.emit(memory.enabled)
+core.emit(memory.echo(""ok""))
+";
+
+            ArtiExecutionResult result = new ArtiExecutor().Execute(
+                source,
+                new ArtiExecutionContext(
+                    valueProvider: new TestRuntimeModuleProvider(),
+                    moduleCatalog: new TestModuleCatalog()));
+
+            Assert(!result.HasErrors, "executor resolves provider-backed module values");
+            AssertEqual("trueok", result.Output, "runtime module values expose callable members");
+        }
+
         private static void ExtendsCoreThroughRuntimeProvider()
         {
             ArtiExecutionResult result = new ArtiExecutor().Execute(
@@ -165,7 +184,8 @@ core.emit(replaced)
         {
             public bool TryGetModule(string packageId, out ArtiModuleInfo module)
             {
-                module = string.Equals(packageId, "example.module", StringComparison.Ordinal)
+                module = (string.Equals(packageId, "example.module", StringComparison.Ordinal)
+                    || string.Equals(packageId, "sample.memory", StringComparison.Ordinal))
                     ? new ArtiModuleInfo(packageId, true, true)
                     : null;
                 return module != null;
@@ -225,6 +245,49 @@ core.emit(replaced)
 
                 value = null;
                 return false;
+            }
+        }
+
+        private sealed class TestRuntimeModuleProvider : IArtiRuntimeValueProvider, IArtiRuntimeModuleProvider
+        {
+            public bool TryGetGlobal(string name, out object value)
+            {
+                value = null;
+                return false;
+            }
+
+            public bool TryGetMember(object target, string member, out object value)
+            {
+                value = null;
+                return false;
+            }
+
+            public bool TryGetIndex(object target, object index, out object value)
+            {
+                value = null;
+                return false;
+            }
+
+            public bool TryGetModuleValue(string packageId, ArtiModuleInfo module, out object value)
+            {
+                value = string.Equals(packageId, "sample.memory", StringComparison.Ordinal)
+                    ? (object)new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        { "enabled", true },
+                        { "echo", new EchoCallable() }
+                    }
+                    : null;
+                return value != null;
+            }
+        }
+
+        private sealed class EchoCallable : IArtiCallable
+        {
+            public object Invoke(IList<object> positionalArguments, IDictionary<string, object> namedArguments)
+            {
+                return positionalArguments != null && positionalArguments.Count > 0
+                    ? positionalArguments[0]
+                    : string.Empty;
             }
         }
 
