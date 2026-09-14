@@ -36,6 +36,7 @@ if name != null {
 - [const](const.md)：声明不可重新赋值的局部变量。
 - [scope](scope.md)：了解代码块、函数和模块别名的可见范围。
 - [use](use.md)：绑定一个模块。
+- [optional](optional.md)：声明可选模块。
 - [group](group.md)：在顶层批量声明模块绑定。
 - [function](function.md)：声明和调用自定义函数。
 

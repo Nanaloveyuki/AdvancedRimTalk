@@ -87,6 +87,7 @@ Arti 与 RimTalk 中已有的两种模板语法并存：
 - [operator](language/operator.md)
 - [scope](language/scope.md)
 - [use](language/use.md)
+- [optional](language/optional.md)
 - [group](language/group.md)
 - [let](language/let.md)
 - [const](language/const.md)

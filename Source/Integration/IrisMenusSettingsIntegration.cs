@@ -79,6 +79,17 @@ namespace AdvancedRimTalk.Integration
                         "takeover-prompt-parts",
                         promptPartsTitle,
                         owner.DrawTakeoverPromptParts);
+
+                    Func<string> documentationTitle = delegate
+                    {
+                        return "AdvancedRimTalk.Documentation.Title".Translate().ToString();
+                    };
+                    RegisterSubItem(
+                        registerSubItem,
+                        owner,
+                        "documentation",
+                        documentationTitle,
+                        owner.DrawDocumentation);
                 }
             }
             catch (Exception exception)

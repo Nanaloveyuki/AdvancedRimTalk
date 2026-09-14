@@ -38,4 +38,16 @@
   <AdvancedRimTalk.PromptParts.NoSharedPrompts>没有找到 RimTalk 分享 Prompt 文件；可先打开分享目录放入 .json 预设。</AdvancedRimTalk.PromptParts.NoSharedPrompts>
   <AdvancedRimTalk.PromptParts.ImportFailed>导入 Prompt 失败。</AdvancedRimTalk.PromptParts.ImportFailed>
   <AdvancedRimTalk.PromptParts.Imported>已从 {1} 导入 {0} 个 Prompt 片段。</AdvancedRimTalk.PromptParts.Imported>
+  <AdvancedRimTalk.Documentation.Title>Arti 文档</AdvancedRimTalk.Documentation.Title>
+  <AdvancedRimTalk.Documentation.Overview>概览</AdvancedRimTalk.Documentation.Overview>
+  <AdvancedRimTalk.Documentation.Index>文档索引</AdvancedRimTalk.Documentation.Index>
+  <AdvancedRimTalk.Documentation.Guide>使用指南</AdvancedRimTalk.Documentation.Guide>
+  <AdvancedRimTalk.Documentation.Language>语法</AdvancedRimTalk.Documentation.Language>
+  <AdvancedRimTalk.Documentation.Global>全局函数</AdvancedRimTalk.Documentation.Global>
+  <AdvancedRimTalk.Documentation.Core>core 函数</AdvancedRimTalk.Documentation.Core>
+  <AdvancedRimTalk.Documentation.CoreString>core.string 函数</AdvancedRimTalk.Documentation.CoreString>
+  <AdvancedRimTalk.Documentation.Data>游戏数据</AdvancedRimTalk.Documentation.Data>
+  <AdvancedRimTalk.Documentation.Compatibility>兼容</AdvancedRimTalk.Documentation.Compatibility>
+  <AdvancedRimTalk.Documentation.SelectDocument>选择一个文档。</AdvancedRimTalk.Documentation.SelectDocument>
+  <AdvancedRimTalk.Documentation.Unavailable>Arti 文档库不可用。</AdvancedRimTalk.Documentation.Unavailable>
 </LanguageData>

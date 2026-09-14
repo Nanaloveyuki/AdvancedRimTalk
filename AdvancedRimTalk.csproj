@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Compile Remove="Tests\**;tmp\**;obj\**" />
+    <EmbeddedResource Include="docs\Arti\zh_cn\**\*.md" />
   </ItemGroup>
 
   <ItemGroup>

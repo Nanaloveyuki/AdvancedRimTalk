@@ -13,6 +13,7 @@ namespace AdvancedRimTalk
         private readonly ArtiReplPage _artiReplPage = new ArtiReplPage();
         private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
         private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();
+        private readonly DocumentationPage _documentationPage;
         private string _artiEditorUndoLimitBuffer;
 
         internal static AdvancedRimTalkSettings Settings { get; private set; }
@@ -35,6 +36,7 @@ namespace AdvancedRimTalk
         public AdvancedRimTalkMod(ModContentPack content)
             : base(content)
         {
+            _documentationPage = new DocumentationPage(content.RootDir);
             Settings = GetSettings<AdvancedRimTalkSettings>();
             RimTalkExpandMemoryArtiBridge.Detect();
             RimTalkArtiPromptRegistration.Register();
@@ -159,6 +161,11 @@ namespace AdvancedRimTalk
         internal void DrawTakeoverPromptParts(Rect inRect)
         {
             _takeoverPromptPartsPage.Draw(inRect);
+        }
+
+        internal void DrawDocumentation(Rect inRect)
+        {
+            _documentationPage.Draw(inRect);
         }
     }
 }

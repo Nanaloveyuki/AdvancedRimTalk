@@ -38,4 +38,16 @@
   <AdvancedRimTalk.PromptParts.NoSharedPrompts>No shared RimTalk prompt files were found. Open the shared folder and place .json presets there.</AdvancedRimTalk.PromptParts.NoSharedPrompts>
   <AdvancedRimTalk.PromptParts.ImportFailed>Prompt import failed.</AdvancedRimTalk.PromptParts.ImportFailed>
   <AdvancedRimTalk.PromptParts.Imported>Imported {0} prompt parts from {1}.</AdvancedRimTalk.PromptParts.Imported>
+  <AdvancedRimTalk.Documentation.Title>Arti Documentation</AdvancedRimTalk.Documentation.Title>
+  <AdvancedRimTalk.Documentation.Overview>Overview</AdvancedRimTalk.Documentation.Overview>
+  <AdvancedRimTalk.Documentation.Index>Documentation index</AdvancedRimTalk.Documentation.Index>
+  <AdvancedRimTalk.Documentation.Guide>Guides</AdvancedRimTalk.Documentation.Guide>
+  <AdvancedRimTalk.Documentation.Language>Language</AdvancedRimTalk.Documentation.Language>
+  <AdvancedRimTalk.Documentation.Global>Global functions</AdvancedRimTalk.Documentation.Global>
+  <AdvancedRimTalk.Documentation.Core>core functions</AdvancedRimTalk.Documentation.Core>
+  <AdvancedRimTalk.Documentation.CoreString>core.string functions</AdvancedRimTalk.Documentation.CoreString>
+  <AdvancedRimTalk.Documentation.Data>Game data</AdvancedRimTalk.Documentation.Data>
+  <AdvancedRimTalk.Documentation.Compatibility>Compatibility</AdvancedRimTalk.Documentation.Compatibility>
+  <AdvancedRimTalk.Documentation.SelectDocument>Select a document.</AdvancedRimTalk.Documentation.SelectDocument>
+  <AdvancedRimTalk.Documentation.Unavailable>The Arti documentation library is unavailable.</AdvancedRimTalk.Documentation.Unavailable>
 </LanguageData>
