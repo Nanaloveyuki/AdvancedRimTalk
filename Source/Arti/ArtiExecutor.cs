@@ -91,6 +91,7 @@ namespace AdvancedRimTalk.Arti
         public int MaxSteps { get; set; } = 10000;
         public int MaxCallDepth { get; set; } = 64;
         public bool IncludeRuntimeErrorsInOutput { get; set; } = true;
+        public bool PersistVariables { get; set; } = false;
     }
 
     public sealed class ArtiExecutionContext
@@ -198,6 +199,7 @@ namespace AdvancedRimTalk.Arti
     public sealed class ArtiExecutor : ArtiDiagnosticReporter
     {
         private ArtiExecutionContext _context;
+        private ArtiExecutionContext _persistentContext;
         private StringBuilder _output;
         private RuntimeObject _core;
         private RuntimeScope _rootScope;
@@ -214,7 +216,8 @@ namespace AdvancedRimTalk.Arti
             {
                 ArtiAnalysisResult analysis = new ArtiAnalyzer(
                     context == null ? null : context.ModuleCatalog,
-                    context == null ? null : context.SymbolCatalog).Analyze(parsed.Program);
+                    context == null ? null : context.SymbolCatalog,
+                    context == null || !context.Options.PersistVariables ? null : context.Globals.Keys).Analyze(parsed.Program);
                 AddDiagnostics(analysis.Diagnostics);
             }
 
@@ -240,7 +243,8 @@ namespace AdvancedRimTalk.Arti
             {
                 ArtiAnalysisResult analysis = new ArtiAnalyzer(
                     context == null ? null : context.ModuleCatalog,
-                    context == null ? null : context.SymbolCatalog).Analyze(parsed.Program);
+                    context == null ? null : context.SymbolCatalog,
+                    context == null || !context.Options.PersistVariables ? null : context.Globals.Keys).Analyze(parsed.Program);
                 AddDiagnostics(analysis.Diagnostics);
             }
 
@@ -262,8 +266,24 @@ namespace AdvancedRimTalk.Arti
         {
             _context = context ?? new ArtiExecutionContext();
             _output = new StringBuilder();
-            _core = CreateCoreModule();
-            _rootScope = new RuntimeScope(null);
+            bool reuseScope = _context.Options.PersistVariables
+                && ReferenceEquals(_persistentContext, _context)
+                && _rootScope != null;
+            if (!reuseScope || _core == null)
+            {
+                _core = CreateCoreModule();
+            }
+
+            if (!reuseScope)
+            {
+                _rootScope = new RuntimeScope(null);
+                if (_context.Options.PersistVariables)
+                {
+                    _rootScope.ImportFrom(_context.Globals);
+                }
+            }
+
+            _persistentContext = _context.Options.PersistVariables ? _context : null;
             _steps = 0;
             _callDepth = 0;
             _lastValue = null;
@@ -308,6 +328,11 @@ namespace AdvancedRimTalk.Arti
 
         private ArtiExecutionResult CreateResult()
         {
+            if (_context != null && _context.Options.PersistVariables && _rootScope != null)
+            {
+                _rootScope.ExportTo(_context.Globals);
+            }
+
             return new ArtiExecutionResult(_output == null ? string.Empty : _output.ToString(), _lastValue, SnapshotDiagnostics());
         }
 
@@ -1902,6 +1927,32 @@ namespace AdvancedRimTalk.Arti
             }
 
             public RuntimeScope Parent { get; }
+
+            public void ImportFrom(IDictionary<string, object> values)
+            {
+                if (values == null)
+                {
+                    return;
+                }
+
+                foreach (KeyValuePair<string, object> value in values)
+                {
+                    TryDeclare(value.Key, value.Value, false);
+                }
+            }
+
+            public void ExportTo(IDictionary<string, object> values)
+            {
+                if (values == null)
+                {
+                    return;
+                }
+
+                foreach (KeyValuePair<string, Binding> binding in _bindings)
+                {
+                    values[binding.Key] = binding.Value.Value;
+                }
+            }
 
             public bool TryDeclare(string name, object value, bool isConst)
             {

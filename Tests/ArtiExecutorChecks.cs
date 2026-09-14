@@ -15,6 +15,7 @@ namespace AdvancedRimTalk.PromptChecks
             ExecutesRuntimeModuleValues();
             ExecutesStringFunctionsAndMethods();
             ExtendsCoreThroughRuntimeProvider();
+            PersistsVariablesBetweenExecutions();
             RejectsRuntimeStepOverflow();
         }
 
@@ -178,6 +179,45 @@ core.emit(replaced)
             Assert(result.HasErrors, "executor stops an unbounded loop");
             Assert(result.Diagnostics[0].Code == "ART4000", "runtime errors use the runtime diagnostic code");
             Assert(result.Output.Contains("Advanced RimTalk Arti error"), "runtime errors remain visible");
+        }
+
+        private static void PersistsVariablesBetweenExecutions()
+        {
+            ArtiExecutionContext context = new ArtiExecutionContext(
+                options: new ArtiExecutionOptions
+                {
+                    PersistVariables = true
+                });
+            ArtiExecutor executor = new ArtiExecutor();
+
+            ArtiExecutionResult first = executor.Execute(
+                "use core\nlet total = 2\nfn double(value) { return value * 2 }",
+                context);
+            ArtiExecutionResult second = executor.Execute(
+                "total += 3\ncore.emit(double(total))",
+                context);
+
+            Assert(!first.HasErrors, "persistent executor accepts the first submission");
+            Assert(!second.HasErrors, "persistent executor resolves previous declarations");
+            AssertEqual("10", second.Output, "persistent executor keeps variables and functions");
+
+            ArtiExecutionContext providerContext = new ArtiExecutionContext(
+                valueProvider: new TestCoreProvider(),
+                options: new ArtiExecutionOptions
+                {
+                    PersistVariables = true
+            });
+            ArtiExecutor providerExecutor = new ArtiExecutor();
+            ArtiExecutionResult providerFirst = providerExecutor.Execute(
+                "use core\ncore.world.name",
+                providerContext);
+            ArtiExecutionResult providerResult = providerExecutor.Execute(
+                "core.emit(core.world.name)",
+                providerContext);
+
+            Assert(!providerFirst.HasErrors, "persistent executor keeps the first provider-backed submission valid");
+            Assert(!providerResult.HasErrors, "persistent executor keeps provider-backed core members");
+            AssertEqual("test-world", providerResult.Output, "persistent core bindings stay connected");
         }
 
         private sealed class TestModuleCatalog : IArtiModuleCatalog

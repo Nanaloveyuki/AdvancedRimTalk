@@ -193,11 +193,16 @@ namespace AdvancedRimTalk.Arti
 
         private readonly IArtiModuleCatalog _moduleCatalog;
         private readonly IArtiSymbolCatalog _symbolCatalog;
+        private readonly IEnumerable<string> _externalGlobals;
 
-        public ArtiAnalyzer(IArtiModuleCatalog moduleCatalog = null, IArtiSymbolCatalog symbolCatalog = null)
+        public ArtiAnalyzer(
+            IArtiModuleCatalog moduleCatalog = null,
+            IArtiSymbolCatalog symbolCatalog = null,
+            IEnumerable<string> externalGlobals = null)
         {
             _moduleCatalog = moduleCatalog;
             _symbolCatalog = symbolCatalog;
+            _externalGlobals = externalGlobals;
         }
 
         public ArtiAnalysisResult Analyze(ArtiProgram program)
@@ -209,7 +214,16 @@ namespace AdvancedRimTalk.Arti
                 return new ArtiAnalysisResult(SnapshotDiagnostics());
             }
 
-            AnalyzeStatements(program.Statements, new Scope(null), 0, 0, true);
+            Scope root = new Scope(null);
+            if (_externalGlobals != null)
+            {
+                foreach (string name in _externalGlobals)
+                {
+                    root.TryDeclare(name, BindingKind.Variable);
+                }
+            }
+
+            AnalyzeStatements(program.Statements, root, 0, 0, true);
             return new ArtiAnalysisResult(SnapshotDiagnostics());
         }
 
