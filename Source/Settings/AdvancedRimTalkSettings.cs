@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using AdvancedRimTalk.Prompt;
+using RimTalk.Prompt;
 using Verse;
 
 namespace AdvancedRimTalk.Settings
@@ -26,6 +29,8 @@ namespace AdvancedRimTalk.Settings
         public bool EnablePlaceholderLayer = true;
         public bool ReplaceRimTalkPromptMechanism = false;
         public string TakeoverArtiPromptDocument = DefaultTakeoverArtiPromptDocument;
+        public List<ArtiPromptPart> TakeoverPromptParts = new List<ArtiPromptPart>();
+        public int ArtiEditorUndoLimit = 100;
 
         public override void ExposeData()
         {
@@ -35,10 +40,76 @@ namespace AdvancedRimTalk.Settings
                 ref TakeoverArtiPromptDocument,
                 "takeoverArtiPromptDocument",
                 DefaultTakeoverArtiPromptDocument);
+            Scribe_Collections.Look(ref TakeoverPromptParts, "takeoverPromptParts", LookMode.Deep);
+            Scribe_Values.Look(ref ArtiEditorUndoLimit, "artiEditorUndoLimit", 100);
             if (TakeoverArtiPromptDocument == null)
             {
                 TakeoverArtiPromptDocument = DefaultTakeoverArtiPromptDocument;
             }
+
+            EnsureTakeoverPromptParts();
+
+            if (ArtiEditorUndoLimit < 0)
+            {
+                ArtiEditorUndoLimit = 0;
+            }
+            else if (ArtiEditorUndoLimit > 500)
+            {
+                ArtiEditorUndoLimit = 500;
+            }
+        }
+
+        public void EnsureTakeoverPromptParts()
+        {
+            if (TakeoverPromptParts == null || TakeoverPromptParts.Count == 0)
+            {
+                TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(TakeoverArtiPromptDocument);
+            }
+
+            foreach (ArtiPromptPart part in TakeoverPromptParts)
+            {
+                if (part != null)
+                {
+                    part.Normalize();
+                }
+            }
+
+            TakeoverPromptParts.RemoveAll(part => part == null);
+            if (TakeoverPromptParts.Count == 0)
+            {
+                TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(TakeoverArtiPromptDocument);
+            }
+        }
+
+        public string GetPrimaryTakeoverSystemDocument()
+        {
+            EnsureTakeoverPromptParts();
+            foreach (ArtiPromptPart part in TakeoverPromptParts)
+            {
+                if (part.Role == PromptRole.System)
+                {
+                    return part.Content ?? string.Empty;
+                }
+            }
+
+            return TakeoverArtiPromptDocument ?? DefaultTakeoverArtiPromptDocument;
+        }
+
+        public void SetPrimaryTakeoverSystemDocument(string document)
+        {
+            string normalized = document ?? DefaultTakeoverArtiPromptDocument;
+            TakeoverArtiPromptDocument = normalized;
+            EnsureTakeoverPromptParts();
+            foreach (ArtiPromptPart part in TakeoverPromptParts)
+            {
+                if (part.Role == PromptRole.System)
+                {
+                    part.Content = normalized;
+                    return;
+                }
+            }
+
+            TakeoverPromptParts.Insert(0, new ArtiPromptPart("System Document", PromptRole.System, normalized));
         }
     }
 }

@@ -13,6 +13,7 @@ namespace AdvancedRimTalk.PromptChecks
             AnalyzeModuleAvailability();
             AnalyzeRootOnlyGroupUse();
             AnalyzeAssignmentTargets();
+            AnalyzeMutableLet();
             AnalyzeModuleAliases();
             ParsePromptDocumentCodeBlocks();
             AnalyzeRimTalkSymbols();
@@ -125,6 +126,16 @@ unknown = 5
             ArtiAnalysisResult analysis = new ArtiAnalyzer().Analyze(parsed.Program);
 
             Assert(analysis.Diagnostics.Count(diagnostic => diagnostic.Code == "ART3014") == 2, "only simple declared names can be assigned");
+        }
+
+        private static void AnalyzeMutableLet()
+        {
+            ArtiParseResult parsed = new ArtiParser().Parse("let value = 1\nvalue = 2\n");
+            ArtiAnalysisResult analysis = new ArtiAnalyzer().Analyze(parsed.Program);
+
+            Assert(
+                !analysis.Diagnostics.Any(diagnostic => diagnostic.Code == "ART3008"),
+                "let bindings are mutable");
         }
 
         private static void AnalyzeModuleAliases()

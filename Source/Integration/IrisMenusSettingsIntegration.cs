@@ -68,6 +68,17 @@ namespace AdvancedRimTalk.Integration
                         "arti-editor",
                         editorTitle,
                         owner.DrawArtiEditor);
+
+                    Func<string> promptPartsTitle = delegate
+                    {
+                        return "AdvancedRimTalk.PromptParts.Title".Translate().ToString();
+                    };
+                    RegisterSubItem(
+                        registerSubItem,
+                        owner,
+                        "takeover-prompt-parts",
+                        promptPartsTitle,
+                        owner.DrawTakeoverPromptParts);
                 }
             }
             catch (Exception exception)

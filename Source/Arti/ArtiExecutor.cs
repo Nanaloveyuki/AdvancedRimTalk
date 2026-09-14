@@ -92,6 +92,7 @@ namespace AdvancedRimTalk.Arti
         public int MaxCallDepth { get; set; } = 64;
         public bool IncludeRuntimeErrorsInOutput { get; set; } = true;
         public bool PersistVariables { get; set; } = false;
+        public bool AllowGlobalRedeclare { get; set; } = false;
     }
 
     public sealed class ArtiExecutionContext
@@ -217,7 +218,8 @@ namespace AdvancedRimTalk.Arti
                 ArtiAnalysisResult analysis = new ArtiAnalyzer(
                     context == null ? null : context.ModuleCatalog,
                     context == null ? null : context.SymbolCatalog,
-                    context == null || !context.Options.PersistVariables ? null : context.Globals.Keys).Analyze(parsed.Program);
+                    context == null || !context.Options.PersistVariables ? null : context.Globals.Keys,
+                    context != null && context.Options.AllowGlobalRedeclare).Analyze(parsed.Program);
                 AddDiagnostics(analysis.Diagnostics);
             }
 
@@ -244,7 +246,8 @@ namespace AdvancedRimTalk.Arti
                 ArtiAnalysisResult analysis = new ArtiAnalyzer(
                     context == null ? null : context.ModuleCatalog,
                     context == null ? null : context.SymbolCatalog,
-                    context == null || !context.Options.PersistVariables ? null : context.Globals.Keys).Analyze(parsed.Program);
+                    context == null || !context.Options.PersistVariables ? null : context.Globals.Keys,
+                    context != null && context.Options.AllowGlobalRedeclare).Analyze(parsed.Program);
                 AddDiagnostics(analysis.Diagnostics);
             }
 
@@ -349,18 +352,26 @@ namespace AdvancedRimTalk.Arti
                 if (use != null)
                 {
                     object module = ResolveModule(use.PackageId);
-                    scope.TryDeclare(use.Alias, module, true);
+                    scope.TryDeclare(
+                        use.Alias,
+                        module,
+                        true,
+                        ShouldAllowRedeclare(scope));
                     continue;
                 }
 
                 ArtiFunctionDeclarationStatement function = statement as ArtiFunctionDeclarationStatement;
                 if (function != null)
                 {
-                    scope.TryDeclare(function.Name, new RuntimeCallable(
-                        delegate(RuntimeArguments arguments)
-                        {
-                            return InvokeUserFunction(function, arguments, scope);
-                        }), true);
+                    scope.TryDeclare(
+                        function.Name,
+                        new RuntimeCallable(
+                            delegate(RuntimeArguments arguments)
+                            {
+                                return InvokeUserFunction(function, arguments, scope);
+                            }),
+                        true,
+                        ShouldAllowRedeclare(scope));
                 }
             }
         }
@@ -396,7 +407,11 @@ namespace AdvancedRimTalk.Arti
             if (variable != null)
             {
                 object value = Evaluate(variable.Value, scope);
-                if (!scope.TryDeclare(variable.Name, value, variable.IsConst))
+                if (!scope.TryDeclare(
+                    variable.Name,
+                    value,
+                    variable.IsConst,
+                    ShouldAllowRedeclare(scope)))
                 {
                     RuntimeError(variable.Span, "The name '" + variable.Name + "' is already declared.");
                 }
@@ -559,6 +574,13 @@ namespace AdvancedRimTalk.Arti
             RuntimeScope scope = new RuntimeScope(parent);
             PrepareDeclarations(block.Statements, scope);
             ExecuteStatements(block.Statements, scope);
+        }
+
+        private bool ShouldAllowRedeclare(RuntimeScope scope)
+        {
+            return _context != null
+                && _context.Options.AllowGlobalRedeclare
+                && ReferenceEquals(scope, _rootScope);
         }
 
         private object Evaluate(ArtiExpression expression, RuntimeScope scope)
@@ -1956,9 +1978,25 @@ namespace AdvancedRimTalk.Arti
 
             public bool TryDeclare(string name, object value, bool isConst)
             {
-                if (string.IsNullOrEmpty(name) || _bindings.ContainsKey(name))
+                return TryDeclare(name, value, isConst, false);
+            }
+
+            public bool TryDeclare(string name, object value, bool isConst, bool allowReplace)
+            {
+                if (string.IsNullOrEmpty(name))
                 {
                     return false;
+                }
+
+                if (_bindings.ContainsKey(name))
+                {
+                    if (!allowReplace)
+                    {
+                        return false;
+                    }
+
+                    _bindings[name] = new Binding(value, isConst);
+                    return true;
                 }
 
                 _bindings.Add(name, new Binding(value, isConst));

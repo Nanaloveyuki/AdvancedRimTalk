@@ -15,7 +15,9 @@ namespace AdvancedRimTalk.PromptChecks
             ExecutesRuntimeModuleValues();
             ExecutesStringFunctionsAndMethods();
             ExtendsCoreThroughRuntimeProvider();
+            ExecutesMutableLet();
             PersistsVariablesBetweenExecutions();
+            AllowsReplRedeclarationBetweenExecutions();
             RejectsRuntimeStepOverflow();
         }
 
@@ -128,6 +130,16 @@ core.emit(memory.echo(""ok""))
             AssertEqual("test-world", result.Output, "core extension members remain regular Arti values");
         }
 
+        private static void ExecutesMutableLet()
+        {
+            ArtiExecutionResult result = new ArtiExecutor().Execute(
+                "let value = 1\nvalue += 2\ncore.emit(value)",
+                new ArtiExecutionContext());
+
+            Assert(!result.HasErrors, "let bindings can be reassigned");
+            AssertEqual("3", result.Output, "let reassignment keeps the updated value");
+        }
+
         private static void ExecutesStringFunctionsAndMethods()
         {
             string source = @"
@@ -218,6 +230,34 @@ core.emit(replaced)
             Assert(!providerFirst.HasErrors, "persistent executor keeps the first provider-backed submission valid");
             Assert(!providerResult.HasErrors, "persistent executor keeps provider-backed core members");
             AssertEqual("test-world", providerResult.Output, "persistent core bindings stay connected");
+        }
+
+        private static void AllowsReplRedeclarationBetweenExecutions()
+        {
+            ArtiExecutionContext context = new ArtiExecutionContext(
+                options: new ArtiExecutionOptions
+                {
+                    PersistVariables = true,
+                    AllowGlobalRedeclare = true
+                });
+            ArtiExecutor executor = new ArtiExecutor();
+
+            ArtiExecutionResult first = executor.Execute("use core\nlet a = \"one\"", context);
+            ArtiExecutionResult second = executor.Execute("let a = \"two\"\ncore.emit(a)", context);
+            ArtiExecutionResult third = executor.Execute("core.emit(a)", context);
+
+            Assert(!first.HasErrors, "REPL redeclare accepts the first submission");
+            Assert(!second.HasErrors, "REPL redeclare updates previous variables");
+            Assert(!third.HasErrors, "REPL redeclare keeps the updated variable");
+            AssertEqual("two", second.Output, "REPL redeclare outputs the new value");
+            AssertEqual("two", third.Output, "REPL redeclare persists the new value");
+
+            ArtiExecutionResult duplicateInOneSubmission = executor.Execute(
+                "let a = \"three\"\nlet a = \"four\"",
+                context);
+            Assert(
+                duplicateInOneSubmission.HasErrors,
+                "REPL redeclare still rejects duplicate declarations in one submission");
         }
 
         private sealed class TestModuleCatalog : IArtiModuleCatalog

@@ -17,6 +17,7 @@ namespace AdvancedRimTalk.PromptChecks
             CheckNativeScribanAndProtectedSlots();
             CheckInvalidExpressionIsVisible();
             CheckSystemInstructionFormats();
+            TakeoverPromptImportConverterChecks.Run();
             Console.WriteLine("Prompt checks passed.");
         }
 

@@ -32,19 +32,31 @@ namespace AdvancedRimTalk.Prompt
 
             segments = new List<PromptMessageSegment>();
             List<ValueTuple<Role, string>> messages = new List<ValueTuple<Role, string>>();
-            ArtiPromptRenderResult renderedDocument = RenderTakeoverDocument(promptContext);
-            string systemPrompt = renderedDocument == null || string.IsNullOrWhiteSpace(renderedDocument.Text)
-                ? BuildFallbackSystemPrompt(promptContext)
-                : renderedDocument.Text;
-            AddMessage(messages, segments, "advancedrimtalk.takeover.system", "Advanced RimTalk System", Role.System, systemPrompt);
-            AddMessage(
-                messages,
-                segments,
-                "advancedrimtalk.takeover.request",
-                "Advanced RimTalk Request",
-                Role.User,
-                BuildRequestMessage(promptContext, talkRequest));
-            LogDiagnostics(renderedDocument);
+            List<RenderedPromptPart> renderedParts = RenderTakeoverPromptParts(promptContext);
+            foreach (RenderedPromptPart renderedPart in renderedParts)
+            {
+                AddMessage(
+                    messages,
+                    segments,
+                    renderedPart.Part.Id,
+                    renderedPart.Part.Name,
+                    renderedPart.Part.ToMessageRole(),
+                    renderedPart.Part.ApplyCustomRolePrefix(renderedPart.RenderResult.Text));
+            }
+
+            if (messages.Count == 0)
+            {
+                AddMessage(messages, segments, "advancedrimtalk.takeover.system", "Advanced RimTalk System", Role.System, BuildFallbackSystemPrompt(promptContext));
+                AddMessage(
+                    messages,
+                    segments,
+                    "advancedrimtalk.takeover.request",
+                    "Advanced RimTalk Request",
+                    Role.User,
+                    BuildRequestMessage(promptContext, talkRequest));
+            }
+
+            LogDiagnostics(renderedParts);
             return MergeConsecutiveRoles(messages);
         }
 
@@ -70,43 +82,73 @@ namespace AdvancedRimTalk.Prompt
 
         private static PromptContext CreateRimTalkContext(TalkRequest talkRequest, List<Pawn> participants, string status)
         {
-            participants = participants ?? new List<Pawn>();
-            ValueTuple<string, string, string> dialogueTypeData = talkRequest == null
-                ? new ValueTuple<string, string, string>(string.Empty, string.Empty, string.Empty)
-                : PromptContextProvider.GetDialogueTypeData(talkRequest, participants);
-            string context = PromptService.BuildContext(
-                participants,
-                talkRequest != null && talkRequest.IsAnnouncement);
-
-            if (talkRequest != null)
+            using (RimTalkTakeoverContextScope.Enter())
             {
-                talkRequest.Context = context;
-                PromptService.DecoratePrompt(talkRequest, participants, status);
-            }
+                participants = participants ?? new List<Pawn>();
+                string originalPrompt = talkRequest == null ? string.Empty : talkRequest.Prompt ?? string.Empty;
+                string rawPrompt = talkRequest == null ? string.Empty : talkRequest.RawPrompt ?? originalPrompt;
+                ValueTuple<string, string, string> dialogueTypeData = talkRequest == null
+                    ? new ValueTuple<string, string, string>(string.Empty, string.Empty, string.Empty)
+                    : PromptContextProvider.GetDialogueTypeData(talkRequest, participants);
+                if (talkRequest != null)
+                {
+                    talkRequest.Prompt = originalPrompt;
+                }
 
-            PromptContext promptContext = talkRequest == null
-                ? new PromptContext(participants)
-                : PromptContext.FromTalkRequest(talkRequest, participants);
-            promptContext.PawnContext = context ?? string.Empty;
-            promptContext.DialogueType = dialogueTypeData.Item1 ?? string.Empty;
-            promptContext.Intent = dialogueTypeData.Item2 ?? string.Empty;
-            promptContext.ConversationTopic = dialogueTypeData.Item3 ?? string.Empty;
-            promptContext.DialogueStatus = status ?? string.Empty;
-            promptContext.DialoguePrompt = talkRequest == null ? string.Empty : talkRequest.Prompt ?? string.Empty;
-            return promptContext;
+                string context = PromptService.BuildContext(
+                    participants,
+                    talkRequest != null && talkRequest.IsAnnouncement);
+
+                if (talkRequest != null)
+                {
+                    talkRequest.Context = context;
+                }
+
+                PromptContext promptContext = talkRequest == null
+                    ? new PromptContext(participants)
+                    : PromptContext.FromTalkRequest(talkRequest, participants);
+                promptContext.PawnContext = context ?? string.Empty;
+                promptContext.DialogueType = dialogueTypeData.Item1 ?? string.Empty;
+                promptContext.Intent = dialogueTypeData.Item2 ?? string.Empty;
+                promptContext.ConversationTopic = dialogueTypeData.Item3 ?? string.Empty;
+                promptContext.DialogueStatus = status ?? string.Empty;
+                promptContext.DialoguePrompt = rawPrompt ?? string.Empty;
+                return promptContext;
+            }
         }
 
-        private static ArtiPromptRenderResult RenderTakeoverDocument(PromptContext promptContext)
+        private static List<RenderedPromptPart> RenderTakeoverPromptParts(PromptContext promptContext)
         {
-            string document = AdvancedRimTalkMod.Settings == null
-                ? AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument
-                : AdvancedRimTalkMod.Settings.TakeoverArtiPromptDocument;
-            if (string.IsNullOrWhiteSpace(document))
+            AdvancedRimTalkSettings settings = AdvancedRimTalkMod.Settings;
+            List<ArtiPromptPart> parts;
+            if (settings == null)
             {
-                return null;
+                parts = ArtiPromptPart.CreateDefaultParts(AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument);
+            }
+            else
+            {
+                settings.EnsureTakeoverPromptParts();
+                parts = settings.TakeoverPromptParts;
             }
 
-            return ArtiPromptDocumentRenderer.Render(document, promptContext);
+            List<RenderedPromptPart> rendered = new List<RenderedPromptPart>();
+            if (parts == null)
+            {
+                return rendered;
+            }
+
+            foreach (ArtiPromptPart part in parts)
+            {
+                if (part == null || !part.Enabled || string.IsNullOrWhiteSpace(part.Content))
+                {
+                    continue;
+                }
+
+                part.Normalize();
+                rendered.Add(new RenderedPromptPart(part, ArtiPromptDocumentRenderer.Render(part.Content, promptContext)));
+            }
+
+            return rendered;
         }
 
         private static string BuildRequestMessage(PromptContext promptContext, TalkRequest talkRequest)
@@ -237,25 +279,39 @@ namespace AdvancedRimTalk.Prompt
             return merged;
         }
 
-        private static void LogDiagnostics(ArtiPromptRenderResult renderedDocument)
+        private static void LogDiagnostics(List<RenderedPromptPart> renderedParts)
         {
-            if (!Prefs.DevMode || renderedDocument == null || renderedDocument.Diagnostics.Count == 0)
+            if (!Prefs.DevMode || renderedParts == null || renderedParts.Count == 0)
             {
                 return;
             }
 
             StringBuilder diagnostics = new StringBuilder();
-            foreach (ArtiDiagnostic diagnostic in renderedDocument.Diagnostics)
+            foreach (RenderedPromptPart renderedPart in renderedParts)
             {
-                if (diagnostics.Length > 0)
+                if (renderedPart.RenderResult == null || renderedPart.RenderResult.Diagnostics.Count == 0)
                 {
-                    diagnostics.AppendLine();
+                    continue;
                 }
 
-                diagnostics.Append(diagnostic);
+                foreach (ArtiDiagnostic diagnostic in renderedPart.RenderResult.Diagnostics)
+                {
+                    if (diagnostics.Length > 0)
+                    {
+                        diagnostics.AppendLine();
+                    }
+
+                    diagnostics
+                        .Append(renderedPart.Part.Name)
+                        .Append(": ")
+                        .Append(diagnostic);
+                }
             }
 
-            Log.Warning("Advanced RimTalk takeover Arti diagnostics:\n" + diagnostics);
+            if (diagnostics.Length > 0)
+            {
+                Log.Warning("Advanced RimTalk takeover Arti diagnostics:\n" + diagnostics);
+            }
         }
 
         private static void SetLastContext(PromptContext context)
@@ -276,6 +332,18 @@ namespace AdvancedRimTalk.Prompt
                     Log.Warning("Advanced RimTalk could not update PromptManager.LastContext: " + exception);
                 }
             }
+        }
+
+        private sealed class RenderedPromptPart
+        {
+            public RenderedPromptPart(ArtiPromptPart part, ArtiPromptRenderResult renderResult)
+            {
+                Part = part;
+                RenderResult = renderResult;
+            }
+
+            public ArtiPromptPart Part { get; }
+            public ArtiPromptRenderResult RenderResult { get; }
         }
     }
 }

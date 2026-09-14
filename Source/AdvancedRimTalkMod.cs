@@ -12,6 +12,8 @@ namespace AdvancedRimTalk
     {
         private readonly ArtiReplPage _artiReplPage = new ArtiReplPage();
         private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
+        private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();
+        private string _artiEditorUndoLimitBuffer;
 
         internal static AdvancedRimTalkSettings Settings { get; private set; }
 
@@ -89,14 +91,59 @@ namespace AdvancedRimTalk
                 ref Settings.EnablePlaceholderLayer,
                 "AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip".Translate());
 
+            listing.Gap();
+            if (_artiEditorUndoLimitBuffer == null)
+            {
+                _artiEditorUndoLimitBuffer = Settings.ArtiEditorUndoLimit.ToString();
+            }
+
+            DrawIntegerSetting(
+                listing,
+                "AdvancedRimTalk.Settings.ArtiEditorUndoLimit".Translate(),
+                ref Settings.ArtiEditorUndoLimit,
+                ref _artiEditorUndoLimitBuffer,
+                0,
+                500);
+
             if (Settings.ReplaceRimTalkPromptMechanism)
             {
                 listing.Label("AdvancedRimTalk.Settings.TakeoverArtiPromptDocument".Translate());
-                Settings.TakeoverArtiPromptDocument = listing.TextEntry(
-                    Settings.TakeoverArtiPromptDocument,
-                    10);
+                string primarySystemDocument = Settings.GetPrimaryTakeoverSystemDocument();
+                string updatedSystemDocument = listing.TextEntry(primarySystemDocument, 10);
+                if (updatedSystemDocument != primarySystemDocument)
+                {
+                    Settings.SetPrimaryTakeoverSystemDocument(updatedSystemDocument);
+                }
+
                 listing.Label("AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip".Translate());
             }
+        }
+
+        private static void DrawIntegerSetting(
+            Listing_Standard listing,
+            string label,
+            ref int value,
+            ref string buffer,
+            int minimum,
+            int maximum)
+        {
+            float labelWidth = listing.ColumnWidth * 0.4f;
+            float height = Mathf.Max(30f, Text.CalcHeight(label, labelWidth));
+            Rect row = listing.GetRect(height);
+            Widgets.Label(
+                new Rect(row.x, row.y, labelWidth, row.height),
+                label);
+            listing.Gap(4f);
+            Widgets.TextFieldNumeric(
+                new Rect(
+                    row.x + labelWidth + 8f,
+                    row.y,
+                    Mathf.Max(1f, row.width - labelWidth - 8f),
+                    30f),
+                ref value,
+                ref buffer,
+                minimum,
+                maximum);
         }
 
         internal void DrawArtiRepl(Rect inRect)
@@ -107,6 +154,11 @@ namespace AdvancedRimTalk
         internal void DrawArtiEditor(Rect inRect)
         {
             _artiCodeEditorPage.Draw(inRect);
+        }
+
+        internal void DrawTakeoverPromptParts(Rect inRect)
+        {
+            _takeoverPromptPartsPage.Draw(inRect);
         }
     }
 }

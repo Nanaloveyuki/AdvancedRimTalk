@@ -17,9 +17,11 @@
     <Compile Include="ArtiChecks.cs" />
     <Compile Include="ArtiExecutorChecks.cs" />
     <Compile Include="ArtiPawnInfoChecks.cs" />
+    <Compile Include="TakeoverPromptImportConverterChecks.cs" />
     <Compile Include="..\Source\Prompt\PromptSnapshot.cs" Link="PromptSnapshot.cs" />
     <Compile Include="..\Source\Prompt\PromptTemplateExpander.cs" Link="PromptTemplateExpander.cs" />
     <Compile Include="..\Source\Prompt\SystemInstructionRenderer.cs" Link="SystemInstructionRenderer.cs" />
+    <Compile Include="..\Source\Prompt\TakeoverPromptImportConverter.cs" Link="TakeoverPromptImportConverter.cs" />
     <Compile Include="..\Source\Arti\ArtiSyntax.cs" Link="ArtiSyntax.cs" />
     <Compile Include="..\Source\Arti\ArtiDiagnostics.cs" Link="ArtiDiagnostics.cs" />
     <Compile Include="..\Source\Arti\ArtiLexer.cs" Link="ArtiLexer.cs" />

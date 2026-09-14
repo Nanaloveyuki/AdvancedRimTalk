@@ -33,6 +33,8 @@ namespace AdvancedRimTalk.UI
 
         private readonly ArtiEditorIntelligence intelligence = new ArtiEditorIntelligence();
         private readonly List<ArtiCompletionItem> completions = new List<ArtiCompletionItem>();
+        private readonly List<EditorSnapshot> undoStack = new List<EditorSnapshot>();
+        private readonly List<EditorSnapshot> redoStack = new List<EditorSnapshot>();
 
         private Vector2 editorScroll;
         private Vector2 diagnosticsScroll;
@@ -206,7 +208,7 @@ namespace AdvancedRimTalk.UI
             Widgets.DrawBoxSolid(
                 new Rect(
                     gutterWidth,
-                    cursorLine * lineAdvance,
+                    LineY(cursorLine),
                     Mathf.Max(minimumCodeWidth, viewRect.width - gutterWidth),
                     lineAdvance),
                 CurrentLineColor);
@@ -360,27 +362,31 @@ namespace AdvancedRimTalk.UI
                 int lineStart = ArtiEditorText.GetLineStart(source, start);
                 int lineEnd = ArtiEditorText.GetLineEnd(source, start);
                 int underlineStart = Math.Max(lineStart, Math.Min(start, lineEnd));
-                int underlineEnd = Math.Max(
-                    underlineStart + (end == start ? 1 : 0),
-                    Math.Min(end, lineEnd));
+                int underlineEnd = Math.Min(
+                    lineEnd,
+                    Math.Max(
+                        underlineStart,
+                        end == start ? underlineStart + 1 : end));
                 float x = gutterWidth
                     + inputStyle.padding.left
                     + MeasureText(source.Substring(lineStart, underlineStart - lineStart));
-                float width = Math.Max(
-                    3f,
-                    MeasureText(source.Substring(underlineStart, underlineEnd - underlineStart)));
+                float width = underlineEnd > underlineStart
+                    ? Math.Max(
+                        3f,
+                        MeasureText(source.Substring(underlineStart, underlineEnd - underlineStart)))
+                    : 3f;
                 Color color = GetDiagnosticColor(diagnostic.Severity);
                 Widgets.DrawBoxSolid(
                     new Rect(
                         x,
-                        ArtiEditorText.GetLineIndex(source, start) * lineAdvance + lineAdvance - 2f,
+                        LineY(ArtiEditorText.GetLineIndex(source, start)) + lineAdvance - 2f,
                         width,
                         2f),
                     color);
                 Widgets.DrawBoxSolid(
                     new Rect(
                         Math.Max(1f, gutterWidth - 5f),
-                        ArtiEditorText.GetLineIndex(source, start) * lineAdvance + 5f,
+                        LineY(ArtiEditorText.GetLineIndex(source, start)) + 5f,
                         3f,
                         3f),
                     color);
@@ -515,6 +521,8 @@ namespace AdvancedRimTalk.UI
                 analysis = null;
                 completions.Clear();
                 completionStart = -1;
+                undoStack.Clear();
+                redoStack.Clear();
                 focusEditor = true;
             }
             else if (string.Equals(configured, source, StringComparison.Ordinal))
@@ -560,8 +568,13 @@ namespace AdvancedRimTalk.UI
             diagnosticStyle = new GUIStyle(syntaxStyle);
             diagnosticStyle.alignment = TextAnchor.MiddleLeft;
 
-            lineAdvance = Mathf.Max(16f, inputStyle.lineHeight + 5f);
+            lineAdvance = Mathf.Max(16f, inputStyle.lineHeight);
             stylesInitialized = true;
+        }
+
+        private float LineY(int line)
+        {
+            return inputStyle.padding.top + Math.Max(0, line) * lineAdvance;
         }
 
         private static void RemoveBackgrounds(GUIStyle style)
@@ -725,15 +738,116 @@ namespace AdvancedRimTalk.UI
             }
         }
 
-        private void CommitSource(string value, int cursor, int select)
+        private void CommitSource(string value, int cursor, int select, bool recordUndo = true)
         {
-            source = ArtiEditorText.NormalizeLineEndings(value);
+            value = ArtiEditorText.NormalizeLineEndings(value);
+            if (recordUndo && !string.Equals(source, value, StringComparison.Ordinal))
+            {
+                PushUndoSnapshot();
+                redoStack.Clear();
+            }
+
+            source = value;
             AdvancedRimTalk.AdvancedRimTalkMod.Settings.TakeoverArtiPromptDocument = source;
             lastBoundSource = source;
             analyzedSource = null;
             analysis = null;
             RefreshAnalysis();
             RequestCaret(GetEditor(), cursor, select);
+        }
+
+        private void PushUndoSnapshot()
+        {
+            int limit = GetUndoLimit();
+            if (limit <= 0)
+            {
+                undoStack.Clear();
+                return;
+            }
+
+            TextEditor editor = GetEditor();
+            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int select = editor == null ? cursor : Clamp(editor.selectIndex, 0, source.Length);
+            undoStack.Add(new EditorSnapshot(source, cursor, select));
+            while (undoStack.Count > limit)
+            {
+                undoStack.RemoveAt(0);
+            }
+        }
+
+        private void Undo()
+        {
+            if (undoStack.Count == 0)
+            {
+                return;
+            }
+
+            PushRedoSnapshot();
+            EditorSnapshot snapshot = undoStack[undoStack.Count - 1];
+            undoStack.RemoveAt(undoStack.Count - 1);
+            ApplySnapshot(snapshot);
+        }
+
+        private void Redo()
+        {
+            if (redoStack.Count == 0)
+            {
+                return;
+            }
+
+            PushUndoSnapshot();
+            EditorSnapshot snapshot = redoStack[redoStack.Count - 1];
+            redoStack.RemoveAt(redoStack.Count - 1);
+            ApplySnapshot(snapshot);
+        }
+
+        private void PushRedoSnapshot()
+        {
+            TextEditor editor = GetEditor();
+            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int select = editor == null ? cursor : Clamp(editor.selectIndex, 0, source.Length);
+            redoStack.Add(new EditorSnapshot(source, cursor, select));
+            int limit = GetUndoLimit();
+            while (redoStack.Count > limit && redoStack.Count > 0)
+            {
+                redoStack.RemoveAt(0);
+            }
+        }
+
+        private void ApplySnapshot(EditorSnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            CommitSource(
+                snapshot.Source,
+                snapshot.Cursor,
+                snapshot.Select,
+                false);
+            ClearCompletion();
+            focusEditor = true;
+            RevealCaret(snapshot.Cursor);
+        }
+
+        private static int GetUndoLimit()
+        {
+            AdvancedRimTalkSettings settings = AdvancedRimTalk.AdvancedRimTalkMod.Settings;
+            if (settings == null)
+            {
+                return 100;
+            }
+
+            return Clamp(settings.ArtiEditorUndoLimit, 0, 500);
+        }
+
+        private string GetCurrentLineText(TextEditor editor)
+        {
+            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int lineStart = ArtiEditorText.GetLineStart(source, cursor);
+            int lineEnd = ArtiEditorText.GetLineEnd(source, cursor);
+            return source.Substring(lineStart, lineEnd - lineStart);
         }
 
         private void ResetDocument()
@@ -762,7 +876,7 @@ namespace AdvancedRimTalk.UI
         private void RevealCaret(int cursor)
         {
             int line = ArtiEditorText.GetLineIndex(source, cursor);
-            float top = line * lineAdvance;
+            float top = LineY(line);
             float bottom = top + lineAdvance;
             if (top < editorScroll.y)
             {
@@ -792,6 +906,80 @@ namespace AdvancedRimTalk.UI
 
             editor.text = source;
             ApplyPendingCaret(editor);
+
+            bool command = current.control || current.command;
+            if (command)
+            {
+                if (current.keyCode == KeyCode.Z)
+                {
+                    if (current.shift)
+                    {
+                        Redo();
+                    }
+                    else
+                    {
+                        Undo();
+                    }
+
+                    current.Use();
+                    return;
+                }
+
+                if (current.keyCode == KeyCode.Y && !current.shift)
+                {
+                    Redo();
+                    current.Use();
+                    return;
+                }
+
+                if (current.keyCode == KeyCode.A && !current.shift)
+                {
+                    editor.SelectAll();
+                    current.Use();
+                    return;
+                }
+
+                if (current.keyCode == KeyCode.C)
+                {
+                    if (current.shift)
+                    {
+                        GUIUtility.systemCopyBuffer = source;
+                    }
+                    else
+                    {
+                        GUIUtility.systemCopyBuffer = editor.hasSelection
+                            ? editor.SelectedText
+                            : GetCurrentLineText(editor);
+                    }
+
+                    current.Use();
+                    return;
+                }
+
+                if (current.keyCode == KeyCode.X)
+                {
+                    if (editor.hasSelection)
+                    {
+                        GUIUtility.systemCopyBuffer = editor.SelectedText;
+                        editor.DeleteSelection();
+                        CommitSource(editor.text, editor.cursorIndex, editor.selectIndex);
+                    }
+
+                    current.Use();
+                    return;
+                }
+
+                if (current.keyCode == KeyCode.V)
+                {
+                    if (editor.Paste())
+                    {
+                        CommitSource(editor.text, editor.cursorIndex, editor.selectIndex);
+                    }
+
+                    current.Use();
+                    return;
+                }
+            }
 
             if (completions.Count > 0)
             {
@@ -827,7 +1015,6 @@ namespace AdvancedRimTalk.UI
                 }
             }
 
-            bool command = current.control || current.command;
             if (command && current.keyCode == KeyCode.Space)
             {
                 ShowCompletion(editor);
@@ -1211,6 +1398,20 @@ namespace AdvancedRimTalk.UI
         private bool IsMemberContext(int position)
         {
             return ArtiEditorIntelligence.IsMemberAccessContext(source, position);
+        }
+
+        private sealed class EditorSnapshot
+        {
+            public EditorSnapshot(string source, int cursor, int select)
+            {
+                Source = source ?? string.Empty;
+                Cursor = cursor;
+                Select = select;
+            }
+
+            public string Source { get; }
+            public int Cursor { get; }
+            public int Select { get; }
         }
     }
 }

@@ -7,15 +7,35 @@
   <AdvancedRimTalk.Settings.TakeoverRimTalkPromptTooltip>使用接管模式 Arti 文档构建 system 和 user 消息。RimTalk 仍负责触发、模型客户端和回复处理。</AdvancedRimTalk.Settings.TakeoverRimTalkPromptTooltip>
   <AdvancedRimTalk.Settings.EnablePlaceholderLayer>启用动态 Prompt 占位符</AdvancedRimTalk.Settings.EnablePlaceholderLayer>
   <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>在嵌入模式下，于生成 Prompt 时展开 Advanced RimTalk 占位符。</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
+  <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>编辑器撤销步数</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>接管模式 Arti system 文档</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>这里只执行 {{% ... %}} Arti 代码块，其余文本会作为 system 消息发送。</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>接管 RimTalk Prompt 构建</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>改由 Advanced RimTalk 构建请求消息，不走 RimTalk 预设和 Scriban 渲染。RimTalk 仍负责触发和模型客户端。</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
   <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
   <AdvancedRimTalk.ArtiRepl.Run>运行</AdvancedRimTalk.ArtiRepl.Run>
-  <AdvancedRimTalk.ArtiRepl.Clear>清屏</AdvancedRimTalk.ArtiRepl.Clear>
+  <AdvancedRimTalk.ArtiRepl.Clear>重置</AdvancedRimTalk.ArtiRepl.Clear>
   <AdvancedRimTalk.ArtiEditor.Title>Arti 编辑器</AdvancedRimTalk.ArtiEditor.Title>
   <AdvancedRimTalk.ArtiEditor.Reset>重置</AdvancedRimTalk.ArtiEditor.Reset>
   <AdvancedRimTalk.ArtiEditor.NoDiagnostics>无错误</AdvancedRimTalk.ArtiEditor.NoDiagnostics>
   <AdvancedRimTalk.ArtiEditor.DiagnosticSummary>错误 {0}，警告 {1}</AdvancedRimTalk.ArtiEditor.DiagnosticSummary>
+  <AdvancedRimTalk.PromptParts.Title>接管 Prompt 片段</AdvancedRimTalk.PromptParts.Title>
+  <AdvancedRimTalk.PromptParts.Parts>Prompt 片段</AdvancedRimTalk.PromptParts.Parts>
+  <AdvancedRimTalk.PromptParts.NewPart>新 Prompt 片段</AdvancedRimTalk.PromptParts.NewPart>
+  <AdvancedRimTalk.PromptParts.AddTooltip>新增一个 Advanced RimTalk 接管 Prompt 片段。</AdvancedRimTalk.PromptParts.AddTooltip>
+  <AdvancedRimTalk.PromptParts.ImportLocal>导入本地</AdvancedRimTalk.PromptParts.ImportLocal>
+  <AdvancedRimTalk.PromptParts.ImportShared>导入分享</AdvancedRimTalk.PromptParts.ImportShared>
+  <AdvancedRimTalk.PromptParts.OpenSharedFolder>打开分享目录</AdvancedRimTalk.PromptParts.OpenSharedFolder>
+  <AdvancedRimTalk.PromptParts.ResetDefaults>重置为默认</AdvancedRimTalk.PromptParts.ResetDefaults>
+  <AdvancedRimTalk.PromptParts.ResetDefaultsConfirm>将 Advanced RimTalk 接管 Prompt 片段重置为默认值？</AdvancedRimTalk.PromptParts.ResetDefaultsConfirm>
+  <AdvancedRimTalk.PromptParts.SelectPart>选择一个 Prompt 片段进行编辑。</AdvancedRimTalk.PromptParts.SelectPart>
+  <AdvancedRimTalk.PromptParts.Name>片段名称:</AdvancedRimTalk.PromptParts.Name>
+  <AdvancedRimTalk.PromptParts.Enabled>启用</AdvancedRimTalk.PromptParts.Enabled>
+  <AdvancedRimTalk.PromptParts.Role>角色:</AdvancedRimTalk.PromptParts.Role>
+  <AdvancedRimTalk.PromptParts.CustomRole>自定义角色:</AdvancedRimTalk.PromptParts.CustomRole>
+  <AdvancedRimTalk.PromptParts.Help>接管模式会按左侧顺序渲染已启用片段；这里只执行 {{% ... %}} Arti 块，不再走 RimTalk Prompt 预设或 Scriban。</AdvancedRimTalk.PromptParts.Help>
+  <AdvancedRimTalk.PromptParts.NoLocalPrompts>没有找到 RimTalk 本地 Prompt 预设。</AdvancedRimTalk.PromptParts.NoLocalPrompts>
+  <AdvancedRimTalk.PromptParts.NoSharedPrompts>没有找到 RimTalk 分享 Prompt 文件；可先打开分享目录放入 .json 预设。</AdvancedRimTalk.PromptParts.NoSharedPrompts>
+  <AdvancedRimTalk.PromptParts.ImportFailed>导入 Prompt 失败。</AdvancedRimTalk.PromptParts.ImportFailed>
+  <AdvancedRimTalk.PromptParts.Imported>已从 {1} 导入 {0} 个 Prompt 片段。</AdvancedRimTalk.PromptParts.Imported>
 </LanguageData>

@@ -194,15 +194,18 @@ namespace AdvancedRimTalk.Arti
         private readonly IArtiModuleCatalog _moduleCatalog;
         private readonly IArtiSymbolCatalog _symbolCatalog;
         private readonly IEnumerable<string> _externalGlobals;
+        private readonly bool _allowExternalGlobalRedeclare;
 
         public ArtiAnalyzer(
             IArtiModuleCatalog moduleCatalog = null,
             IArtiSymbolCatalog symbolCatalog = null,
-            IEnumerable<string> externalGlobals = null)
+            IEnumerable<string> externalGlobals = null,
+            bool allowExternalGlobalRedeclare = false)
         {
             _moduleCatalog = moduleCatalog;
             _symbolCatalog = symbolCatalog;
             _externalGlobals = externalGlobals;
+            _allowExternalGlobalRedeclare = allowExternalGlobalRedeclare;
         }
 
         public ArtiAnalysisResult Analyze(ArtiProgram program)
@@ -219,7 +222,7 @@ namespace AdvancedRimTalk.Arti
             {
                 foreach (string name in _externalGlobals)
                 {
-                    root.TryDeclare(name, BindingKind.Variable);
+                    root.TryDeclare(name, BindingKind.External);
                 }
             }
 
@@ -246,7 +249,10 @@ namespace AdvancedRimTalk.Arti
                     continue;
                 }
 
-                if (!scope.TryDeclare(function.Name, BindingKind.Function))
+                if (!scope.TryDeclare(
+                    function.Name,
+                    BindingKind.Function,
+                    _allowExternalGlobalRedeclare))
                 {
                     ReportError(3001, function.Span, function.Name);
                 }
@@ -277,7 +283,10 @@ namespace AdvancedRimTalk.Arti
                 }
                 else if (!isBuiltinCore)
                 {
-                    if (!scope.TryDeclare(use.Alias, BindingKind.Module))
+                    if (!scope.TryDeclare(
+                        use.Alias,
+                        BindingKind.Module,
+                        _allowExternalGlobalRedeclare))
                     {
                         ReportError(3001, use.Span, use.Alias);
                     }
@@ -289,7 +298,10 @@ namespace AdvancedRimTalk.Arti
             ArtiVariableDeclarationStatement variable = statement as ArtiVariableDeclarationStatement;
             if (variable != null)
             {
-                if (!scope.TryDeclare(variable.Name, variable.IsConst ? BindingKind.Constant : BindingKind.Variable))
+                if (!scope.TryDeclare(
+                    variable.Name,
+                    variable.IsConst ? BindingKind.Constant : BindingKind.Variable,
+                    _allowExternalGlobalRedeclare))
                 {
                     ReportError(3001, variable.Span, variable.Name);
                 }
@@ -584,7 +596,8 @@ namespace AdvancedRimTalk.Arti
             Constant,
             Function,
             Parameter,
-            Module
+            Module,
+            External
         }
 
         private sealed class Binding
@@ -610,8 +623,25 @@ namespace AdvancedRimTalk.Arti
 
             public bool TryDeclare(string name, BindingKind kind)
             {
-                if (string.IsNullOrEmpty(name) || _bindings.ContainsKey(name))
+                return TryDeclare(name, kind, false);
+            }
+
+            public bool TryDeclare(string name, BindingKind kind, bool allowExternalRedeclare)
+            {
+                if (string.IsNullOrEmpty(name))
                 {
+                    return false;
+                }
+
+                Binding existing;
+                if (_bindings.TryGetValue(name, out existing))
+                {
+                    if (allowExternalRedeclare && existing.Kind == BindingKind.External)
+                    {
+                        _bindings[name] = new Binding(kind);
+                        return true;
+                    }
+
                     return false;
                 }
 

@@ -270,7 +270,8 @@ namespace AdvancedRimTalk.UI
 
         public ArtiEditorAnalysis AnalyzeDocument(
             string source,
-            IEnumerable<string> externalGlobals = null)
+            IEnumerable<string> externalGlobals = null,
+            bool allowExternalGlobalRedeclare = false)
         {
             source = ArtiEditorText.NormalizeLineEndings(source);
             EnsureCatalogs();
@@ -303,7 +304,8 @@ namespace AdvancedRimTalk.UI
                         ArtiAnalysisResult semantic = new ArtiAnalyzer(
                             moduleCatalog,
                             symbolCatalog,
-                            externalGlobals).Analyze(block.ParseResult.Program);
+                            externalGlobals,
+                            allowExternalGlobalRedeclare).Analyze(block.ParseResult.Program);
                         AddDiagnostics(diagnostics, semantic.Diagnostics);
                     }
                     catch (Exception exception)
@@ -314,6 +316,49 @@ namespace AdvancedRimTalk.UI
             }
 
             List<ArtiHighlightSpan> highlights = BuildHighlights(source, parsed, tokens, codeRanges);
+            diagnostics.Sort(CompareDiagnostics);
+            return new ArtiEditorAnalysis(source, tokens, diagnostics, highlights, codeRanges);
+        }
+
+        public ArtiEditorAnalysis AnalyzeCode(
+            string source,
+            IEnumerable<string> externalGlobals = null,
+            bool allowExternalGlobalRedeclare = false)
+        {
+            source = ArtiEditorText.NormalizeLineEndings(source);
+            EnsureCatalogs();
+
+            ArtiParseResult parsed = new ArtiParser().Parse(source);
+            List<ArtiToken> tokens = new List<ArtiToken>();
+            List<ArtiDiagnostic> diagnostics = new List<ArtiDiagnostic>();
+            List<ArtiCodeRange> codeRanges = new List<ArtiCodeRange>
+            {
+                new ArtiCodeRange(0, source.Length)
+            };
+
+            if (parsed != null)
+            {
+                AddTokens(tokens, parsed.Tokens);
+                AddDiagnostics(diagnostics, parsed.Diagnostics);
+                if (!parsed.HasErrors)
+                {
+                    try
+                    {
+                        ArtiAnalysisResult semantic = new ArtiAnalyzer(
+                            moduleCatalog,
+                            symbolCatalog,
+                            externalGlobals,
+                            allowExternalGlobalRedeclare).Analyze(parsed.Program);
+                        AddDiagnostics(diagnostics, semantic.Diagnostics);
+                    }
+                    catch (Exception exception)
+                    {
+                        WarnCatalogFailure("analysis", exception);
+                    }
+                }
+            }
+
+            List<ArtiHighlightSpan> highlights = BuildHighlights(source, null, tokens, codeRanges);
             diagnostics.Sort(CompareDiagnostics);
             return new ArtiEditorAnalysis(source, tokens, diagnostics, highlights, codeRanges);
         }

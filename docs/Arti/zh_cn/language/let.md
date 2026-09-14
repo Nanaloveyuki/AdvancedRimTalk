@@ -1,6 +1,7 @@
 # let
 
-`let` 声明一个可以重新赋值的局部变量：
+`let` 声明一个可以重新赋值的局部变量。Arti 中的 `let` 语义更接近 Kotlin 的 `var`，
+不是 Rust 中默认不可变的 `let`：
 
 ```arti
 let name = pawn.name

@@ -7,15 +7,35 @@
   <AdvancedRimTalk.Settings.TakeoverRimTalkPromptTooltip>Build the system and user messages from the takeover Arti document. RimTalk still handles triggers, model clients, and responses.</AdvancedRimTalk.Settings.TakeoverRimTalkPromptTooltip>
   <AdvancedRimTalk.Settings.EnablePlaceholderLayer>Enable dynamic prompt placeholders</AdvancedRimTalk.Settings.EnablePlaceholderLayer>
   <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>In embed mode, expand Advanced RimTalk placeholders when a prompt is generated.</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
+  <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>Editor undo entries</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>Takeover Arti system document</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>Only {{% ... %}} Arti blocks execute here. Other text becomes the system message.</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>Replace RimTalk prompt builder</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>Build request messages with Advanced RimTalk instead of RimTalk presets and Scriban rendering. RimTalk still handles triggers and the model client.</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
   <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
   <AdvancedRimTalk.ArtiRepl.Run>Run</AdvancedRimTalk.ArtiRepl.Run>
-  <AdvancedRimTalk.ArtiRepl.Clear>Clear</AdvancedRimTalk.ArtiRepl.Clear>
+  <AdvancedRimTalk.ArtiRepl.Clear>Reset</AdvancedRimTalk.ArtiRepl.Clear>
   <AdvancedRimTalk.ArtiEditor.Title>Arti Editor</AdvancedRimTalk.ArtiEditor.Title>
   <AdvancedRimTalk.ArtiEditor.Reset>Reset</AdvancedRimTalk.ArtiEditor.Reset>
   <AdvancedRimTalk.ArtiEditor.NoDiagnostics>No errors</AdvancedRimTalk.ArtiEditor.NoDiagnostics>
   <AdvancedRimTalk.ArtiEditor.DiagnosticSummary>{0} errors, {1} warnings</AdvancedRimTalk.ArtiEditor.DiagnosticSummary>
+  <AdvancedRimTalk.PromptParts.Title>Takeover Prompt Parts</AdvancedRimTalk.PromptParts.Title>
+  <AdvancedRimTalk.PromptParts.Parts>Prompt parts</AdvancedRimTalk.PromptParts.Parts>
+  <AdvancedRimTalk.PromptParts.NewPart>New Prompt Part</AdvancedRimTalk.PromptParts.NewPart>
+  <AdvancedRimTalk.PromptParts.AddTooltip>Add a new Advanced RimTalk takeover prompt part.</AdvancedRimTalk.PromptParts.AddTooltip>
+  <AdvancedRimTalk.PromptParts.ImportLocal>Import local</AdvancedRimTalk.PromptParts.ImportLocal>
+  <AdvancedRimTalk.PromptParts.ImportShared>Import shared</AdvancedRimTalk.PromptParts.ImportShared>
+  <AdvancedRimTalk.PromptParts.OpenSharedFolder>Open shared folder</AdvancedRimTalk.PromptParts.OpenSharedFolder>
+  <AdvancedRimTalk.PromptParts.ResetDefaults>Reset defaults</AdvancedRimTalk.PromptParts.ResetDefaults>
+  <AdvancedRimTalk.PromptParts.ResetDefaultsConfirm>Reset Advanced RimTalk takeover prompt parts to defaults?</AdvancedRimTalk.PromptParts.ResetDefaultsConfirm>
+  <AdvancedRimTalk.PromptParts.SelectPart>Select a prompt part to edit.</AdvancedRimTalk.PromptParts.SelectPart>
+  <AdvancedRimTalk.PromptParts.Name>Part name:</AdvancedRimTalk.PromptParts.Name>
+  <AdvancedRimTalk.PromptParts.Enabled>Enabled</AdvancedRimTalk.PromptParts.Enabled>
+  <AdvancedRimTalk.PromptParts.Role>Role:</AdvancedRimTalk.PromptParts.Role>
+  <AdvancedRimTalk.PromptParts.CustomRole>Custom role:</AdvancedRimTalk.PromptParts.CustomRole>
+  <AdvancedRimTalk.PromptParts.Help>Takeover mode renders enabled parts in the left-side order. Only {{% ... %}} Arti blocks execute here; RimTalk prompt presets and Scriban are not used.</AdvancedRimTalk.PromptParts.Help>
+  <AdvancedRimTalk.PromptParts.NoLocalPrompts>No local RimTalk prompt presets were found.</AdvancedRimTalk.PromptParts.NoLocalPrompts>
+  <AdvancedRimTalk.PromptParts.NoSharedPrompts>No shared RimTalk prompt files were found. Open the shared folder and place .json presets there.</AdvancedRimTalk.PromptParts.NoSharedPrompts>
+  <AdvancedRimTalk.PromptParts.ImportFailed>Prompt import failed.</AdvancedRimTalk.PromptParts.ImportFailed>
+  <AdvancedRimTalk.PromptParts.Imported>Imported {0} prompt parts from {1}.</AdvancedRimTalk.PromptParts.Imported>
 </LanguageData>

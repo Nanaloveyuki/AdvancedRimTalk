@@ -17,16 +17,32 @@ namespace AdvancedRimTalk.UI
         private const int MaxHistory = 100;
         private static readonly Color PanelColor = new Color(0f, 0f, 0f, 0.16f);
         private static readonly Color AccentColor = new Color(1f, 0.85f, 0.55f);
+        private static readonly Color CommentColor = new Color(0.42f, 0.55f, 0.47f);
+        private static readonly Color KeywordColor = new Color(0.83f, 0.62f, 0.96f);
+        private static readonly Color StringColor = new Color(0.9f, 0.73f, 0.43f);
+        private static readonly Color NumberColor = new Color(0.48f, 0.78f, 0.91f);
+        private static readonly Color BooleanColor = new Color(0.82f, 0.58f, 0.94f);
+        private static readonly Color BuiltinColor = new Color(0.38f, 0.77f, 0.84f);
+        private static readonly Color IdentifierColor = new Color(0.84f, 0.87f, 0.92f);
+        private static readonly Color OperatorColor = new Color(0.78f, 0.81f, 0.86f);
+        private static readonly Color PunctuationColor = new Color(0.62f, 0.69f, 0.76f);
+        private static readonly Color InvalidColor = new Color(1f, 0.35f, 0.35f);
 
         private readonly List<ReplEntry> history = new List<ReplEntry>();
         private readonly ArtiReplSession session = new ArtiReplSession();
+        private readonly ArtiEditorIntelligence intelligence = new ArtiEditorIntelligence();
         private Vector2 outputScroll;
         private string input = string.Empty;
-        private string transcript = string.Empty;
+        private string analyzedInput;
+        private ArtiEditorAnalysis inputAnalysis;
         private int historyIndex;
         private string historyDraft = string.Empty;
         private bool focusEditor = true;
         private bool scrollToBottom;
+        private GUIStyle inputStyle;
+        private GUIStyle syntaxStyle;
+        private float lineAdvance;
+        private bool stylesInitialized;
 
         public void Draw(Rect inRect)
         {
@@ -42,6 +58,7 @@ namespace AdvancedRimTalk.UI
             {
                 Text.Font = GameFont.Small;
                 Text.WordWrap = true;
+                EnsureStyles();
 
                 float toolbarHeight = 30f;
                 float editorHeight = Mathf.Clamp(inRect.height * 0.28f, 88f, 170f);
@@ -62,8 +79,10 @@ namespace AdvancedRimTalk.UI
                     Mathf.Max(1f, editorPanel.width - 36f),
                     Mathf.Max(1f, editorPanel.height - 8f));
                 ProcessEditorShortcuts();
+                RefreshInputAnalysis();
+                DrawInputSyntax(editorRect);
                 GUI.SetNextControlName(EditorControlName);
-                input = NormalizeLineEndings(Widgets.TextArea(editorRect, input));
+                input = NormalizeLineEndings(GUI.TextArea(editorRect, input, inputStyle));
 
                 Rect toolbar = new Rect(inRect.x, editorPanel.yMax + 6f, inRect.width, toolbarHeight);
                 if (Widgets.ButtonText(new Rect(toolbar.x, toolbar.y, 82f, 26f), "AdvancedRimTalk.ArtiRepl.Run".Translate()))
@@ -96,7 +115,7 @@ namespace AdvancedRimTalk.UI
             float contentWidth = Mathf.Max(1f, viewport.width - 20f);
             float contentHeight = Mathf.Max(
                 viewport.height,
-                Text.CalcHeight(transcript, Mathf.Max(1f, contentWidth - 8f)) + 8f);
+                CalculateTranscriptHeight(Mathf.Max(1f, contentWidth - 8f)) + 8f);
             if (scrollToBottom)
             {
                 outputScroll.y = float.MaxValue;
@@ -109,17 +128,216 @@ namespace AdvancedRimTalk.UI
                 new Rect(0f, 0f, contentWidth, contentHeight));
             try
             {
-                if (transcript.Length > 0)
+                if (history.Count > 0)
                 {
-                    Widgets.Label(
+                    DrawTranscriptEntries(
                         new Rect(4f, 4f, Mathf.Max(1f, contentWidth - 8f), Mathf.Max(1f, contentHeight - 8f)),
-                        transcript);
+                        Mathf.Max(1f, contentWidth - 8f));
                 }
             }
             finally
             {
                 Widgets.EndScrollView();
             }
+        }
+
+        private float CalculateTranscriptHeight(float width)
+        {
+            float height = 0f;
+            foreach (ReplEntry entry in history)
+            {
+                height += ArtiEditorText.GetLineCount(entry.Source) * lineAdvance;
+                if (!string.IsNullOrEmpty(entry.Result))
+                {
+                    string[] lines = NormalizeLineEndings(entry.Result).Split(new[] { '\n' }, StringSplitOptions.None);
+                    height += Math.Max(1, lines.Length) * lineAdvance;
+                }
+            }
+
+            return height;
+        }
+
+        private void DrawTranscriptEntries(Rect rect, float width)
+        {
+            float y = rect.y;
+            foreach (ReplEntry entry in history)
+            {
+                y = DrawTranscriptSource(entry, rect.x, y, width);
+                if (!string.IsNullOrEmpty(entry.Result))
+                {
+                    y = DrawResultText(entry.Result, rect.x, y, width);
+                }
+            }
+        }
+
+        private float DrawTranscriptSource(ReplEntry entry, float x, float y, float width)
+        {
+            string text = NormalizeLineEndings(entry.Source);
+            int lineCount = ArtiEditorText.GetLineCount(text);
+            int lineStart = 0;
+            for (int line = 0; line < lineCount; line++)
+            {
+                int lineEnd = ArtiEditorText.GetLineEnd(text, lineStart);
+                string prompt = line == 0 ? ">>> " : "... ";
+                float promptWidth = DrawTextRun(prompt, x, y, AccentColor);
+                DrawSyntaxLine(
+                    text,
+                    entry.Analysis,
+                    lineStart,
+                    lineEnd,
+                    x + promptWidth,
+                    y);
+                y += lineAdvance;
+                lineStart = lineEnd < text.Length ? lineEnd + 1 : text.Length;
+            }
+
+            return y;
+        }
+
+        private float DrawResultText(string result, float x, float y, float width)
+        {
+            string[] lines = NormalizeLineEndings(result).Split(new[] { '\n' }, StringSplitOptions.None);
+            foreach (string line in lines)
+            {
+                Color color = line.StartsWith("ART", StringComparison.Ordinal)
+                    || line.StartsWith("REPL error", StringComparison.Ordinal)
+                    || line.StartsWith("[Advanced", StringComparison.Ordinal)
+                        ? InvalidColor
+                        : line.StartsWith("warn:", StringComparison.Ordinal)
+                            ? AccentColor
+                            : IdentifierColor;
+                DrawTextRun(line, x, y, color);
+                y += lineAdvance;
+            }
+
+            return y;
+        }
+
+        private void EnsureStyles()
+        {
+            if (stylesInitialized)
+            {
+                return;
+            }
+
+            inputStyle = new GUIStyle(Text.CurTextAreaStyle);
+            inputStyle.alignment = TextAnchor.UpperLeft;
+            inputStyle.wordWrap = false;
+            inputStyle.richText = false;
+            RemoveBackgrounds(inputStyle);
+            SetTextColors(inputStyle, new Color(1f, 1f, 1f, 0.01f));
+
+            syntaxStyle = new GUIStyle(inputStyle);
+            syntaxStyle.padding = new RectOffset(0, 0, 0, 0);
+            syntaxStyle.contentOffset = Vector2.zero;
+            SetTextColors(syntaxStyle, Color.white);
+
+            lineAdvance = Mathf.Max(16f, inputStyle.lineHeight);
+            stylesInitialized = true;
+        }
+
+        private void RefreshInputAnalysis()
+        {
+            if (inputAnalysis != null
+                && string.Equals(analyzedInput, input, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            inputAnalysis = intelligence.AnalyzeCode(
+                input,
+                session.GetGlobalNames(),
+                true);
+            analyzedInput = input;
+        }
+
+        private void DrawInputSyntax(Rect rect)
+        {
+            string text = input ?? string.Empty;
+            int lineCount = ArtiEditorText.GetLineCount(text);
+            int lineStart = 0;
+            for (int line = 0; line < lineCount; line++)
+            {
+                int lineEnd = ArtiEditorText.GetLineEnd(text, lineStart);
+                DrawSyntaxLine(
+                    text,
+                    inputAnalysis,
+                    lineStart,
+                    lineEnd,
+                    rect.x + inputStyle.padding.left,
+                    rect.y + inputStyle.padding.top + line * lineAdvance);
+                lineStart = lineEnd < text.Length ? lineEnd + 1 : text.Length;
+            }
+        }
+
+        private void DrawSyntaxLine(
+            string text,
+            ArtiEditorAnalysis analysis,
+            int lineStart,
+            int lineEnd,
+            float x,
+            float y)
+        {
+            int position = lineStart;
+            if (analysis != null)
+            {
+                foreach (ArtiHighlightSpan highlight in analysis.Highlights)
+                {
+                    if (highlight.EndOffset <= lineStart)
+                    {
+                        continue;
+                    }
+
+                    if (highlight.StartOffset >= lineEnd)
+                    {
+                        break;
+                    }
+
+                    int segmentStart = Math.Max(position, Math.Max(lineStart, highlight.StartOffset));
+                    int segmentEnd = Math.Min(lineEnd, highlight.EndOffset);
+                    if (segmentEnd <= segmentStart)
+                    {
+                        continue;
+                    }
+
+                    if (segmentStart > position)
+                    {
+                        string plain = text.Substring(position, segmentStart - position);
+                        x += DrawTextRun(plain, x, y, IdentifierColor);
+                    }
+
+                    string segment = text.Substring(segmentStart, segmentEnd - segmentStart);
+                    x += DrawTextRun(segment, x, y, GetSyntaxColor(highlight.Role));
+                    position = segmentEnd;
+                }
+            }
+
+            if (position < lineEnd)
+            {
+                DrawTextRun(
+                    text.Substring(position, lineEnd - position),
+                    x,
+                    y,
+                    IdentifierColor);
+            }
+        }
+
+        private float DrawTextRun(string text, float x, float y, Color color)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return 0f;
+            }
+
+            Vector2 size = syntaxStyle.CalcSize(new GUIContent(text));
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.Label(
+                new Rect(x, y, Mathf.Max(1f, size.x + 2f), lineAdvance),
+                text,
+                syntaxStyle);
+            GUI.color = previous;
+            return size.x;
         }
 
         private void ProcessEditorShortcuts()
@@ -344,6 +562,10 @@ namespace AdvancedRimTalk.UI
             }
 
             string resultText;
+            ArtiEditorAnalysis sourceAnalysis = intelligence.AnalyzeCode(
+                source,
+                session.GetGlobalNames(),
+                true);
             try
             {
                 resultText = FormatResult(session.Execute(source));
@@ -354,7 +576,7 @@ namespace AdvancedRimTalk.UI
                 resultText = "REPL error: " + exception.Message;
             }
 
-            history.Add(new ReplEntry(source, resultText));
+            history.Add(new ReplEntry(source, resultText, sourceAnalysis));
             if (history.Count > MaxHistory)
             {
                 history.RemoveAt(0);
@@ -362,44 +584,26 @@ namespace AdvancedRimTalk.UI
 
             historyIndex = history.Count;
 
-            RebuildTranscript();
             scrollToBottom = true;
         }
 
         private void ClearTranscript()
         {
             history.Clear();
-            transcript = string.Empty;
+            input = string.Empty;
+            analyzedInput = null;
+            inputAnalysis = null;
             outputScroll = Vector2.zero;
             historyIndex = 0;
             historyDraft = string.Empty;
+            session.Reset();
+            focusEditor = true;
         }
 
-        private void RebuildTranscript()
+        private static string FormatResult(ArtiReplExecution replExecution)
         {
             StringBuilder builder = new StringBuilder();
-            foreach (ReplEntry entry in history)
-            {
-                string source = NormalizeLineEndings(entry.Source);
-                string[] lines = source.Split(new[] { '\n' }, StringSplitOptions.None);
-                builder.Append(">>> ").AppendLine(lines.Length == 0 ? string.Empty : lines[0]);
-                for (int index = 1; index < lines.Length; index++)
-                {
-                    builder.Append("... ").AppendLine(lines[index]);
-                }
-
-                if (entry.Result.Length > 0)
-                {
-                    builder.AppendLine(entry.Result);
-                }
-            }
-
-            transcript = builder.ToString().TrimEnd('\r', '\n');
-        }
-
-        private static string FormatResult(ArtiExecutionResult execution)
-        {
-            StringBuilder builder = new StringBuilder();
+            ArtiExecutionResult execution = replExecution == null ? null : replExecution.Result;
             string output = execution == null ? string.Empty : NormalizeLineEndings(execution.Output).TrimEnd('\r', '\n');
             if (output.Length > 0)
             {
@@ -425,6 +629,24 @@ namespace AdvancedRimTalk.UI
                     }
 
                     builder.Append(diagnostic.ToString());
+                }
+            }
+
+            if (replExecution != null && replExecution.Warnings != null)
+            {
+                foreach (string warning in replExecution.Warnings)
+                {
+                    if (string.IsNullOrEmpty(warning))
+                    {
+                        continue;
+                    }
+
+                    if (builder.Length > 0)
+                    {
+                        builder.AppendLine();
+                    }
+
+                    builder.Append("warn: ").Append(warning);
                 }
             }
 
@@ -619,27 +841,93 @@ namespace AdvancedRimTalk.UI
             return (value ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n');
         }
 
+        private static Color GetSyntaxColor(ArtiSyntaxRole role)
+        {
+            switch (role)
+            {
+                case ArtiSyntaxRole.Comment:
+                    return CommentColor;
+                case ArtiSyntaxRole.Keyword:
+                    return KeywordColor;
+                case ArtiSyntaxRole.String:
+                    return StringColor;
+                case ArtiSyntaxRole.Number:
+                    return NumberColor;
+                case ArtiSyntaxRole.Boolean:
+                    return BooleanColor;
+                case ArtiSyntaxRole.Builtin:
+                    return BuiltinColor;
+                case ArtiSyntaxRole.Operator:
+                    return OperatorColor;
+                case ArtiSyntaxRole.Punctuation:
+                    return PunctuationColor;
+                case ArtiSyntaxRole.Invalid:
+                    return InvalidColor;
+                default:
+                    return IdentifierColor;
+            }
+        }
+
+        private static void RemoveBackgrounds(GUIStyle style)
+        {
+            style.normal.background = null;
+            style.hover.background = null;
+            style.active.background = null;
+            style.focused.background = null;
+            style.onNormal.background = null;
+            style.onHover.background = null;
+            style.onActive.background = null;
+            style.onFocused.background = null;
+        }
+
+        private static void SetTextColors(GUIStyle style, Color color)
+        {
+            style.normal.textColor = color;
+            style.hover.textColor = color;
+            style.active.textColor = color;
+            style.focused.textColor = color;
+            style.onNormal.textColor = color;
+            style.onHover.textColor = color;
+            style.onActive.textColor = color;
+            style.onFocused.textColor = color;
+        }
+
         private sealed class ReplEntry
         {
-            public ReplEntry(string source, string result)
+            public ReplEntry(string source, string result, ArtiEditorAnalysis analysis)
             {
                 Source = source ?? string.Empty;
                 Result = result ?? string.Empty;
+                Analysis = analysis;
             }
 
             public string Source { get; }
             public string Result { get; }
+            public ArtiEditorAnalysis Analysis { get; }
         }
+    }
+
+    internal sealed class ArtiReplExecution
+    {
+        public ArtiReplExecution(ArtiExecutionResult result, IList<string> warnings)
+        {
+            Result = result;
+            Warnings = warnings ?? new List<string>();
+        }
+
+        public ArtiExecutionResult Result { get; }
+        public IList<string> Warnings { get; }
     }
 
     internal sealed class ArtiReplSession
     {
         private readonly LiveValueProvider provider = new LiveValueProvider();
+        private readonly List<string> warnings = new List<string>();
         private ArtiExecutionContext context;
         private ArtiExecutor executor;
         private Game game;
 
-        public ArtiExecutionResult Execute(string source)
+        public ArtiReplExecution Execute(string source)
         {
             EnsureInitialized();
             Game currentGame = GetCurrentGame();
@@ -651,7 +939,26 @@ namespace AdvancedRimTalk.UI
             }
 
             provider.Refresh(CreatePromptContext());
-            return executor.Execute(source, context);
+            warnings.Clear();
+            ArtiExecutionResult result = executor.Execute(source, context);
+            return new ArtiReplExecution(result, new List<string>(warnings));
+        }
+
+        public IEnumerable<string> GetGlobalNames()
+        {
+            EnsureInitialized();
+            return context.Globals.Keys;
+        }
+
+        public void Reset()
+        {
+            if (context != null)
+            {
+                context.Globals.Clear();
+            }
+
+            warnings.Clear();
+            executor = new ArtiExecutor();
         }
 
         private void EnsureInitialized()
@@ -668,6 +975,7 @@ namespace AdvancedRimTalk.UI
                 options: new ArtiExecutionOptions
                 {
                     PersistVariables = true,
+                    AllowGlobalRedeclare = true,
                     IncludeRuntimeErrorsInOutput = true,
                     MaxSteps = 10000,
                     MaxCallDepth = 64
@@ -682,6 +990,7 @@ namespace AdvancedRimTalk.UI
             };
             context.WarningSink = delegate(string message)
             {
+                warnings.Add(message ?? string.Empty);
                 if (Prefs.DevMode)
                 {
                     Log.Warning("Advanced RimTalk Arti REPL: " + message);
