@@ -30,5 +30,7 @@
     <Compile Include="..\Source\Arti\ArtiSymbols.cs" Link="ArtiSymbols.cs" />
     <Compile Include="..\Source\Arti\ArtiDocumentParser.cs" Link="ArtiDocumentParser.cs" />
     <Compile Include="..\Source\Integration\RimTalkArtiPawnAgeParts.cs" Link="RimTalkArtiPawnAgeParts.cs" />
+    <Compile Include="..\Source\UI\ArtiEditorText.cs" Link="ArtiEditorText.cs" />
+    <Compile Include="ArtiEditorTextChecks.cs" />
   </ItemGroup>
 </Project>

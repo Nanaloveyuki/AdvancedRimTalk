@@ -9,6 +9,7 @@ namespace AdvancedRimTalk.PromptChecks
         private static void Main()
         {
             ArtiChecks.Run();
+            ArtiEditorTextChecks.Run();
             ArtiExecutorChecks.Run();
             ArtiPawnInfoChecks.Run();
             CheckMultilineAndMultipleExpressions();

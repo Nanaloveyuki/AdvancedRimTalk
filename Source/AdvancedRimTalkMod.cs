@@ -1,6 +1,7 @@
 using System.Reflection;
 using AdvancedRimTalk.Integration;
 using AdvancedRimTalk.Settings;
+using AdvancedRimTalk.UI;
 using HarmonyLib;
 using UnityEngine;
 using Verse;
@@ -9,6 +10,9 @@ namespace AdvancedRimTalk
 {
     public sealed class AdvancedRimTalkMod : Mod
     {
+        private readonly ArtiReplPage _artiReplPage = new ArtiReplPage();
+        private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
+
         internal static AdvancedRimTalkSettings Settings { get; private set; }
 
         internal static bool IsPlaceholderLayerEnabled
@@ -93,6 +97,16 @@ namespace AdvancedRimTalk
                     10);
                 listing.Label("AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip".Translate());
             }
+        }
+
+        internal void DrawArtiRepl(Rect inRect)
+        {
+            _artiReplPage.Draw(inRect);
+        }
+
+        internal void DrawArtiEditor(Rect inRect)
+        {
+            _artiCodeEditorPage.Draw(inRect);
         }
     }
 }

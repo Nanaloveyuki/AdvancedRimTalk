@@ -63,7 +63,7 @@ The default takeover document emits a system instruction, the current pawn/dialo
 
 ## Settings UI
 
-When `Nanaloveyuki.IrisMenus` is active, Advanced RimTalk registers its existing settings page through IrisMenus' public `RegisterListing` API. The integration is optional and reflection-based: no `IrisMenus.dll` is shipped with this mod, and the original RimWorld settings dialog remains the fallback when IrisMenus is absent or incompatible.
+When `Nanaloveyuki.IrisMenus` is active, Advanced RimTalk registers its settings page plus separate `Arti Editor` and `Arti REPL` SubItems through IrisMenus' public API. The Editor edits and analyzes the takeover document without executing it; the REPL keeps its own history and executes Arti against the current selection/map without creating a RimTalk talk request. Enter runs in the REPL and Shift+Enter inserts a newline. The integration is optional and reflection-based: no `IrisMenus.dll` is shipped with this mod, and the original RimWorld settings dialog remains the fallback when IrisMenus is absent or incompatible.
 
 ## Arti language design
 

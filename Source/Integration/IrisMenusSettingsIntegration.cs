@@ -1,5 +1,7 @@
 using System;
 using System.Reflection;
+using AdvancedRimTalk.UI;
+using UnityEngine;
 using Verse;
 
 namespace AdvancedRimTalk.Integration
@@ -30,16 +32,47 @@ namespace AdvancedRimTalk.Integration
                 if (registerListing == null)
                 {
                     Log.Warning("Advanced RimTalk found IrisMenus, but its RegisterListing API is unavailable.");
-                    return;
+                }
+                else
+                {
+                    Func<string> title = owner.SettingsCategory;
+                    Action<Listing_Standard> draw = owner.DrawSettingsPage;
+                    registerListing.Invoke(null, new object[] { owner, "general", title, draw, null });
                 }
 
-                Func<string> title = owner.SettingsCategory;
-                Action<Listing_Standard> draw = owner.DrawSettingsPage;
-                registerListing.Invoke(null, new object[] { owner, "general", title, draw, null });
+                MethodInfo registerSubItem = FindRegisterSubItem(registryType);
+                if (registerSubItem == null)
+                {
+                    Log.Warning("Advanced RimTalk found IrisMenus, but its RegisterSubItem API is unavailable.");
+                }
+                else
+                {
+                    Func<string> replTitle = delegate
+                    {
+                        return "AdvancedRimTalk.ArtiRepl.Title".Translate().ToString();
+                    };
+                    RegisterSubItem(
+                        registerSubItem,
+                        owner,
+                        "arti-repl",
+                        replTitle,
+                        owner.DrawArtiRepl);
+
+                    Func<string> editorTitle = delegate
+                    {
+                        return "AdvancedRimTalk.ArtiEditor.Title".Translate().ToString();
+                    };
+                    RegisterSubItem(
+                        registerSubItem,
+                        owner,
+                        "arti-editor",
+                        editorTitle,
+                        owner.DrawArtiEditor);
+                }
             }
             catch (Exception exception)
             {
-                Log.Warning("Advanced RimTalk could not register its settings page with IrisMenus: " + exception);
+                Log.Warning("Advanced RimTalk could not register its IrisMenus pages: " + exception);
             }
         }
 
@@ -63,6 +96,60 @@ namespace AdvancedRimTalk.Integration
                     || parameters[1].ParameterType != typeof(string)
                     || parameters[2].ParameterType != typeof(Func<string>)
                     || parameters[3].ParameterType != typeof(Action<Listing_Standard>)
+                    || parameters[4].ParameterType != typeof(Action))
+                {
+                    continue;
+                }
+
+                return method;
+            }
+
+            return null;
+        }
+
+        private static void RegisterSubItem(
+            MethodInfo registerSubItem,
+            AdvancedRimTalkMod owner,
+            string pageId,
+            Func<string> title,
+            Action<Rect> draw)
+        {
+            try
+            {
+                registerSubItem.Invoke(
+                    null,
+                    new object[] { owner, pageId, title, draw, null });
+            }
+            catch (Exception exception)
+            {
+                Log.Warning(
+                    "Advanced RimTalk could not register IrisMenus SubItem '"
+                    + pageId
+                    + "': "
+                    + exception);
+            }
+        }
+
+        private static MethodInfo FindRegisterSubItem(Type registryType)
+        {
+            if (registryType == null)
+            {
+                return null;
+            }
+
+            foreach (MethodInfo method in registryType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (!string.Equals(method.Name, "RegisterSubItem", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                ParameterInfo[] parameters = method.GetParameters();
+                if (parameters.Length != 5
+                    || parameters[0].ParameterType != typeof(Mod)
+                    || parameters[1].ParameterType != typeof(string)
+                    || parameters[2].ParameterType != typeof(Func<string>)
+                    || parameters[3].ParameterType != typeof(Action<Rect>)
                     || parameters[4].ParameterType != typeof(Action))
                 {
                     continue;

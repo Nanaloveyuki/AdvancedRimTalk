@@ -11,4 +11,11 @@
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>Only {{% ... %}} Arti blocks execute here. Other text becomes the system message.</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>Replace RimTalk prompt builder</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>Build request messages with Advanced RimTalk instead of RimTalk presets and Scriban rendering. RimTalk still handles triggers and the model client.</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
+  <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
+  <AdvancedRimTalk.ArtiRepl.Run>Run</AdvancedRimTalk.ArtiRepl.Run>
+  <AdvancedRimTalk.ArtiRepl.Clear>Clear</AdvancedRimTalk.ArtiRepl.Clear>
+  <AdvancedRimTalk.ArtiEditor.Title>Arti Editor</AdvancedRimTalk.ArtiEditor.Title>
+  <AdvancedRimTalk.ArtiEditor.Reset>Reset</AdvancedRimTalk.ArtiEditor.Reset>
+  <AdvancedRimTalk.ArtiEditor.NoDiagnostics>No errors</AdvancedRimTalk.ArtiEditor.NoDiagnostics>
+  <AdvancedRimTalk.ArtiEditor.DiagnosticSummary>{0} errors, {1} warnings</AdvancedRimTalk.ArtiEditor.DiagnosticSummary>
 </LanguageData>

@@ -11,4 +11,11 @@
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>这里只执行 {{% ... %}} Arti 代码块，其余文本会作为 system 消息发送。</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>接管 RimTalk Prompt 构建</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>改由 Advanced RimTalk 构建请求消息，不走 RimTalk 预设和 Scriban 渲染。RimTalk 仍负责触发和模型客户端。</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
+  <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
+  <AdvancedRimTalk.ArtiRepl.Run>运行</AdvancedRimTalk.ArtiRepl.Run>
+  <AdvancedRimTalk.ArtiRepl.Clear>清屏</AdvancedRimTalk.ArtiRepl.Clear>
+  <AdvancedRimTalk.ArtiEditor.Title>Arti 编辑器</AdvancedRimTalk.ArtiEditor.Title>
+  <AdvancedRimTalk.ArtiEditor.Reset>重置</AdvancedRimTalk.ArtiEditor.Reset>
+  <AdvancedRimTalk.ArtiEditor.NoDiagnostics>无错误</AdvancedRimTalk.ArtiEditor.NoDiagnostics>
+  <AdvancedRimTalk.ArtiEditor.DiagnosticSummary>错误 {0}，警告 {1}</AdvancedRimTalk.ArtiEditor.DiagnosticSummary>
 </LanguageData>
