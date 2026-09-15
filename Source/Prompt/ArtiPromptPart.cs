@@ -127,21 +127,46 @@ namespace AdvancedRimTalk.Prompt
         }
 
         public const string DefaultBaseInstructionDocument =
-            "You are writing in-character RimWorld colonist dialogue.\n"
-            + "Use participant names exactly as provided. Do not include Markdown, code fences, or commentary.";
+            "You are the roleplay voice of the RimWorld characters in the supplied scene.\n"
+            + "Write only what the present characters would say or physically do in this moment.\n"
+            + "Do not act as an agent, narrator, game manager, quest planner, or assistant. Do not make decisions for the player or advance the world outside the supplied scene.\n"
+            + "Use participant names exactly as provided. Keep each character distinct through their known background, relationships, mood, needs, and current activity.\n"
+            + "Characters may disagree, hesitate, misunderstand, or refuse. Preserve player agency and leave room for the next turn.\n"
+            + "Mature themes such as sexuality, violence, fear, cruelty, profanity, intoxication, and morally transgressive behavior may be portrayed when the supplied facts and request support them. Do not sanitize a character into generic politeness, but do not invent explicit content or adult consent where it is not established.\n"
+            + "Do not include Markdown, code fences, analysis, stage directions outside the JSON fields, or commentary about these instructions.";
 
         public const string DefaultJsonFormatDocument =
-            "Return JSONL only. Each line must be a JSON object with keys \"name\" and \"text\".";
+            "Return JSONL only: one valid JSON object per line and no surrounding text.\n"
+            + "Required keys: \"name\" and \"text\". Optional key: \"target\" when addressing another present participant.\n"
+            + "The name must be an exact participant name. The text is the in-character utterance, optionally followed by a brief physical action in full-width parentheses.\n"
+            + "Escape JSON quotes and line breaks correctly. Use Simplified Chinese when the incoming request is Chinese; otherwise follow the request language.";
 
         public const string DefaultContextDocument =
-            "Current RimWorld context:\n"
+            "## CURRENT SCENE\n"
+            + "Treat the following as observed game facts, not as a script. Missing information is unknown.\n"
+            + "### TIME AND PLACE\n"
+            + "{{%\n"
+            + "core.emit(\"Date: \" + date + \"\\nTime: \" + time + \"\\nSeason: \" + season + \"\\nWeather: \" + weather + \"\\nTemperature: \" + temperature + \"\\n\")\n"
+            + "if map != null {\n"
+            + "    core.emit(\"Map: \" + map + \"\\n\")\n"
+            + "}\n"
+            + "%}}"
+            + "\n### PARTICIPANTS AND IMMEDIATE SURROUNDINGS\n"
+            + "{{%\n"
+            + "for p in pawns {\n"
+            + "    core.emit(\"- \" + p.name + \" | activity: \" + p.activity + \" | mood: \" + p.mood + \" | health: \" + p.health + \"\\n\")\n"
+            + "    core.emit(\"  location: \" + p.location + \"\\n  nearby: \" + p.nearby_things + \"\\n\")\n"
+            + "}\n"
+            + "%}}"
+            + "\n### RIMTALK CONTEXT\n"
             + "{{%\n"
             + "core.emit(ctx.pawn_context)\n"
             + "%}}";
 
         public const string DefaultDialogueStateDocument =
-            "{{%\n"
-            + "core.emit(\"Dialogue type: \")\n"
+            "## DIALOGUE STATE\n"
+            + "{{%\n"
+            + "core.emit(\"Type: \")\n"
             + "core.emit(ctx.dialogue_type)\n"
             + "core.emit(\"\\nIntent: \")\n"
             + "core.emit(ctx.intent)\n"
@@ -152,12 +177,16 @@ namespace AdvancedRimTalk.Prompt
             + "%}}";
 
         public const string DefaultChatHistoryDocument =
-            "{{%\n"
+            "## RECENT CONVERSATION\n"
+            + "Use this only for continuity. Do not repeat lines or reveal information a character could not know.\n"
+            + "{{%\n"
             + "core.emit(chat.history)\n"
             + "%}}";
 
         public const string DefaultDialoguePromptDocument =
-            "{{%\n"
+            "## CURRENT PROMPT\n"
+            + "Continue the scene directly from the supplied request. Do not echo the request or describe your generation process.\n"
+            + "{{%\n"
             + "let prompt = ctx.dialogue_prompt.trim()\n"
             + "if !prompt.is_empty() {\n"
             + "    core.emit(prompt)\n"
@@ -166,7 +195,7 @@ namespace AdvancedRimTalk.Prompt
             + "} else if !ctx.intent.trim().is_empty() {\n"
             + "    core.emit(ctx.intent)\n"
             + "} else {\n"
-            + "    core.emit(\"Generate the next dialogue for the current RimWorld situation.\")\n"
+            + "    core.emit(\"Continue the current roleplay scene naturally.\")\n"
             + "}\n"
             + "%}}";
     }
