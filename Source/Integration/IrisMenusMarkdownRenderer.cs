@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using AdvancedRimTalk.UI;
 using UnityEngine;
 using Verse;
 
@@ -7,19 +8,19 @@ namespace AdvancedRimTalk.Integration
 {
     internal sealed class IrisMenusMarkdownRenderer
     {
-        private readonly object markdown;
-        private readonly MethodInfo measureMethod;
-        private readonly MethodInfo drawMethod;
+        private readonly Func<string> getMarkdown;
+        private readonly MethodInfo parseMethod;
+        private readonly ArtiEditorIntelligence intelligence = new ArtiEditorIntelligence();
+        private string cachedSource;
+        private string renderedText;
         private bool failureLogged;
 
         private IrisMenusMarkdownRenderer(
-            object markdown,
-            MethodInfo measureMethod,
-            MethodInfo drawMethod)
+            Func<string> getMarkdown,
+            MethodInfo parseMethod)
         {
-            this.markdown = markdown;
-            this.measureMethod = measureMethod;
-            this.drawMethod = drawMethod;
+            this.getMarkdown = getMarkdown;
+            this.parseMethod = parseMethod;
         }
 
         public bool Failed { get; private set; }
@@ -39,64 +40,18 @@ namespace AdvancedRimTalk.Integration
                     return null;
                 }
 
-                MethodInfo factory = null;
-                foreach (MethodInfo method in markdownType.GetMethods(
-                    BindingFlags.Public | BindingFlags.Static))
-                {
-                    if (!string.Equals(
-                            method.Name,
-                            "Dynamic",
-                            StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    ParameterInfo[] parameters = method.GetParameters();
-                    if ((parameters.Length == 1
-                        && parameters[0].ParameterType == typeof(Func<string>))
-                        || (parameters.Length == 2
-                            && parameters[0].ParameterType == typeof(Func<string>)
-                            && parameters[1].IsOptional))
-                    {
-                        factory = method;
-                        break;
-                    }
-                }
-
-                if (factory == null)
-                {
-                    return null;
-                }
-
-                object document = factory.Invoke(
+                MethodInfo parse = markdownType.GetMethod(
+                    "Parse",
+                    BindingFlags.Public | BindingFlags.Static,
                     null,
-                    factory.GetParameters().Length == 1
-                        ? new object[] { getMarkdown }
-                        : new object[] { getMarkdown, null });
-                if (document == null)
-                {
-                    return null;
-                }
-
-                Type documentType = document.GetType();
-                MethodInfo measure = documentType.GetMethod(
-                    "Measure",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new[] { typeof(float) },
+                    new[] { typeof(string) },
                     null);
-                MethodInfo draw = documentType.GetMethod(
-                    "Draw",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new[] { typeof(Rect) },
-                    null);
-                if (measure == null || draw == null)
+                if (parse == null)
                 {
                     return null;
                 }
 
-                return new IrisMenusMarkdownRenderer(document, measure, draw);
+                return new IrisMenusMarkdownRenderer(getMarkdown, parse);
             }
             catch (Exception exception)
             {
@@ -137,10 +92,10 @@ namespace AdvancedRimTalk.Integration
         {
             try
             {
-                object value = measureMethod.Invoke(
-                    markdown,
-                    new object[] { Mathf.Max(1f, width) });
-                return Mathf.Max(0f, Convert.ToSingle(value));
+                Refresh();
+                return Mathf.Max(
+                    0f,
+                    Text.CalcHeight(renderedText ?? string.Empty, Mathf.Max(1f, width)));
             }
             catch (Exception exception)
             {
@@ -153,12 +108,36 @@ namespace AdvancedRimTalk.Integration
         {
             try
             {
-                drawMethod.Invoke(markdown, new object[] { rect });
+                Refresh();
+                Widgets.Label(rect, renderedText ?? string.Empty);
             }
             catch (Exception exception)
             {
                 LogFailure(exception);
             }
+        }
+
+        private void Refresh()
+        {
+            string source = getMarkdown() ?? string.Empty;
+            if (renderedText != null
+                && string.Equals(cachedSource, source, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            renderedText = ArtiDocumentationMarkup.Render(
+                source,
+                ParseMarkdown,
+                intelligence);
+            cachedSource = source;
+            Failed = false;
+        }
+
+        private string ParseMarkdown(string source)
+        {
+            object value = parseMethod.Invoke(null, new object[] { source });
+            return value as string ?? Convert.ToString(value) ?? string.Empty;
         }
 
         private void LogFailure(Exception exception)

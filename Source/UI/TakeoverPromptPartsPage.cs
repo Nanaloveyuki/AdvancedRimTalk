@@ -24,6 +24,13 @@ namespace AdvancedRimTalk.UI
         private Vector2 partListScrollPosition = Vector2.zero;
         private Vector2 contentScrollPosition = Vector2.zero;
         private string selectedPartId;
+        private readonly ArtiEditorIntelligence contentIntelligence = new ArtiEditorIntelligence();
+        private ArtiEditorAnalysis contentAnalysis;
+        private string analyzedContent;
+        private GUIStyle contentInputStyle;
+        private GUIStyle contentSyntaxStyle;
+        private float contentLineAdvance;
+        private bool contentStylesInitialized;
 
         public void Draw(Rect inRect)
         {
@@ -224,12 +231,131 @@ namespace AdvancedRimTalk.UI
             y += 22f;
 
             Rect editorRect = new Rect(rect.x + 10f, y, rect.width - 20f, rect.yMax - y - 5f);
-            float innerWidth = editorRect.width - 20f;
-            float contentHeight = Mathf.Ceil(Mathf.Max(editorRect.height, Text.CalcHeight(part.Content, innerWidth) + 25f));
-            Rect viewRect = new Rect(0f, 0f, innerWidth, contentHeight);
-            Widgets.BeginScrollView(editorRect, ref contentScrollPosition, viewRect);
-            part.Content = Widgets.TextArea(new Rect(0f, 0f, innerWidth, contentHeight), part.Content ?? string.Empty);
-            Widgets.EndScrollView();
+            DrawContentEditor(editorRect, part);
+        }
+
+        private void DrawContentEditor(Rect editorRect, ArtiPromptPart part)
+        {
+            bool previousWordWrap = Text.WordWrap;
+            try
+            {
+                Text.WordWrap = false;
+                EnsureContentEditorStyles();
+
+                string content = ArtiEditorText.NormalizeLineEndings(part.Content);
+                if (!string.Equals(part.Content, content, StringComparison.Ordinal))
+                {
+                    part.Content = content;
+                }
+
+                RefreshContentAnalysis(content);
+                float viewportWidth = Mathf.Max(1f, editorRect.width - 20f);
+                float contentWidth = Mathf.Max(
+                    viewportWidth,
+                    GetMaxContentLineWidth(content)
+                        + contentInputStyle.padding.left
+                        + contentInputStyle.padding.right
+                        + 16f);
+                float contentHeight = Mathf.Ceil(Mathf.Max(
+                    editorRect.height,
+                    ArtiEditorText.GetLineCount(content) * contentLineAdvance
+                        + contentInputStyle.padding.top
+                        + contentInputStyle.padding.bottom
+                        + 8f));
+                Rect viewRect = new Rect(0f, 0f, contentWidth, contentHeight);
+                Widgets.BeginScrollView(editorRect, ref contentScrollPosition, viewRect);
+                try
+                {
+                    Rect syntaxRect = new Rect(
+                        contentInputStyle.padding.left,
+                        contentInputStyle.padding.top,
+                        Mathf.Max(
+                            1f,
+                            contentWidth
+                                - contentInputStyle.padding.left
+                                - contentInputStyle.padding.right),
+                        Mathf.Max(
+                            1f,
+                            contentHeight
+                                - contentInputStyle.padding.top
+                                - contentInputStyle.padding.bottom));
+                    GUI.Label(
+                        syntaxRect,
+                        ArtiSyntaxRendering.ToRichText(content, contentAnalysis),
+                        contentSyntaxStyle);
+                    GUI.SetNextControlName("AdvancedRimTalk.PromptParts.Content");
+                    string edited = GUI.TextArea(
+                        new Rect(0f, 0f, contentWidth, contentHeight),
+                        content,
+                        contentInputStyle);
+                    string normalized = ArtiEditorText.NormalizeLineEndings(edited);
+                    if (!string.Equals(content, normalized, StringComparison.Ordinal))
+                    {
+                        part.Content = normalized;
+                        contentAnalysis = null;
+                        analyzedContent = null;
+                    }
+                }
+                finally
+                {
+                    Widgets.EndScrollView();
+                }
+            }
+            finally
+            {
+                Text.WordWrap = previousWordWrap;
+            }
+        }
+
+        private void RefreshContentAnalysis(string content)
+        {
+            if (contentAnalysis != null
+                && string.Equals(analyzedContent, content, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            contentAnalysis = contentIntelligence.AnalyzeDocument(content);
+            analyzedContent = content;
+        }
+
+        private void EnsureContentEditorStyles()
+        {
+            if (contentStylesInitialized)
+            {
+                return;
+            }
+
+            contentInputStyle = ArtiSyntaxRendering.CreateInputStyle();
+            contentSyntaxStyle = ArtiSyntaxRendering.CreateSyntaxStyle(contentInputStyle);
+            contentLineAdvance = Mathf.Max(16f, contentInputStyle.lineHeight);
+            contentStylesInitialized = true;
+        }
+
+        private float GetMaxContentLineWidth(string content)
+        {
+            float width = 0f;
+            int lineStart = 0;
+            while (lineStart <= content.Length)
+            {
+                int lineEnd = ArtiEditorText.GetLineEnd(content, lineStart);
+                if (lineEnd > lineStart)
+                {
+                    width = Mathf.Max(
+                        width,
+                        contentSyntaxStyle.CalcSize(new GUIContent(
+                            content.Substring(lineStart, lineEnd - lineStart))).x);
+                }
+
+                if (lineEnd >= content.Length)
+                {
+                    break;
+                }
+
+                lineStart = lineEnd + 1;
+            }
+
+            return width;
         }
 
         private void ShowRoleMenu(ArtiPromptPart part)
