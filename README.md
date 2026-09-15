@@ -67,9 +67,9 @@ When `Nanaloveyuki.IrisMenus` is active, Advanced RimTalk registers its settings
 
 ## Arti language design
 
-The formal language and Prompt document design is maintained in [`docs/Arti/zh_cn/index.md`](docs/Arti/zh_cn/index.md). `tmp/dsl.md` remains an experimental sketch. The RimWorld runtime provider exposes game data under `core.game`, `core.world`, `core.maps`, `core.pawns`, `core.factions`, `core.settlements`, `core.world_objects`, `core.mods`, `core.defs`, `core.query`, and `core.find`.
+The formal language and Prompt document design is maintained in [`docs/Arti/zh_cn/index.md`](docs/Arti/zh_cn/index.md). `tmp/dsl.md` remains an experimental sketch. The RimWorld runtime provider exposes game data under `core.game`, `core.world`, `core.maps`, `core.pawns`, `core.factions`, `core.settlements`, `core.world_objects`, `core.mods`, `core.defs`, `core.query`, and `core.find`. When RimTalk - Expand Memory is installed and active, Arti can import the optional `memory` module for its reflected memory and common-knowledge API.
 
-The actual Arti document parser extracts only `{{% ... %}}` blocks. It preserves source locations, ignores Markdown fenced/inline code and native Scriban blocks, and leaves all text outside Arti blocks unchanged. The RimTalk symbol adapter reads the installed RimTalk variable registry at runtime; RimTalk - Expand Memory is reference-only and is not a project dependency.
+The actual Arti document parser extracts only `{{% ... %}}` blocks. It preserves source locations, ignores Markdown fenced/inline code and native Scriban blocks, and leaves all text outside Arti blocks unchanged. The RimTalk symbol adapter reads the installed RimTalk variable registry at runtime; RimTalk - Expand Memory is discovered through reflection when present, so no compile-time reference is shipped.
 
 For detailed Pawn data, use the read-only `pawn.info` object (or `core.pawn.info` for the current Pawn). It exposes structured age decomposition, health state, all Hediffs including hidden ones, needs, prompt context, and the public Pawn trackers; existing `pawn.age`, `pawn.health`, and raw tracker paths remain compatible.
 

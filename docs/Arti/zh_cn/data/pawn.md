@@ -50,6 +50,13 @@ core.emit(name)
 | `cleanliness` | 清洁度 |
 | `terrain` | 所在地形标签 |
 | `surroundings` | 周边环境文本 |
+| `nearby_things` / `nearby_things_text` | 周边环境文本 |
+| `nearby_things_raw` | 周边 Thing 列表 |
+| `nearby_items` | 周边物品列表 |
+| `nearby_buildings` | 周边建筑列表 |
+| `nearby_plants` | 周边植物列表 |
+| `nearby_animals` | 周边动物列表 |
+| `nearby_filth` | 周边污物列表 |
 
 `race` 在 Biotech 可用并且存在异种型时优先返回异种型标签，否则返回种族 Def 标签。
 
@@ -73,7 +80,7 @@ if pawn != null {
 }
 ```
 
-完整字段按身份、年龄、健康、需求、提示词上下文和 Tracker 分类，见 [pawn.info 字段参考](pawn_info.md)。
+完整字段按身份、年龄、健康、需求、提示词上下文、环境文本和 Tracker 分类，见 [pawn.info 字段参考](pawn_info.md)。
 
 其中：
 

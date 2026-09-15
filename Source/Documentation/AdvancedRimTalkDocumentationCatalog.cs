@@ -48,6 +48,11 @@ namespace AdvancedRimTalk.Documentation
                 "data/",
                 "AdvancedRimTalk.Documentation.Data"),
             new CategoryDefinition(
+                "memory",
+                "memory/index.md",
+                "memory/",
+                "AdvancedRimTalk.Documentation.Memory"),
+            new CategoryDefinition(
                 "compatibility",
                 "compatibility/index.md",
                 "compatibility/",

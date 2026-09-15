@@ -47,6 +47,7 @@
   <AdvancedRimTalk.Documentation.Core>core 函数</AdvancedRimTalk.Documentation.Core>
   <AdvancedRimTalk.Documentation.CoreString>core.string 函数</AdvancedRimTalk.Documentation.CoreString>
   <AdvancedRimTalk.Documentation.Data>游戏数据</AdvancedRimTalk.Documentation.Data>
+  <AdvancedRimTalk.Documentation.Memory>memory 模块</AdvancedRimTalk.Documentation.Memory>
   <AdvancedRimTalk.Documentation.Compatibility>兼容</AdvancedRimTalk.Documentation.Compatibility>
   <AdvancedRimTalk.Documentation.SelectDocument>选择一个文档。</AdvancedRimTalk.Documentation.SelectDocument>
   <AdvancedRimTalk.Documentation.Unavailable>Arti 文档库不可用。</AdvancedRimTalk.Documentation.Unavailable>

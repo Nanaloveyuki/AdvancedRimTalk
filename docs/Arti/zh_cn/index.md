@@ -37,6 +37,7 @@ core.emit("话题：" + topic, newline: true)
 | 学习语法 | [language](language/index.md) |
 | 读取 RimTalk 上下文 | [context](data/context.md) |
 | 查询 RimWorld 数据 | [query](data/query.md) |
+| 读取或管理 Expand Memory | [memory](memory/index.md) |
 | 查找一个函数 | 从下方的函数索引进入 |
 | 处理旧模板 | [art](compatibility/art.md) |
 | 排查执行问题 | [error](guide/error.md) |
@@ -57,6 +58,7 @@ Arti 与 RimTalk 中已有的两种模板语法并存：
 
 - Arti 通过白名单入口读取宿主提供的数据。
 - 游戏对象只开放明确的读取成员；文件、网络和程序集访问不在 Arti 的运行时接口中。
+- 可选 [`memory`](memory/index.md) 模块提供 RimTalk - Expand Memory 的明确读写函数，调用写入函数会改动该 Mod 的记忆数据。
 - `core.emit`、`core.emit_if` 和它们的别名负责输出。
 - 每次执行都有步数上限和函数调用深度上限。
 - 每个代码块拥有独立的局部作用域；需要跨代码块保存文本时使用 [`setvar`](global/setvar.md) 和 [`getvar`](global/getvar.md)。
@@ -192,6 +194,17 @@ Arti 与 RimTalk 中已有的两种模板语法并存：
 - [read](data/read.md)
 - [has](data/has.md)
 - [keys](data/keys.md)
+
+### 可选 `memory` 模块
+
+- [memory](memory/index.md)
+- [use](memory/use.md)
+- [layer](memory/layer.md)
+- [pawn](memory/pawn/index.md)
+- [value](memory/value.md)
+- [knowledge](memory/knowledge/index.md)
+- [knowledge_value](memory/knowledge_value.md)
+- [stats](memory/stats.md)
 
 ### 兼容
 

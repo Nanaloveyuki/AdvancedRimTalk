@@ -1,117 +1,160 @@
 # pawn.info
 
-`pawn.info` 是 Pawn 的稳定只读数据对象。它可以用于当前 Pawn、接收者、集合中的 Pawn 和选择器返回的 Pawn：
+`pawn.info` 是 Pawn 的结构化信息对象。它把身份、年龄、健康、需求、RimTalk 上下文和公开 Tracker 集中到一个稳定入口。
 
 ```arti
-let target = core.pawn.current
-if target != null {
-    core.emit(target.info.name)
+if pawn != null {
+    let age = pawn.info.age.biological
+    core.emit(pawn.info.name + "：" + age.years + "岁", newline: true)
 }
 ```
 
-`core.pawn.info` 直接指向当前 Pawn 的信息。没有当前 Pawn 时，它仍然存在，但只有 `exists = false` 可用。
+`core.pawn.info` 指向当前 Pawn 的同一类信息对象；没有当前 Pawn 时，`core.pawn.info.exists` 为 `false`。
 
-## 年龄
-
-年龄由 RimWorld 的年龄 tick 分解得到，不依赖本地化文本。
-
-| 路径 | 含义 |
-| --- | --- |
-| `info.age.biological` | 生理年龄分解 |
-| `info.age.chronological` | 历法年龄分解 |
-| `info.age.biological_ticks` | 生理年龄的原始 tick |
-| `info.age.chronological_ticks` | 历法年龄的原始 tick |
-| `info.age.number` | RimWorld 的年龄显示文本 |
-| `info.age.tooltip` | RimWorld 的年龄 Tooltip 文本 |
-| `info.age.life_stage` | 当前生命阶段 |
-| `info.age.growth` | 当前成长进度 |
-| `info.age.adult` | 是否达到成年年龄 |
-
-`biological` 和 `chronological` 都包含以下字段：
+## 顶层字段
 
 | 字段 | 含义 |
 | --- | --- |
-| `ticks` | 该年龄的 tick 数 |
-| `years` | 完整年数 |
-| `quadrums` / `quadrum` | 完整象数，一个象为 15 天 |
-| `days` | 扣除年和象后的剩余完整天数 |
-| `hours` | 扣除年、象和天后的剩余小时数，可以带小数 |
-| `total_years` | 以年表示的总年龄 |
-| `total_quadrums` | 以象表示的总年龄 |
-| `total_days` | 以天表示的总年龄 |
-| `total_hours` | 以小时表示的总年龄 |
+| `exists` | 是否有 Pawn |
+| `raw` | 原始 Pawn 对象，只读读取公开字段/属性 |
+| `name` / `label_short` | 简短显示名称 |
+| `label` | 完整显示名称 |
+| `name_raw` | 原始名称对象 |
+| `id` / `thing_id_number` | Thing 数字 ID |
+| `thing_id` | Thing ID 文本 |
+| `def` / `race_def` | 种族 Def |
+| `def_name` / `def_label` | 种族 Def 标识和标签 |
+| `kind_def` / `kind_def_name` / `kind_label` | PawnKind 信息 |
+| `faction` / `faction_object` | 当前派系名称和派系对象 |
+| `faction_def_name` / `faction_def_label` | 派系 Def 信息 |
+| `host_faction` / `slave_faction` / `home_faction` | Host、Slave 和 Home 派系对象 |
+| `race` / `race_def_name` / `race_def_label` | 种族或异种型显示信息 |
+| `gender` / `title` | 性别和称谓 |
+| `humanlike` / `animal` / `mechanoid` | 常见种族分类 |
+| `colony_mech` / `mutant` / `subhuman` / `entity` | DLC 或特殊 Pawn 分类 |
+| `shambler` / `ghoul` / `awoken_corpse` | 异常或特殊状态分类 |
+| `colonist` / `free_colonist` / `prisoner` / `prisoner_of_colony` | 殖民者和囚犯状态 |
+| `slave` / `slave_of_colony` / `player_controlled` | 奴隶和玩家控制状态 |
+| `dead` / `downed` / `dead_or_downed` / `health_state` | 简要健康状态 |
+| `drafted` | 是否被征召 |
+| `spawned` / `spawned_or_any_parent_spawned` | 是否在地图或容器链上生成 |
+| `destroyed` / `suspended` / `marked_for_discard` / `teleporting` | 生命周期状态 |
+| `became_world_pawn_tick_abs` / `prev_map` | 世界 Pawn 时间和上一地图 |
+| `developmental_stage` | 当前成长阶段枚举文本 |
+| `mental_state` / `mental_state_def` / `mental_state_def_name` | 精神状态 |
+| `in_mental_state` / `in_aggro_mental_state` | 精神状态布尔值 |
+| `inspired` / `inspiration` / `inspiration_def` | 灵感状态 |
+| `job` / `job_raw` / `job_def` / `job_def_name` / `job_def_label` | 当前工作 |
+| `map` / `map_held` | 当前地图和持有地图 |
+| `position` / `position_held` | 当前格和持有格 |
+| `health_scale` | 健康规模 |
+| `location` / `terrain` / `beauty` / `cleanliness` / `surroundings` | RimTalk 环境文本 |
+| `age` | 年龄对象 |
+| `health` | 健康对象 |
+| `needs` | 需求对象 |
+| `prompt` | RimTalk Prompt 上下文对象 |
+| `trackers` | 公开 Tracker 对象集合 |
+| `lifecycle` | 生命周期对象 |
 
-例如，`pawn.info.age.biological.years`、`pawn.info.age.biological.quadrums`、`pawn.info.age.biological.days` 和 `pawn.info.age.biological.hours` 可以直接组合成详细年龄。顶层也提供 `biological_years`、`biological_quadrums`、`biological_days`、`biological_hours` 以及对应的 `chronological_*` 快捷字段。
+## 年龄
 
-出生日期字段包括 `birth_year`、`birth_quadrum`、`birth_day_of_quadrum` 和 `birth_day_of_year`。不带后缀的日期从 1 开始；`*_zero_based` 保留 RimWorld Tracker 的 0 起始值。
+`info.age` 基于 RimWorld 年龄 tick 计算。1 小时为 2,500 tick，1 天为 60,000 tick，1 象为 900,000 tick，1 年为 3,600,000 tick。
+
+| 字段 | 含义 |
+| --- | --- |
+| `exists` / `raw` | 是否有 `Pawn_AgeTracker` 以及原始 Tracker |
+| `biological` / `bio` | 生理年龄分解 |
+| `chronological` / `chrono` | 历法年龄分解 |
+| `biological_ticks` / `chronological_ticks` | 原始 tick |
+| `biological_years` / `chronological_years` | RimWorld 年龄整数年 |
+| `biological_years_float` / `chronological_years_float` | 浮点年数 |
+| `biological_quadrums` / `biological_days` / `biological_hours` | 生理年龄快捷字段 |
+| `chronological_quadrums` / `chronological_days` / `chronological_hours` | 历法年龄快捷字段 |
+| `number` / `number_string` | RimWorld 年龄显示文本 |
+| `tooltip` | RimWorld 年龄 Tooltip 文本 |
+| `birth_year` / `birth_quadrum` | 出生年份和出生象 |
+| `birth_day_of_quadrum` / `birth_day_of_year` | 从 1 开始的出生日 |
+| `birth_day_of_quadrum_zero_based` / `birth_day_of_year_zero_based` | RimWorld Tracker 的 0 起始出生日 |
+| `life_stage` / `life_stage_def` | 生命阶段信息和原始 Def |
+| `life_stage_index` / `cur_life_stage_index` | 生命阶段序号 |
+| `growth` / `growth_tier` / `percent_to_next_growth_tier` / `at_max_growth_tier` | 成长进度 |
+| `adult` / `adult_min_age` / `adult_min_age_ticks` | 成年状态和阈值 |
+| `biological_ticks_per_tick` | 生理年龄推进速度 |
+| `adult_aging_multiplier` / `child_aging_multiplier` | 成年和儿童老化倍率 |
+
+`biological`、`bio`、`chronological` 和 `chrono` 都包含：`ticks`、`years`、`quadrums`、`quadrum`、`days`、`hours`、`total_years`、`total_quadrums`、`total_days`、`total_hours`。
+
+`life_stage` 包含：`exists`、`raw`、`def`、`def_name`、`label`、`adjective`、`developmental_stage`、`reproductive`、`visible`、`always_downed`、`claimable`、`body_size_factor`、`health_scale_factor`、`hunger_rate_factor`。
 
 ## 健康
 
-| 路径 | 含义 |
+| 字段 | 含义 |
 | --- | --- |
-| `info.health.state` | `Mobile`、`Down` 或 `Dead` |
-| `info.health.state_id` | `PawnHealthState` 数值 |
-| `info.health.mobile` / `downed` / `dead` | 健康状态布尔值 |
-| `info.health.can_bleed` | 是否具有流血条件 |
-| `info.health.in_pain_shock` | 是否处于痛休克阈值 |
-| `info.health.can_crawl` / `can_crawl_or_move` | 爬行或移动能力 |
-| `info.health.lethal_damage_threshold` | 致死伤害阈值 |
-| `info.health.pain_total` | HediffSet 的总疼痛值 |
-| `info.health.bleed_rate_total` | HediffSet 的总流血速率 |
-| `info.health.hediff_count` | 全部健康项数量 |
-| `info.health.visible_hediff_count` | `Hediff.Visible` 为真的数量 |
-| `info.health.hidden_hediff_count` | `Hediff.Visible` 为假的数量 |
-| `info.health.summary` | RimTalk 普通健康摘要 |
-| `info.health.detailed_summary` | RimTalk Full 健康摘要 |
+| `exists` / `raw` | 是否有 `Pawn_HealthTracker` 以及原始 Tracker |
+| `hediff_set` / `capacities` / `summary_health` | 健康内部对象 |
+| `surgery_bills` / `immunity` | 手术账单和免疫 Tracker |
+| `state` / `state_id` | `PawnHealthState` 文本和数值 |
+| `mobile` / `downed` / `dead` | 移动、倒地和死亡状态 |
+| `can_bleed` / `bleeding` | 是否可流血和当前是否有流血速率 |
+| `in_pain_shock` | 是否处于痛休克 |
+| `can_crawl` / `can_crawl_or_move` | 爬行或移动能力 |
+| `lethal_damage_threshold` | 致死伤害阈值 |
+| `health_scale` | Pawn 健康规模 |
+| `pain_total` / `bleed_rate_total` | 总疼痛和总流血速率 |
+| `hediff_count` / `visible_hediff_count` / `hidden_hediff_count` | 健康项数量 |
+| `has_hidden_hediffs` | 是否有隐藏健康项 |
+| `hediffs` / `all_hediffs` | 全部健康项，包含隐藏项 |
+| `visible_hediffs` / `hidden_hediffs` | 按 `Hediff.Visible` 分组的健康项 |
+| `raw_hediffs` | 原始 Hediff 列表 |
+| `summary` / `detailed_summary` | RimTalk Normal 和 Full 健康摘要 |
 
-健康项列表：
+## Hediff 对象
 
-- `info.health.all_hediffs` / `hediffs`：全部 Hediff，包括隐藏项。
-- `info.health.visible_hediffs`：`Hediff.Visible == true` 的 Hediff。
-- `info.health.hidden_hediffs`：`Hediff.Visible == false` 的 Hediff。
-- `info.health.raw_hediffs`：原始 `List<Hediff>`，只读访问。
+`info.health.hediffs`、`all_hediffs`、`visible_hediffs` 和 `hidden_hediffs` 的元素包含：
 
-每个列表元素都是结构化对象，常用字段如下：
-
-| 路径 | 含义 |
+| 字段 | 含义 |
 | --- | --- |
-| `hediff.label` / `label_cap` | 健康项名称 |
-| `hediff.def_name` / `def_label` | Hediff Def 标识和标签 |
-| `hediff.description` | 健康项描述 |
-| `hediff.visible` / `hidden` | 是否可见 |
-| `hediff.severity` / `severity_label` | 严重度及显示文本 |
-| `hediff.bleeding` / `bleed_rate` | 流血状态及速率 |
-| `hediff.pain_offset` / `pain_factor` | 疼痛影响 |
-| `hediff.lethal` / `currently_life_threatening` | 致死性和当前生命威胁 |
-| `hediff.stage` | 当前严重度阶段对象 |
-| `hediff.part` | 身体部位对象；没有部位时 `exists = false` |
-| `hediff.age_ticks` / `age_days` | 健康项存在时间 |
-| `hediff.source` | 造成该健康项的来源信息 |
-| `hediff.def_info` | Hediff Def 的详细信息 |
+| `exists` / `raw` | 是否有 Hediff 以及原始对象 |
+| `label` / `label_cap` / `description` | 显示文本 |
+| `visible` / `hidden` | 是否可见 |
+| `bleeding` / `bleed_rate` / `bleed_rate_scaled` | 流血状态和速率 |
+| `pain_offset` / `pain_factor` | 疼痛影响 |
+| `severity` / `severity_label` | 严重度 |
+| `stage_index` / `stage` / `stage_raw` | 当前阶段 |
+| `lethal` / `currently_life_threatening` | 致死性 |
+| `summary_health_percent_impact` | 对整体健康百分比的影响 |
+| `tend_priority` | 照料优先级 |
+| `age_ticks` / `age_days` / `tick_added` | 持续时间和加入时间 |
+| `def` / `def_info` / `def_name` / `def_label` | Hediff Def 信息 |
+| `part` / `part_raw` / `part_label` / `part_def_name` | 身体部位 |
+| `source` | 来源信息 |
 
-`hediff.stage` 包含 `min_severity`、`label`、`life_threatening`、`pain_factor`、`pain_offset`、`total_bleed_factor`、`natural_healing_factor`、`regeneration`、`blocks_mental_breaks`、`blocks_inspirations`、`prevents_crawling`、`prevents_pregnancy`、`prevents_lung_rot`、`blocks_sleeping` 和部位破坏相关字段。
+`hediff.stage` 包含：`exists`、`raw`、`min_severity`、`label`、`override_label`、`become_visible`、`life_threatening`、`pain_factor`、`pain_offset`、`total_bleed_factor`、`natural_healing_factor`、`regeneration`、`blocks_mental_breaks`、`blocks_inspirations`、`override_mood_base`、`severity_gain_factor`、`prevent_vacuum_burns`、`blocks_sleeping`、`part_efficiency_offset`、`part_ignore_missing_hp`、`destroy_part`。
 
-`hediff.part` 包含 `label`、`label_cap`、`label_short`、`index`、`def_name`、`def_label`、`height`、`depth`、`coverage`、`is_core_part` 和父部位信息。
+`hediff.def_info` 包含通用 Def 字段 `exists`、`raw`、`def_name`、`label`、`description`，并补充 `is_bad`、`chronic`、`tendable`、`initial_severity`、`min_severity`、`max_severity`、`lethal_severity`、`always_show_severity`、`prevents_death`、`prevents_crawling`、`prevents_pregnancy`、`prevents_lung_rot`、`is_infection`、`organic_added_bodypart`、`display_wound`、`ever_curable_by_item`、`blocks_social_interaction`、`blocks_sleeping`。
 
-## 身份和状态
+`hediff.part` 包含：`exists`、`raw`、`label`、`label_cap`、`label_short`、`index`、`def`、`def_name`、`def_label`、`custom_label`、`height`、`depth`、`coverage`、`is_core_part`、`parent`、`parent_raw`、`parent_label`、`parent_def_name`。
 
-`info` 顶层提供以下稳定字段：
+`hediff.source` 包含：`label`、`def`、`def_name`、`body_part_group`、`tool_label`、`hediff_def`、`hediff_def_name`。
 
-- 身份：`name`、`label`、`label_short`、`id`、`thing_id`、`def_name`、`def_label`、`kind_def_name`、`kind_label`。
-- 阵营和种族：`faction`、`faction_def_name`、`race`、`race_def_name`、`gender`、`title`。
-- 分类：`humanlike`、`animal`、`mechanoid`、`colony_mech`、`mutant`、`subhuman`、`entity`、`colonist`、`free_colonist`、`prisoner`、`slave`、`player_controlled`。
-- 状态：`dead`、`downed`、`dead_or_downed`、`health_state`、`drafted`、`spawned`、`destroyed`、`suspended`、`developmental_stage`。
-- 精神和工作：`mental_state`、`mental_state_def_name`、`in_mental_state`、`in_aggro_mental_state`、`inspired`、`job`、`job_def_name`、`job_def_label`。
-- 位置：`map`、`map_held`、`position`、`position_held`、`health_scale`。
+## 需求
 
-`info.lifecycle` 还提供 `spawned`、`spawned_or_any_parent_spawned`、`destroyed`、`suspended`、`marked_for_discard`、`teleporting`、`became_world_pawn_tick_abs` 和 `previous_map`。
+`info.needs` 包含：`exists`、`raw`、`all`、`misc`、`count`、`mood`、`mood_text`、`mood_level`、`mood_level_percent`、`prefers_outdoors`、`prefers_indoors`。
 
-## 需求、上下文和 Tracker
+每个需求元素包含：`exists`、`raw`、`label`、`def`、`def_name`、`def_label`、`description`、`level`、`level_percent`、`instant_level`、`instant_level_percent`、`max_level`、`mood`。
 
-`info.needs` 提供 `count`、`all`、`misc`、`mood`、`mood_text`、`mood_level`、`mood_level_percent`、`prefers_outdoors` 和 `prefers_indoors`。需求元素包含 `label`、`def_name`、`def_label`、`description`、`level`、`level_percent`、`instant_level`、`instant_level_percent` 和 `max_level`。
+## RimTalk Prompt 上下文
 
-`info.prompt` 保留 RimTalk 的上下文构建结果，包括 `context`、`race`、`genes`、`all_genes`、`ideology`、`backstory`、`traits`、`skills`、`health`、`mood`、`thoughts`、`relations`、`social`、`full_social`、`full_relation`、`full_interaction`、`equipment`、`captive_status`、`activity`、`location`、`terrain`、`beauty`、`cleanliness` 和 `surroundings`。`info.prompt.full` 使用 RimTalk 的 Full 信息级别。
+`info.prompt` 保留 RimTalk 的上下文构建结果：`context`、`race`、`genes`、`all_genes`、`ideology`、`backstory`、`traits`、`skills`、`health`、`mood`、`thoughts`、`relations`、`social`、`full_social`、`full_relation`、`full_interaction`、`equipment`、`captive_status`、`activity`、`location`、`terrain`、`beauty`、`cleanliness`、`surroundings`。
 
-`info.trackers` 集中暴露 Pawn 的公开 Tracker 字段，例如 `age`、`health`、`needs`、`mind_state`、`jobs`、`equipment`、`apparel`、`skills`、`story`、`guest`、`royalty`、`abilities`、`ideo`、`genes`、`relations`、`interactions`、`timetable`、`mechanitor`、`learning` 和 `drafter`。
+`info.prompt.full` 使用 RimTalk 的 Full 信息级别，字段名称与 `info.prompt` 相同。
 
-这些入口只读。`raw`、`part_raw`、`stage_raw`、`raw_hediffs` 和 Tracker 成员仍然遵守 Arti 的运行边界：只能读取公开实例字段/属性，不执行任意方法。
+## Tracker 和生命周期
+
+`info.trackers` 暴露 Pawn 的公开 Tracker 字段：`age`、`health`、`records`、`inventory`、`melee_verbs`、`verb_tracker`、`ownership`、`carry`、`needs`、`mind_state`、`surroundings`、`thinker`、`jobs`、`stances`、`infection_vectors`、`duplicate`、`rotation`、`pather`、`natives`、`filth`、`roping`、`flight`、`equipment`、`apparel`、`skills`、`story`、`guest`、`guilt`、`royalty`、`abilities`、`ideo`、`genes`、`creep_joiner`、`work_settings`、`trader`、`style`、`style_observer`、`connections`、`training`、`caller`、`psychic_entropy`、`mutant`、`relations`、`interactions`、`player_settings`、`outfits`、`drugs`、`food_restriction`、`timetable`、`inventory_stock`、`mechanitor`、`learning`、`reading`、`drafter`、`lord`。
+
+`info.lifecycle` 包含：`spawned`、`spawned_or_any_parent_spawned`、`destroyed`、`suspended`、`marked_for_discard`、`teleporting`、`became_world_pawn_tick_abs`、`previous_map`。
+
+## 读取边界
+
+`pawn.info` 用于读取数据。`raw`、`part_raw`、`stage_raw`、`raw_hediffs` 和 Tracker 成员仍遵守 Arti 的运行边界：读取公开实例字段和属性，保持提示词脚本与游戏执行逻辑分离。

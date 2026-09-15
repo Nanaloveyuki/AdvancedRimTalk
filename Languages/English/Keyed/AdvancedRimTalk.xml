@@ -47,6 +47,7 @@
   <AdvancedRimTalk.Documentation.Core>core functions</AdvancedRimTalk.Documentation.Core>
   <AdvancedRimTalk.Documentation.CoreString>core.string functions</AdvancedRimTalk.Documentation.CoreString>
   <AdvancedRimTalk.Documentation.Data>Game data</AdvancedRimTalk.Documentation.Data>
+  <AdvancedRimTalk.Documentation.Memory>memory module</AdvancedRimTalk.Documentation.Memory>
   <AdvancedRimTalk.Documentation.Compatibility>Compatibility</AdvancedRimTalk.Documentation.Compatibility>
   <AdvancedRimTalk.Documentation.SelectDocument>Select a document.</AdvancedRimTalk.Documentation.SelectDocument>
   <AdvancedRimTalk.Documentation.Unavailable>The Arti documentation library is unavailable.</AdvancedRimTalk.Documentation.Unavailable>
