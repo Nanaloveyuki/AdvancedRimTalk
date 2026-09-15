@@ -86,6 +86,8 @@ namespace AdvancedRimTalk.Integration
                     };
                     RegisterSubItem(registerSubItem, owner, "prompt-preview",
                         () => "AdvancedRimTalk.Preview.Title".Translate().ToString(), owner.DrawPromptPreview);
+                    RegisterSubItem(registerSubItem, owner, "response-ignore",
+                        () => "AdvancedRimTalk.Response.IgnoreLogic".Translate().ToString(), owner.DrawResponseSettings);
                     RegisterSubItem(
                         registerSubItem,
                         owner,

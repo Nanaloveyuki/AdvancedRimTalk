@@ -15,6 +15,7 @@ namespace AdvancedRimTalk
         private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
         private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();
         private readonly DocumentationPage _documentationPage;
+        private readonly ResponseSettingsPage _responseSettingsPage = new ResponseSettingsPage();
         private string _artiEditorUndoLimitBuffer;
         private string _artiEditorCompletionLimitBuffer;
         private string _takeoverPawnLimitBuffer;
@@ -189,6 +190,11 @@ namespace AdvancedRimTalk
         internal void DrawDocumentation(Rect inRect)
         {
             _documentationPage.Draw(inRect);
+        }
+
+        internal void DrawResponseSettings(Rect inRect)
+        {
+            _responseSettingsPage.Draw(inRect);
         }
     }
 }

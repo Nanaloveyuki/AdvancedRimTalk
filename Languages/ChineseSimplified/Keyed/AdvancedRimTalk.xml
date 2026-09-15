@@ -64,4 +64,16 @@
   <AdvancedRimTalk.Preview.ContextResult>上下文预览</AdvancedRimTalk.Preview.ContextResult>
   <AdvancedRimTalk.Preview.CapturedResult>最近生成的消息</AdvancedRimTalk.Preview.CapturedResult>
   <AdvancedRimTalk.Preview.Request>预览请求</AdvancedRimTalk.Preview.Request>
+  <AdvancedRimTalk.Response.IgnoreLogic>忽略逻辑</AdvancedRimTalk.Response.IgnoreLogic>
+  <AdvancedRimTalk.Response.Enable>启用响应处理</AdvancedRimTalk.Response.Enable>
+  <AdvancedRimTalk.Response.Json>尝试 JSON 格式化</AdvancedRimTalk.Response.Json>
+  <AdvancedRimTalk.Response.RegexIgnore>按正则策略忽略</AdvancedRimTalk.Response.RegexIgnore>
+  <AdvancedRimTalk.Response.Whitelist>启用白名单</AdvancedRimTalk.Response.Whitelist>
+  <AdvancedRimTalk.Response.WhitelistPatterns>白名单正则（每行一个）</AdvancedRimTalk.Response.WhitelistPatterns>
+  <AdvancedRimTalk.Response.Blacklist>启用黑名单</AdvancedRimTalk.Response.Blacklist>
+  <AdvancedRimTalk.Response.BlacklistPatterns>黑名单正则（每行一个）</AdvancedRimTalk.Response.BlacklistPatterns>
+  <AdvancedRimTalk.Response.IntervalIgnore>按时间间隔忽略</AdvancedRimTalk.Response.IntervalIgnore>
+  <AdvancedRimTalk.Response.IntervalSeconds>间隔秒数</AdvancedRimTalk.Response.IntervalSeconds>
+  <AdvancedRimTalk.Response.ModelIgnore>按模型忽略</AdvancedRimTalk.Response.ModelIgnore>
+  <AdvancedRimTalk.Response.ModelIds>模型 ID（每行一个）</AdvancedRimTalk.Response.ModelIds>
 </LanguageData>

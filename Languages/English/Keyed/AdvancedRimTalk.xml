@@ -64,4 +64,16 @@
   <AdvancedRimTalk.Preview.ContextResult>Context preview</AdvancedRimTalk.Preview.ContextResult>
   <AdvancedRimTalk.Preview.CapturedResult>Last generated messages</AdvancedRimTalk.Preview.CapturedResult>
   <AdvancedRimTalk.Preview.Request>Preview request</AdvancedRimTalk.Preview.Request>
+  <AdvancedRimTalk.Response.IgnoreLogic>Ignore logic</AdvancedRimTalk.Response.IgnoreLogic>
+  <AdvancedRimTalk.Response.Enable>Enable response processing</AdvancedRimTalk.Response.Enable>
+  <AdvancedRimTalk.Response.Json>Attempt JSON formatting</AdvancedRimTalk.Response.Json>
+  <AdvancedRimTalk.Response.RegexIgnore>Ignore by regex policy</AdvancedRimTalk.Response.RegexIgnore>
+  <AdvancedRimTalk.Response.Whitelist>Enable whitelist</AdvancedRimTalk.Response.Whitelist>
+  <AdvancedRimTalk.Response.WhitelistPatterns>Whitelist regex (one per line)</AdvancedRimTalk.Response.WhitelistPatterns>
+  <AdvancedRimTalk.Response.Blacklist>Enable blacklist</AdvancedRimTalk.Response.Blacklist>
+  <AdvancedRimTalk.Response.BlacklistPatterns>Blacklist regex (one per line)</AdvancedRimTalk.Response.BlacklistPatterns>
+  <AdvancedRimTalk.Response.IntervalIgnore>Ignore within interval</AdvancedRimTalk.Response.IntervalIgnore>
+  <AdvancedRimTalk.Response.IntervalSeconds>Interval seconds</AdvancedRimTalk.Response.IntervalSeconds>
+  <AdvancedRimTalk.Response.ModelIgnore>Ignore by model</AdvancedRimTalk.Response.ModelIgnore>
+  <AdvancedRimTalk.Response.ModelIds>Model IDs (one per line)</AdvancedRimTalk.Response.ModelIds>
 </LanguageData>

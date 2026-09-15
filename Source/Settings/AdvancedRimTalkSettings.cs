@@ -22,6 +22,17 @@ namespace AdvancedRimTalk.Settings
         public int TakeoverMaxPawnContextCount = 32;
         public int TakeoverConversationHistoryCount = 40;
         public int TakeoverPromptCharacterBudget = 24000;
+        public bool EnableResponseProcessing = true;
+        public bool EnableJsonFormatting = false;
+        public bool IgnoreByRegex = false;
+        public bool IgnoreByInterval = false;
+        public bool IgnoreByModel = false;
+        public float IgnoreIntervalSeconds = 0f;
+        public bool RegexWhitelist = false;
+        public bool RegexBlacklist = true;
+        public string ResponseWhitelistRegex = string.Empty;
+        public string ResponseBlacklistRegex = string.Empty;
+        public string ResponseModelIds = string.Empty;
 
         public override void ExposeData()
         {
@@ -33,6 +44,17 @@ namespace AdvancedRimTalk.Settings
             Scribe_Values.Look(ref TakeoverMaxPawnContextCount, "takeoverMaxPawnContextCount", 32);
             Scribe_Values.Look(ref TakeoverConversationHistoryCount, "takeoverConversationHistoryCount", 40);
             Scribe_Values.Look(ref TakeoverPromptCharacterBudget, "takeoverPromptCharacterBudget", 24000);
+            Scribe_Values.Look(ref EnableResponseProcessing, "enableResponseProcessing", true);
+            Scribe_Values.Look(ref EnableJsonFormatting, "enableJsonFormatting", false);
+            Scribe_Values.Look(ref IgnoreByRegex, "ignoreByRegex", false);
+            Scribe_Values.Look(ref IgnoreByInterval, "ignoreByInterval", false);
+            Scribe_Values.Look(ref IgnoreByModel, "ignoreByModel", false);
+            Scribe_Values.Look(ref IgnoreIntervalSeconds, "ignoreIntervalSeconds", 0f);
+            Scribe_Values.Look(ref RegexWhitelist, "regexWhitelist", false);
+            Scribe_Values.Look(ref RegexBlacklist, "regexBlacklist", true);
+            Scribe_Values.Look(ref ResponseWhitelistRegex, "responseWhitelistRegex", string.Empty);
+            Scribe_Values.Look(ref ResponseBlacklistRegex, "responseBlacklistRegex", string.Empty);
+            Scribe_Values.Look(ref ResponseModelIds, "responseModelIds", string.Empty);
             EnsureTakeoverPromptParts();
 
             if (ArtiEditorUndoLimit < 0)
