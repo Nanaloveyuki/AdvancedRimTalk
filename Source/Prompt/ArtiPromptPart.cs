@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using RimTalk.Data;
 using RimTalk.Prompt;
 using Verse;
@@ -13,6 +14,10 @@ namespace AdvancedRimTalk.Prompt
         public bool Enabled = true;
         public PromptRole Role = PromptRole.System;
         public string CustomRole = string.Empty;
+        // Preserve RimTalk preset placement metadata for round-tripping and takeover ordering.
+        public string Position = "Relative";
+        public int InChatDepth;
+        public bool IsMainChatHistory;
         public string Content = string.Empty;
 
         public ArtiPromptPart()
@@ -35,6 +40,9 @@ namespace AdvancedRimTalk.Prompt
             Scribe_Values.Look(ref Enabled, "enabled", true);
             Scribe_Values.Look(ref Role, "role", PromptRole.System);
             Scribe_Values.Look(ref CustomRole, "customRole", string.Empty);
+            Scribe_Values.Look(ref Position, "position", "Relative");
+            Scribe_Values.Look(ref InChatDepth, "inChatDepth", 0);
+            Scribe_Values.Look(ref IsMainChatHistory, "isMainChatHistory", false);
             Scribe_Values.Look(ref Content, "content", string.Empty);
 
             Normalize();
@@ -55,6 +63,11 @@ namespace AdvancedRimTalk.Prompt
             if (CustomRole == null)
             {
                 CustomRole = string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(Position))
+            {
+                Position = "Relative";
             }
 
             if (Content == null)
@@ -95,9 +108,21 @@ namespace AdvancedRimTalk.Prompt
             if (entry != null)
             {
                 part.CustomRole = entry.CustomRole ?? string.Empty;
+                part.Position = ReadEntryValue(entry, "Position", "Relative").ToString();
+                part.InChatDepth = Convert.ToInt32(ReadEntryValue(entry, "InChatDepth", 0));
+                part.IsMainChatHistory = Convert.ToBoolean(ReadEntryValue(entry, "IsMainChatHistory", false));
             }
 
             return part;
+        }
+
+        private static object ReadEntryValue(PromptEntry entry, string name, object fallback)
+        {
+            if (entry == null) return fallback;
+            PropertyInfo property = entry.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            if (property != null) return property.GetValue(entry, null) ?? fallback;
+            FieldInfo field = entry.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public);
+            return field == null ? fallback : (field.GetValue(entry) ?? fallback);
         }
 
         public static List<ArtiPromptPart> CreateDefaultParts(string legacySystemDocument)

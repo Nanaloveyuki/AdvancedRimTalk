@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using AdvancedRimTalk.Arti;
@@ -186,6 +187,24 @@ namespace AdvancedRimTalk.Prompt
                     }
                 }
                 rendered.Add(new RenderedPromptPart(part, arti));
+            }
+
+            // RimTalk's InChat entries are anchored at the main history entry. Keep
+            // Relative entries in preset order and place imported InChat entries by
+            // depth around that anchor so imported presets retain their intent.
+            int historyIndex = rendered.FindIndex(item => item.Part.IsMainChatHistory);
+            if (historyIndex >= 0)
+            {
+                List<RenderedPromptPart> inChat = rendered
+                    .Where(item => string.Equals(item.Part.Position, "InChat", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(item => item.Part.InChatDepth)
+                    .ToList();
+                if (inChat.Count > 0)
+                {
+                    rendered.RemoveAll(item => string.Equals(item.Part.Position, "InChat", StringComparison.OrdinalIgnoreCase));
+                    historyIndex = rendered.FindIndex(item => item.Part.IsMainChatHistory);
+                    rendered.InsertRange(historyIndex, inChat);
+                }
             }
 
             return rendered;
