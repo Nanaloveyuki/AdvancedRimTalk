@@ -17,6 +17,7 @@ $sourceAbout = Join-Path $repoRoot "About\About.xml"
 $sourceLanguages = Join-Path $repoRoot "Languages"
 $sourceAssembly = Join-Path $repoRoot "tmp\build\AdvancedRimTalk.dll"
 $sourcePdb = Join-Path $repoRoot "tmp\build\AdvancedRimTalk.pdb"
+$sourceDocs = Join-Path $repoRoot "docs"
 
 $targetFull = [System.IO.Path]::GetFullPath($GameModPath).TrimEnd([char[]]"\/")
 $modsRoot = Split-Path -Parent $targetFull
@@ -46,6 +47,9 @@ foreach ($requiredFile in @($projectPath, $sourceAbout)) {
 
 if (-not (Test-Path -LiteralPath $sourceLanguages -PathType Container)) {
     throw "Language directory not found: $sourceLanguages"
+}
+if (-not (Test-Path -LiteralPath $sourceDocs -PathType Container)) {
+    throw "Documentation directory not found: $sourceDocs"
 }
 
 try {
@@ -127,6 +131,14 @@ foreach ($languageFile in $languageFiles) {
     $targetFiles += [pscustomobject]@{
         SourcePath = $languageFile.FullName
         RelativePath = Join-Path "Languages" $relativeLanguagePath
+    }
+}
+
+foreach ($docFile in @(Get-ChildItem -LiteralPath $sourceDocs -File -Recurse)) {
+    $relativeDocPath = $docFile.FullName.Substring($sourceDocs.Length).TrimStart([char[]]"/\")
+    $targetFiles += [pscustomobject]@{
+        SourcePath = $docFile.FullName
+        RelativePath = Join-Path "Documentation" $relativeDocPath
     }
 }
 

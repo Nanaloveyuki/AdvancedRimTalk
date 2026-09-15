@@ -13,6 +13,49 @@ using Verse;
 
 namespace AdvancedRimTalk.Integration
 {
+    internal static class RimTalkArtiRawValueReader
+    {
+        public static object Read(object value, int depth, int budget)
+        {
+            if (value == null || budget <= 0) return null;
+            if (value is string || value is bool || value is char || value is byte || value is sbyte || value is short || value is ushort || value is int || value is uint || value is long || value is ulong || value is float || value is double || value is decimal)
+                return value;
+            if (depth <= 0) return Convert.ToString(value, CultureInfo.InvariantCulture);
+            System.Collections.IDictionary dictionary = value as System.Collections.IDictionary;
+            if (dictionary != null)
+            {
+                Dictionary<string, object> result = new Dictionary<string, object>(StringComparer.Ordinal);
+                int count = 0;
+                foreach (System.Collections.DictionaryEntry entry in dictionary)
+                {
+                    if (count++ >= budget) break;
+                    result[Convert.ToString(entry.Key, CultureInfo.InvariantCulture)] = Read(entry.Value, depth - 1, budget - count);
+                }
+                return result;
+            }
+            System.Collections.IEnumerable enumerable = value as System.Collections.IEnumerable;
+            if (enumerable != null && !(value is string))
+            {
+                List<object> result = new List<object>();
+                foreach (object item in enumerable)
+                {
+                    if (result.Count >= budget) break;
+                    result.Add(Read(item, depth - 1, budget - result.Count));
+                }
+                return result;
+            }
+            Dictionary<string, object> members = new Dictionary<string, object>(StringComparer.Ordinal);
+            foreach (string name in RimTalkArtiPublicValueReader.GetPublicMemberNames(value))
+            {
+                if (members.Count >= budget) break;
+                object member;
+                if (RimTalkArtiPublicValueReader.TryRead(value, name, out member))
+                    members[name] = Read(member, depth - 1, budget - members.Count);
+            }
+            return members;
+        }
+    }
+
     internal static class RimTalkArtiNames
     {
         public static string Normalize(string value)
@@ -1132,7 +1175,37 @@ namespace AdvancedRimTalk.Integration
             mods.Set("count", () => _installedMods.Value.Count, false);
             mods.Set("dlc", () => CreateDlc());
             mods.Set("find", new RimTalkArtiCallable(ResolveMod));
+            mods.Set("has", new RimTalkArtiCallable(HasMod));
+            mods.Set("raw", new RimTalkArtiCallable(RawMod));
+            mods.Set("members", new RimTalkArtiCallable(ModMembers));
             return mods;
+        }
+
+        private object HasMod(IList<object> positional, IDictionary<string, object> named)
+        {
+            return ResolveMod(positional, named) != null;
+        }
+
+        private object ModMembers(IList<object> positional, IDictionary<string, object> named)
+        {
+            object target = GetArgument(positional, named, 0, "id", null);
+            if (target is string || target == null)
+            {
+                target = ResolveMod(new List<object> { target }, named);
+            }
+
+            return target == null ? new List<string>() : RimTalkArtiPublicValueReader.GetPublicMemberNames(target);
+        }
+
+        private object RawMod(IList<object> positional, IDictionary<string, object> named)
+        {
+            object target = GetArgument(positional, named, 0, "id", null);
+            if (target is string || target == null)
+            {
+                target = ResolveMod(new List<object> { target }, named);
+            }
+
+            return RimTalkArtiRawValueReader.Read(target, 2, 64);
         }
 
         private RimTalkArtiLazyNamespace CreateDlc()
