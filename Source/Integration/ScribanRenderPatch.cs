@@ -18,6 +18,8 @@ namespace AdvancedRimTalk.Integration
         private static void Prefix(ref string templateText, PromptContext context, out ScribanRenderState __state)
         {
             __state = null;
+            // Context previews explicitly preprocess each entry before calling Scriban.
+            if (PromptPreviewSession.Variables != null && context != null && context.IsPreview) return;
 
             ArtiPromptRenderResult arti = null;
             if (AdvancedRimTalkMod.IsArtiPromptEmbeddingEnabled

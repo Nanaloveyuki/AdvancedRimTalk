@@ -84,6 +84,8 @@ namespace AdvancedRimTalk.Integration
                     {
                         return "AdvancedRimTalk.Documentation.Title".Translate().ToString();
                     };
+                    RegisterSubItem(registerSubItem, owner, "prompt-preview",
+                        () => "AdvancedRimTalk.Preview.Title".Translate().ToString(), owner.DrawPromptPreview);
                     RegisterSubItem(
                         registerSubItem,
                         owner,

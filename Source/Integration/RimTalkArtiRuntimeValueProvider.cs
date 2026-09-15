@@ -178,6 +178,7 @@ namespace AdvancedRimTalk.Integration
                 RimTalkArtiLazyNamespace lazyNamespace = target as RimTalkArtiLazyNamespace;
                 if (lazyNamespace != null && lazyNamespace.TryGetMember(member, out value))
                 {
+                    value = GuardPreviewMemoryCall(target, member, value);
                     return true;
                 }
 
@@ -266,12 +267,18 @@ namespace AdvancedRimTalk.Integration
             return false;
         }
 
+        private object GuardPreviewMemoryCall(object target, string member, object value)
+        {
+            return MemoryPreviewPolicy.Guard(_context.IsPreview, target, RimTalkArtiNames.Normalize(member), value);
+        }
+
         public bool TryGetIndex(object target, object index, out object value)
         {
             RimTalkArtiLazyNamespace lazyNamespace = target as RimTalkArtiLazyNamespace;
             string key = index as string;
             if (lazyNamespace != null && key != null && lazyNamespace.TryGetMember(key, out value))
             {
+                value = GuardPreviewMemoryCall(target, key, value);
                 return true;
             }
 

@@ -57,7 +57,35 @@ namespace AdvancedRimTalk.Prompt
             }
 
             LogDiagnostics(renderedParts);
-            return MergeConsecutiveRoles(messages);
+            return FinalizeMessages(messages, segments);
+        }
+
+        internal static List<ValueTuple<Role, string>> FinalizeMessages(List<ValueTuple<Role, string>> messages, List<PromptMessageSegment> segments)
+        {
+            return MergeConsecutiveRoles(ApplyCharacterBudget(messages, segments));
+        }
+
+        private static List<ValueTuple<Role, string>> ApplyCharacterBudget(List<ValueTuple<Role, string>> messages, List<PromptMessageSegment> segments)
+        {
+            int budget = AdvancedRimTalkMod.Settings == null ? 24000 : AdvancedRimTalkMod.Settings.TakeoverPromptCharacterBudget;
+            List<string> contents = new List<string>();
+            foreach (ValueTuple<Role, string> message in messages) contents.Add(message.Item2);
+            // Reserve separators before merging adjacent roles; removed parts can create new adjacency.
+            int contentBudget = Math.Max(0, budget - Math.Max(0, messages.Count - 1) * 2);
+            string[] bounded = PromptCharacterBudget.Apply(contents, contentBudget);
+            List<ValueTuple<Role, string>> result = new List<ValueTuple<Role, string>>();
+            bool truncated = false;
+            for (int index = 0; index < messages.Count; index++)
+            {
+                string text = bounded[index];
+                truncated |= text != contents[index];
+                segments[index].Content = text;
+                if (text.Length == 0) continue;
+                result.Add(new ValueTuple<Role, string>(messages[index].Item1, text));
+            }
+            segments.RemoveAll(segment => string.IsNullOrEmpty(segment.Content));
+            if (truncated) Log.Warning("Advanced RimTalk trimmed prompt parts to the configured character budget (" + budget + ").");
+            return result;
         }
 
         private static string BuildSystemInstruction()
@@ -145,7 +173,19 @@ namespace AdvancedRimTalk.Prompt
                 }
 
                 part.Normalize();
-                rendered.Add(new RenderedPromptPart(part, ArtiPromptDocumentRenderer.Render(part.Content, promptContext)));
+                ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(part.Content, promptContext);
+                if (arti != null && !string.IsNullOrEmpty(arti.Text) && arti.Text.Contains("{{"))
+                {
+                    try
+                    {
+                        arti = new ArtiPromptRenderResult(ScribanParser.Render(arti.Text, promptContext, true), arti.Diagnostics);
+                    }
+                    catch (Exception exception)
+                    {
+                        Log.Warning("Advanced RimTalk takeover Scriban rendering failed: " + exception);
+                    }
+                }
+                rendered.Add(new RenderedPromptPart(part, arti));
             }
 
             return rendered;

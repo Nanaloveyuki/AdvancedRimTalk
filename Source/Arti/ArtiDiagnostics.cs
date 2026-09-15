@@ -78,6 +78,7 @@ namespace AdvancedRimTalk.Arti
                 { 3013, Define(3013, "模块别名 '{0}' 会覆盖内置名称。", "The module alias '{0}' would shadow a builtin name.") },
                 { 3014, Define(3014, "赋值目标必须是已声明的变量名。", "An assignment target must be a declared variable name.") },
                 { 3015, Define(3015, "模块别名 '{0}' 不是有效的标识符，请使用 as 指定别名。", "The module alias '{0}' is not a valid identifier; specify an alias with as.") },
+                { 3016, Define(3016, "const 必须使用静态表达式；动态值请通过函数获取。", "const requires a static expression; use a function for dynamic values.") },
 
                 { 4000, Define(4000, "Arti 运行时错误：{0}", "Arti runtime error: {0}") }
             };

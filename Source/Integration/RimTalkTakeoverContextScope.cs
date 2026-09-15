@@ -1,4 +1,6 @@
 using System;
+using System.Reflection;
+using HarmonyLib;
 using RimTalk;
 using RimTalk.Data;
 
@@ -10,7 +12,12 @@ namespace AdvancedRimTalk.Integration
         private static int depth;
 
         [ThreadStatic]
-        private static ContextSettings savedContext;
+        private static RimTalkSettings scopedSettings;
+
+        private static readonly MethodInfo CloneMethod = typeof(object).GetMethod(
+            "MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        internal static RimTalkSettings CurrentSettings => scopedSettings;
 
         private bool active;
 
@@ -18,10 +25,10 @@ namespace AdvancedRimTalk.Integration
         {
         }
 
-        public static RimTalkTakeoverContextScope Enter()
+        public static RimTalkTakeoverContextScope Enter(bool? takeover = null)
         {
             RimTalkTakeoverContextScope scope = new RimTalkTakeoverContextScope();
-            if (!AdvancedRimTalkMod.ShouldReplaceRimTalkPromptMechanism)
+            if (!(takeover ?? AdvancedRimTalkMod.ShouldReplaceRimTalkPromptMechanism))
             {
                 return scope;
             }
@@ -34,8 +41,9 @@ namespace AdvancedRimTalk.Integration
 
             if (depth == 0)
             {
-                savedContext = settings.Context;
-                settings.Context = CreateTakeoverContextSettings(savedContext);
+                RimTalkSettings copy = (RimTalkSettings)CloneMethod.Invoke(settings, null);
+                copy.Context = CreateTakeoverContextSettings(settings.Context);
+                scopedSettings = copy;
             }
 
             depth++;
@@ -50,21 +58,15 @@ namespace AdvancedRimTalk.Integration
                 return;
             }
 
+            active = false;
             depth--;
             if (depth > 0)
             {
                 return;
             }
 
-            RimTalkSettings settings = RimTalk.Settings.Get();
-            if (settings != null && savedContext != null)
-            {
-                settings.Context = savedContext;
-            }
-
-            savedContext = null;
+            scopedSettings = null;
             depth = 0;
-            active = false;
         }
 
         private static ContextSettings CreateTakeoverContextSettings(ContextSettings source)
@@ -73,8 +75,8 @@ namespace AdvancedRimTalk.Integration
             return new ContextSettings
             {
                 EnableContextOptimization = false,
-                MaxPawnContextCount = 9999,
-                ConversationHistoryCount = 9999,
+                MaxPawnContextCount = AdvancedRimTalkMod.Settings == null ? 32 : AdvancedRimTalkMod.Settings.TakeoverMaxPawnContextCount,
+                ConversationHistoryCount = AdvancedRimTalkMod.Settings == null ? 40 : AdvancedRimTalkMod.Settings.TakeoverConversationHistoryCount,
                 IncludeRace = true,
                 IncludeNotableGenes = true,
                 IncludeIdeology = true,
@@ -101,6 +103,16 @@ namespace AdvancedRimTalk.Integration
                 MaxEventsCount = fallback.MaxEventsCount,
                 IncludeTopicKeywords = true
             };
+        }
+    }
+
+    [HarmonyPatch(typeof(RimTalk.Settings), nameof(RimTalk.Settings.Get))]
+    internal static class RimTalkScopedSettingsPatch
+    {
+        private static void Postfix(ref RimTalkSettings __result)
+        {
+            if (RimTalkTakeoverContextScope.CurrentSettings != null)
+                __result = RimTalkTakeoverContextScope.CurrentSettings;
         }
     }
 }

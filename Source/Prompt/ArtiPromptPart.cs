@@ -90,7 +90,7 @@ namespace AdvancedRimTalk.Prompt
                 entry == null ? PromptRole.System : entry.Role,
                 entry == null
                     ? string.Empty
-                    : TakeoverPromptImportConverter.ConvertKnownRimTalkScriban(entry.Content),
+                    : entry.Content,
                 entry == null || entry.Enabled);
             if (entry != null)
             {

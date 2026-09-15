@@ -156,7 +156,6 @@ namespace AdvancedRimTalk.UI
                     "AdvancedRimTalk.PromptParts.ResetDefaultsConfirm".Translate(),
                     delegate
                     {
-                        settings.TakeoverArtiPromptDocument = AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument;
                         settings.TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(
                             AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument);
                         selectedPartId = null;
@@ -229,6 +228,13 @@ namespace AdvancedRimTalk.UI
             GUI.color = Color.white;
             Text.Font = GameFont.Small;
             y += 22f;
+
+            if (Widgets.ButtonText(new Rect(labelX, y, Mathf.Min(240f, rect.width - 20f), 28f),
+                "AdvancedRimTalk.ArtiEditor.Title".Translate()))
+            {
+                Find.WindowStack.Add(new ArtiPartEditorWindow(part));
+            }
+            y += 34f;
 
             Rect editorRect = new Rect(rect.x + 10f, y, rect.width - 20f, rect.yMax - y - 5f);
             DrawContentEditor(editorRect, part);

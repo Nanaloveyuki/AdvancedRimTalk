@@ -558,6 +558,11 @@ namespace AdvancedRimTalk.Integration
                 return false;
             }
 
+            return PinMemoryEntry(component, entry, pinned);
+        }
+
+        private static bool PinMemoryEntry(object component, object entry, bool pinned)
+        {
             try
             {
                 object maintainer = ReadMember(component, "Maintainer");
@@ -567,7 +572,7 @@ namespace AdvancedRimTalk.Integration
             catch (Exception exception)
             {
                 Warn("pinning a memory", exception);
-                return SetMember(entry, "IsPinned", pinned);
+                return false;
             }
         }
 
@@ -582,24 +587,7 @@ namespace AdvancedRimTalk.Integration
                 return false;
             }
 
-            IList target = GetLayerList(component, layer);
-            if (target == null)
-            {
-                return false;
-            }
-
-            foreach (string name in new[] { "Active", "Situational", "EventLog", "Archive" })
-            {
-                IList source = GetLayerList(component, name);
-                if (source != null)
-                {
-                    source.Remove(entry);
-                }
-            }
-
-            SetMember(entry, "Layer", layer);
-            target.Insert(0, entry);
-            return true;
+            return MoveMemoryByEntry(component, ref entry, layer);
         }
 
         internal static bool UpdateMemory(
@@ -653,12 +641,6 @@ namespace AdvancedRimTalk.Integration
                 changed |= SetMember(entry, "Activity", Clamp01(ToFloat(value, 1f)));
             }
 
-            value = GetNamed(named, "pinned", out hasValue);
-            if (hasValue)
-            {
-                changed |= SetMember(entry, "IsPinned", ToBool(value, false));
-            }
-
             value = GetNamed(named, "notes", out hasValue);
             if (hasValue)
             {
@@ -671,7 +653,8 @@ namespace AdvancedRimTalk.Integration
                 object layer;
                 if (TryParseLayer(ToText(value), out layer))
                 {
-                    changed |= MoveMemoryByEntry(component, entry, layer);
+                    if (!MoveMemoryByEntry(component, ref entry, layer)) return false;
+                    changed = true;
                 }
             }
 
@@ -695,6 +678,14 @@ namespace AdvancedRimTalk.Integration
             if (hasValue)
             {
                 changed |= ReplaceStrings(entry, "keywords", value);
+            }
+
+            // Pinning can replace an Active entry with a private copy, so it must run last.
+            value = GetNamed(named, "pinned", out hasValue);
+            if (hasValue)
+            {
+                if (!PinMemoryEntry(component, entry, ToBool(value, false))) return false;
+                changed = true;
             }
 
             return changed;
@@ -1442,6 +1433,13 @@ namespace AdvancedRimTalk.Integration
             return TryFindMemoryById(component, wanted, out entry);
         }
 
+        internal static object ResolveMemoryReference(object component, object previous)
+        {
+            if (previous == null) return null;
+            object current;
+            return TryFindMemoryById(component, GetMemoryId(previous), out current) ? current : null;
+        }
+
         private static bool TryFindMemoryById(object component, long wanted, out object entry)
         {
             entry = null;
@@ -1483,26 +1481,28 @@ namespace AdvancedRimTalk.Integration
             return entry != null;
         }
 
-        private static bool MoveMemoryByEntry(object component, object entry, object layer)
+        private static bool MoveMemoryByEntry(object component, ref object entry, object layer)
         {
-            IList target = GetLayerList(component, layer);
-            if (target == null)
+            try
             {
+                object oldLayer = ReadMember(entry, "Layer");
+                IList source = GetLayerList(component, oldLayer);
+                IList target = GetLayerList(component, layer);
+                entry = MemoryLayerTransfer.Move(source, target, entry, oldLayer, layer,
+                    value => string.Equals(ToText(oldLayer), "Active", StringComparison.OrdinalIgnoreCase)
+                        ? InvokeInstance(value, "Privatize") : value,
+                    (value, destination) =>
+                    {
+                        if (!SetMember(value, "Layer", destination))
+                            throw new InvalidOperationException("The memory layer cannot be assigned.");
+                    });
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Warn("moving a memory", exception);
                 return false;
             }
-
-            foreach (string name in new[] { "Active", "Situational", "EventLog", "Archive" })
-            {
-                IList source = GetLayerList(component, name);
-                if (source != null)
-                {
-                    source.Remove(entry);
-                }
-            }
-
-            SetMember(entry, "Layer", layer);
-            target.Insert(0, entry);
-            return true;
         }
 
         private static long GetMemoryId(object entry)
@@ -1688,7 +1688,7 @@ namespace AdvancedRimTalk.Integration
 
         private static object InvokeStatic(Type type, string methodName, params object[] arguments)
         {
-            MethodInfo method = FindMethod(type, methodName, arguments == null ? 0 : arguments.Length, true);
+            MethodInfo method = MemoryApiMethodResolver.Resolve(type, methodName, arguments, true);
             if (method == null)
             {
                 throw new MissingMethodException(type == null ? string.Empty : type.FullName, methodName);
@@ -1704,33 +1704,13 @@ namespace AdvancedRimTalk.Integration
                 throw new NullReferenceException("The memory API returned a null object.");
             }
 
-            MethodInfo method = FindMethod(target.GetType(), methodName, arguments == null ? 0 : arguments.Length, false);
+            MethodInfo method = MemoryApiMethodResolver.Resolve(target.GetType(), methodName, arguments, false);
             if (method == null)
             {
                 throw new MissingMethodException(target.GetType().FullName, methodName);
             }
 
             return Invoke(method, target, arguments);
-        }
-
-        private static MethodInfo FindMethod(Type type, string name, int argumentCount, bool isStatic)
-        {
-            if (type == null)
-            {
-                return null;
-            }
-
-            BindingFlags flags = BindingFlags.Public | (isStatic ? BindingFlags.Static : BindingFlags.Instance);
-            foreach (MethodInfo method in type.GetMethods(flags))
-            {
-                if (string.Equals(method.Name, name, StringComparison.Ordinal)
-                    && method.GetParameters().Length == argumentCount)
-                {
-                    return method;
-                }
-            }
-
-            return null;
         }
 
         private static object Invoke(MethodInfo method, object target, object[] arguments)
@@ -1795,16 +1775,17 @@ namespace AdvancedRimTalk.Integration
             }
         }
 
-        private static void Warn(string operation, Exception exception)
+        internal static void Warn(string operation, Exception exception)
         {
-            if (Prefs.DevMode)
+            while (exception is TargetInvocationException && exception.InnerException != null)
             {
-                Log.Warning("Advanced RimTalk Expand Memory " + operation + " failed: " + exception.Message);
+                exception = exception.InnerException;
             }
+            Log.Warning("Advanced RimTalk Expand Memory " + operation + " failed: " + exception);
         }
     }
 
-    internal sealed class RimTalkExpandMemoryArtiModule : RimTalkArtiLazyNamespace
+    internal sealed class RimTalkExpandMemoryArtiModule : RimTalkArtiLazyNamespace, IMemoryArtiValue
     {
         private readonly PromptContext _context;
         private readonly RimTalkExpandMemoryArtiPawn _pawn;
@@ -1834,7 +1815,7 @@ namespace AdvancedRimTalk.Integration
         }
     }
 
-    internal sealed class RimTalkExpandMemoryArtiPawn : RimTalkArtiLazyNamespace
+    internal sealed class RimTalkExpandMemoryArtiPawn : RimTalkArtiLazyNamespace, IMemoryArtiValue
     {
         private readonly PromptContext _context;
 
@@ -1972,7 +1953,7 @@ namespace AdvancedRimTalk.Integration
         }
     }
 
-    internal sealed class RimTalkExpandMemoryArtiLayer : RimTalkArtiLazyNamespace
+    internal sealed class RimTalkExpandMemoryArtiLayer : RimTalkArtiLazyNamespace, IMemoryArtiValue
     {
         private readonly PromptContext _context;
         private readonly string _layer;
@@ -2085,7 +2066,7 @@ namespace AdvancedRimTalk.Integration
         }
     }
 
-    internal sealed class RimTalkExpandMemoryArtiKnowledge : RimTalkArtiLazyNamespace
+    internal sealed class RimTalkExpandMemoryArtiKnowledge : RimTalkArtiLazyNamespace, IMemoryArtiValue
     {
         public RimTalkExpandMemoryArtiKnowledge()
         {
@@ -2129,7 +2110,7 @@ namespace AdvancedRimTalk.Integration
         }
     }
 
-    internal sealed class RimTalkExpandMemoryArtiMemoryValue : RimTalkArtiLazyNamespace
+    internal sealed class RimTalkExpandMemoryArtiMemoryValue : RimTalkArtiLazyNamespace, IMemoryArtiValue
     {
         private readonly Pawn _pawn;
         private readonly object _component;
@@ -2138,7 +2119,7 @@ namespace AdvancedRimTalk.Integration
         {
             _pawn = pawn;
             _component = component;
-            Entry = entry;
+            _entry = entry;
             Set("id", () => RimTalkExpandMemoryArtiBridge.ReadMember(Entry, "Id"), false);
             Set("origin_id", () => RimTalkExpandMemoryArtiBridge.ReadMember(Entry, "OriginId"), false);
             Set("content", () => RimTalkExpandMemoryArtiBridge.ReadMember(Entry, "Content") ?? string.Empty, false);
@@ -2179,7 +2160,15 @@ namespace AdvancedRimTalk.Integration
             Set("decay", new RimTalkArtiCallable((positional, named) => SetField("Activity", RimTalkExpandMemoryArtiBridge.Clamp01(RimTalkExpandMemoryArtiBridge.ToFloat(RimTalkExpandMemoryArtiBridge.ReadMember(Entry, "Activity"), 0f) * (1f - RimTalkExpandMemoryArtiBridge.Clamp01(RimTalkExpandMemoryArtiBridge.ToFloat(RimTalkExpandMemoryArtiBridge.GetArgument(positional, named, 0, "rate", 0f), 0f)))))));
         }
 
-        internal object Entry { get; }
+        private object _entry;
+        internal object Entry
+        {
+            get
+            {
+                _entry = RimTalkExpandMemoryArtiBridge.ResolveMemoryReference(_component, _entry);
+                return _entry;
+            }
+        }
         internal object Component { get { return _component; } }
 
         private object SetActivity(float value)
@@ -2196,17 +2185,15 @@ namespace AdvancedRimTalk.Integration
         {
             try
             {
-                MethodInfo method = Entry.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
-                if (method == null)
-                {
-                    return false;
-                }
-
-                method.Invoke(Entry, new object[] { RimTalkExpandMemoryArtiBridge.ToText(RimTalkExpandMemoryArtiBridge.GetArgument(positional, named, 0, "value", string.Empty)) });
+                object current = Entry;
+                object[] arguments = { RimTalkExpandMemoryArtiBridge.ToText(RimTalkExpandMemoryArtiBridge.GetArgument(positional, named, 0, "value", string.Empty)) };
+                MethodInfo method = MemoryApiMethodResolver.Resolve(current?.GetType(), methodName, arguments, false);
+                method.Invoke(current, arguments);
                 return true;
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                RimTalkExpandMemoryArtiBridge.Warn(methodName, exception);
                 return false;
             }
         }
@@ -2229,15 +2216,18 @@ namespace AdvancedRimTalk.Integration
                     return true;
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                RimTalkExpandMemoryArtiBridge.Warn("setting " + name, exception);
+                return false;
             }
 
+            RimTalkExpandMemoryArtiBridge.Warn("setting " + name, new MissingMemberException("Memory entry", name));
             return false;
         }
     }
 
-    internal sealed class RimTalkExpandMemoryArtiKnowledgeValue : RimTalkArtiLazyNamespace
+    internal sealed class RimTalkExpandMemoryArtiKnowledgeValue : RimTalkArtiLazyNamespace, IMemoryArtiValue
     {
         internal RimTalkExpandMemoryArtiKnowledgeValue(object entry)
         {

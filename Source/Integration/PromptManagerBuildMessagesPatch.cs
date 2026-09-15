@@ -11,8 +11,22 @@ namespace AdvancedRimTalk.Integration
     [HarmonyPatch(typeof(PromptManager), nameof(PromptManager.BuildMessages))]
     internal static class PromptManagerBuildMessagesPatch
     {
-        private static bool Prefix(TalkRequest talkRequest, List<Pawn> pawns, string status, ref List<ValueTuple<Role, string>> __result)
+        private static void Postfix(List<ValueTuple<Role, string>> __result, bool __state)
         {
+            if (__result == null) return;
+            try
+            {
+                UI.PromptPreviewPage.Capture(__result, __state);
+            }
+            catch (Exception exception)
+            {
+                Log.Warning("Advanced RimTalk could not capture the prompt preview: " + exception);
+            }
+        }
+
+        private static bool Prefix(TalkRequest talkRequest, List<Pawn> pawns, string status, ref List<ValueTuple<Role, string>> __result, out bool __state)
+        {
+            __state = false;
             if (!AdvancedRimTalkMod.ShouldReplaceRimTalkPromptMechanism)
             {
                 return true;
@@ -27,6 +41,7 @@ namespace AdvancedRimTalk.Integration
                     talkRequest.PromptMessageSegments = segments.Count > 0 ? segments : null;
                 }
 
+                __state = true;
                 return false;
             }
             catch (Exception exception)

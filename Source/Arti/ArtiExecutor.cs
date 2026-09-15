@@ -406,6 +406,8 @@ namespace AdvancedRimTalk.Arti
             ArtiVariableDeclarationStatement variable = statement as ArtiVariableDeclarationStatement;
             if (variable != null)
             {
+                if (variable.IsConst && !ArtiConstantExpression.IsStatic(variable.Value, scope.IsConstant))
+                    RuntimeError(variable.Span, "const requires a static expression; use a function for dynamic values.");
                 object value = Evaluate(variable.Value, scope);
                 if (!scope.TryDeclare(
                     variable.Name,
@@ -417,6 +419,7 @@ namespace AdvancedRimTalk.Arti
                 }
 
                 _lastValue = value;
+                if (variable.IsConst) scope.MarkConstant(variable.Name);
                 return;
             }
 
@@ -1940,6 +1943,7 @@ namespace AdvancedRimTalk.Arti
 
         private sealed class RuntimeScope
         {
+            private readonly HashSet<string> _constantNames = new HashSet<string>(StringComparer.Ordinal);
             private readonly IDictionary<string, Binding> _bindings =
                 new Dictionary<string, Binding>(StringComparer.Ordinal);
 
@@ -1949,6 +1953,16 @@ namespace AdvancedRimTalk.Arti
             }
 
             public RuntimeScope Parent { get; }
+
+            public void MarkConstant(string name) { _constantNames.Add(name); }
+
+            public bool IsConstant(string name)
+            {
+                Binding binding;
+                if (_bindings.TryGetValue(name, out binding))
+                    return _constantNames.Contains(name);
+                return Parent != null && Parent.IsConstant(name);
+            }
 
             public void ImportFrom(IDictionary<string, object> values)
             {

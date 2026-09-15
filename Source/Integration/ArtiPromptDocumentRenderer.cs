@@ -36,6 +36,18 @@ namespace AdvancedRimTalk.Integration
 
     internal static class ArtiPromptDocumentRenderer
     {
+        private static Game runtimeGame;
+        private static ArtiGlobalRuntime globalRuntime;
+
+        private static ArtiGlobalRuntime GetGlobalRuntime()
+        {
+            if (!ReferenceEquals(runtimeGame, Current.Game))
+            {
+                runtimeGame = Current.Game;
+                globalRuntime = new ArtiGlobalRuntime();
+            }
+            return globalRuntime ?? (globalRuntime = new ArtiGlobalRuntime());
+        }
         public static bool HasArtiBlocks(string source)
         {
             return !string.IsNullOrEmpty(source)
@@ -47,9 +59,10 @@ namespace AdvancedRimTalk.Integration
             source = source ?? string.Empty;
             ArtiDocumentParseResult document = new ArtiDocumentParser().Parse(source);
             List<ArtiDiagnostic> diagnostics = new List<ArtiDiagnostic>(document.Diagnostics);
+            bool preview = context != null && context.IsPreview;
             if (document.CodeBlocks.Count == 0)
             {
-                return new ArtiPromptRenderResult(source, diagnostics);
+                return new ArtiPromptRenderResult(preview && document.Diagnostics.Count > 0 ? string.Empty : source, diagnostics);
             }
 
             ArtiSymbolCatalog symbols = RimTalkArtiCatalog.CreateSymbolCatalog();
@@ -68,24 +81,20 @@ namespace AdvancedRimTalk.Integration
 
                 if (block.HasErrors)
                 {
-                    output.Append(CreateErrorMarker(FirstDiagnosticForBlock(document.Diagnostics, block), block.Span));
+                    if (!preview) output.Append(CreateErrorMarker(FirstDiagnosticForBlock(document.Diagnostics, block), block.Span));
                 }
                 else
                 {
-                    ArtiAnalysisResult analysis = new ArtiAnalyzer(modules, symbols).Analyze(block.ParseResult.Program);
-                    AddDiagnostics(diagnostics, analysis.Diagnostics);
-                    if (analysis.HasErrors)
-                    {
-                        output.Append(CreateErrorMarker(FirstError(analysis.Diagnostics), block.Span));
-                    }
-                    else
-                    {
-                        ArtiExecutionResult execution = new ArtiExecutor().Execute(
-                            block.ParseResult.Program,
-                            executionContext);
-                        AddDiagnostics(diagnostics, execution.Diagnostics);
-                        output.Append(execution.Output);
-                    }
+                    string blockSource = block.Body ?? string.Empty;
+                    ArtiExecutionResult execution = GetGlobalRuntime().Execute(
+                        blockSource,
+                        "prompt-document",
+                        executionContext);
+                    AddDiagnostics(diagnostics, execution.Diagnostics);
+                    bool executionFailed = false;
+                    foreach (ArtiDiagnostic diagnostic in execution.Diagnostics)
+                        executionFailed |= diagnostic.Severity == ArtiDiagnosticSeverity.Error;
+                    if (!preview || !executionFailed) output.Append(execution.Output);
                 }
 
                 cursor = end;
@@ -116,13 +125,21 @@ namespace AdvancedRimTalk.Integration
                     Log.Warning("Advanced RimTalk Arti: " + message);
                 }
             };
+            Dictionary<string, object> previewVariables = promptContext.IsPreview
+                ? PromptPreviewSession.Variables ?? new Dictionary<string, object>(StringComparer.Ordinal) : null;
             executionContext.GetVariable = delegate(string key)
             {
+                if (previewVariables != null)
+                {
+                    object value;
+                    return previewVariables.TryGetValue(key, out value) ? value : string.Empty;
+                }
                 return ScribanParser.GetSessionVar(key);
             };
             executionContext.SetVariable = delegate(string key, string value)
             {
-                ScribanParser.SetSessionVar(key, value);
+                if (previewVariables != null) previewVariables[key] = value;
+                else ScribanParser.SetSessionVar(key, value);
             };
             return executionContext;
         }

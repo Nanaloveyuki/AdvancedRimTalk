@@ -298,6 +298,11 @@ namespace AdvancedRimTalk.Arti
             ArtiVariableDeclarationStatement variable = statement as ArtiVariableDeclarationStatement;
             if (variable != null)
             {
+                if (variable.IsConst && !ArtiConstantExpression.IsStatic(variable.Value, name =>
+                {
+                    Binding binding;
+                    return scope.TryResolve(name, out binding) && binding.Kind == BindingKind.Constant;
+                })) ReportError(3016, variable.Span);
                 if (!scope.TryDeclare(
                     variable.Name,
                     variable.IsConst ? BindingKind.Constant : BindingKind.Variable,
