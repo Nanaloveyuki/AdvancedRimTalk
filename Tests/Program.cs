@@ -8,6 +8,19 @@ namespace AdvancedRimTalk.PromptChecks
     {
         private static void Main()
         {
+            GlobalRuntimeProperties.Run();
+            GlobalDefinitionProperties.Run();
+            PreviewSessionPatchChecks.Run();
+            MixedTemplateChecks.Run();
+            ArtiDocumentRenderChecks.Run();
+            PromptSettingsChecks.Run();
+            MemoryLayerTransferChecks.Run();
+            MemoryPreviewPolicyChecks.Run();
+            PromptPreviewSessionChecks.Run();
+            TakeoverScopeChecks.Run();
+            PromptPreviewChecks.Run();
+            PromptCharacterBudgetChecks.Run();
+            MemoryApiMethodResolverChecks.Run();
             ArtiChecks.Run();
             ArtiEditorTextChecks.Run();
             ArtiExecutorChecks.Run();

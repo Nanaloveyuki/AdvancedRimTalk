@@ -8,6 +8,7 @@
   <AdvancedRimTalk.Settings.EnablePlaceholderLayer>Enable dynamic prompt placeholders</AdvancedRimTalk.Settings.EnablePlaceholderLayer>
   <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>In embed mode, expand Advanced RimTalk placeholders when a prompt is generated.</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
   <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>Editor undo entries</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
+  <AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>Maximum completion suggestions</AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>Takeover Arti system document</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>Only {{% ... %}} Arti blocks execute here. Other text becomes the system message.</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>Replace RimTalk prompt builder</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
@@ -51,4 +52,16 @@
   <AdvancedRimTalk.Documentation.Compatibility>Compatibility</AdvancedRimTalk.Documentation.Compatibility>
   <AdvancedRimTalk.Documentation.SelectDocument>Select a document.</AdvancedRimTalk.Documentation.SelectDocument>
   <AdvancedRimTalk.Documentation.Unavailable>The Arti documentation library is unavailable.</AdvancedRimTalk.Documentation.Unavailable>
+  <AdvancedRimTalk.Settings.PawnLimit>Takeover pawn context limit</AdvancedRimTalk.Settings.PawnLimit>
+  <AdvancedRimTalk.Settings.HistoryLimit>Takeover history limit</AdvancedRimTalk.Settings.HistoryLimit>
+  <AdvancedRimTalk.Settings.CharacterBudget>Takeover character budget</AdvancedRimTalk.Settings.CharacterBudget>
+  <AdvancedRimTalk.Preview.Title>Prompt Preview</AdvancedRimTalk.Preview.Title>
+  <AdvancedRimTalk.Preview.Text>Plain text</AdvancedRimTalk.Preview.Text>
+  <AdvancedRimTalk.Preview.Json>Raw messages JSON</AdvancedRimTalk.Preview.Json>
+  <AdvancedRimTalk.Preview.NoCapture>No generated prompt for this mode in the current game.</AdvancedRimTalk.Preview.NoCapture>
+  <AdvancedRimTalk.Preview.Experimental>Experimental context execution</AdvancedRimTalk.Preview.Experimental>
+  <AdvancedRimTalk.Preview.Generate>Generate context preview</AdvancedRimTalk.Preview.Generate>
+  <AdvancedRimTalk.Preview.ContextResult>Context preview</AdvancedRimTalk.Preview.ContextResult>
+  <AdvancedRimTalk.Preview.CapturedResult>Last generated messages</AdvancedRimTalk.Preview.CapturedResult>
+  <AdvancedRimTalk.Preview.Request>Preview request</AdvancedRimTalk.Preview.Request>
 </LanguageData>

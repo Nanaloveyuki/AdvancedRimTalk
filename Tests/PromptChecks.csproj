@@ -10,10 +10,41 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <OutputPath>..\tmp\prompt-checks\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <RimTalkAssemblyDir Condition="'$(RimTalkAssemblyDir)' == ''">F:\tmp\rimworld\Rimtalk\1.6\Assemblies</RimTalkAssemblyDir>
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Scriban">
+      <HintPath>$(RimTalkAssemblyDir)\Scriban.dll</HintPath>
+    </Reference>
     <Compile Include="Program.cs" />
+    <Compile Include="GlobalRuntimeProperties.cs" />
+    <Compile Include="..\Source\Arti\ArtiGlobalRuntime.cs" Link="ArtiGlobalRuntime.cs" />
+    <Compile Include="GlobalDefinitionProperties.cs" />
+    <Compile Include="..\Source\Arti\ArtiGlobalDefinitions.cs" Link="ArtiGlobalDefinitions.cs" />
+    <Compile Include="..\Source\Arti\ArtiConstantExpression.cs" Link="ArtiConstantExpression.cs" />
+    <Compile Include="PreviewSessionPatchChecks.cs" />
+    <Compile Include="..\Source\Integration\PreviewSessionVariablePatches.cs" Link="PreviewSessionVariablePatches.cs" />
+    <Compile Include="MixedTemplateChecks.cs" />
+    <Compile Include="ArtiDocumentRenderChecks.cs" />
+    <Compile Include="..\Source\Integration\ArtiPromptDocumentRenderer.cs" Link="ArtiPromptDocumentRenderer.cs" />
+    <Compile Include="PromptSettingsChecks.cs" />
+    <Compile Include="..\Source\Settings\AdvancedRimTalkSettings.cs" Link="AdvancedRimTalkSettings.cs" />
+    <Compile Include="..\Source\Prompt\ArtiPromptPart.cs" Link="ArtiPromptPart.cs" />
+    <Compile Include="MemoryLayerTransferChecks.cs" />
+    <Compile Include="..\Source\Integration\MemoryLayerTransfer.cs" Link="MemoryLayerTransfer.cs" />
+    <Compile Include="MemoryPreviewPolicyChecks.cs" />
+    <Compile Include="..\Source\Integration\MemoryPreviewPolicy.cs" Link="MemoryPreviewPolicy.cs" />
+    <Compile Include="PromptPreviewSessionChecks.cs" />
+    <Compile Include="..\Source\Integration\PromptPreviewSession.cs" Link="PromptPreviewSession.cs" />
+    <Compile Include="TakeoverScopeChecks.cs" />
+    <Compile Include="..\Source\Integration\RimTalkTakeoverContextScope.cs" Link="RimTalkTakeoverContextScope.cs" />
+    <Compile Include="PromptPreviewChecks.cs" />
+    <Compile Include="PromptCharacterBudgetChecks.cs" />
+    <Compile Include="..\Source\Prompt\PromptCharacterBudget.cs" Link="PromptCharacterBudget.cs" />
+    <Compile Include="MemoryApiMethodResolverChecks.cs" />
+    <Compile Include="..\Source\Integration\MemoryApiMethodResolver.cs" Link="MemoryApiMethodResolver.cs" />
+    <Compile Include="..\Source\Prompt\PromptPreview.cs" Link="PromptPreview.cs" />
     <Compile Include="ArtiChecks.cs" />
     <Compile Include="ArtiExecutorChecks.cs" />
     <Compile Include="ArtiPawnInfoChecks.cs" />

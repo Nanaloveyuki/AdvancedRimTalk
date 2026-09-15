@@ -11,10 +11,15 @@ namespace AdvancedRimTalk
     public sealed class AdvancedRimTalkMod : Mod
     {
         private readonly ArtiReplPage _artiReplPage = new ArtiReplPage();
+        private readonly PromptPreviewPage _promptPreviewPage = new PromptPreviewPage();
         private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
         private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();
         private readonly DocumentationPage _documentationPage;
         private string _artiEditorUndoLimitBuffer;
+        private string _artiEditorCompletionLimitBuffer;
+        private string _takeoverPawnLimitBuffer;
+        private string _takeoverHistoryLimitBuffer;
+        private string _takeoverBudgetBuffer;
 
         internal static AdvancedRimTalkSettings Settings { get; private set; }
 
@@ -107,6 +112,18 @@ namespace AdvancedRimTalk
                 0,
                 500);
 
+            DrawIntegerSetting(
+                listing,
+                "AdvancedRimTalk.Settings.ArtiEditorCompletionLimit".Translate(),
+                ref Settings.ArtiEditorCompletionLimit,
+                ref _artiEditorCompletionLimitBuffer,
+                1,
+                9);
+
+            DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.PawnLimit".Translate(), ref Settings.TakeoverMaxPawnContextCount, ref _takeoverPawnLimitBuffer, 1, 256);
+            DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.HistoryLimit".Translate(), ref Settings.TakeoverConversationHistoryCount, ref _takeoverHistoryLimitBuffer, 0, 500);
+            DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.CharacterBudget".Translate(), ref Settings.TakeoverPromptCharacterBudget, ref _takeoverBudgetBuffer, 4000, 200000);
+
             if (Settings.ReplaceRimTalkPromptMechanism)
             {
                 listing.Label("AdvancedRimTalk.Settings.TakeoverArtiPromptDocument".Translate());
@@ -129,6 +146,7 @@ namespace AdvancedRimTalk
             int minimum,
             int maximum)
         {
+            if (buffer == null) buffer = value.ToString();
             float labelWidth = listing.ColumnWidth * 0.4f;
             float height = Mathf.Max(30f, Text.CalcHeight(label, labelWidth));
             Rect row = listing.GetRect(height);
@@ -151,6 +169,11 @@ namespace AdvancedRimTalk
         internal void DrawArtiRepl(Rect inRect)
         {
             _artiReplPage.Draw(inRect);
+        }
+
+        internal void DrawPromptPreview(Rect inRect)
+        {
+            _promptPreviewPage.Draw(inRect);
         }
 
         internal void DrawArtiEditor(Rect inRect)

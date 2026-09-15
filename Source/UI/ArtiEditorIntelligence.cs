@@ -367,7 +367,8 @@ namespace AdvancedRimTalk.UI
             string source,
             int cursor,
             ArtiEditorAnalysis analysis,
-            IEnumerable<string> externalGlobals = null)
+            IEnumerable<string> externalGlobals = null,
+            int maximumResults = 5)
         {
             source = ArtiEditorText.NormalizeLineEndings(source);
             cursor = Math.Max(0, Math.Min(cursor, source.Length));
@@ -447,7 +448,7 @@ namespace AdvancedRimTalk.UI
                     : StringComparer.Ordinal.Compare(left.Key, right.Key);
             });
 
-            int limit = Math.Min(12, ordered.Count);
+            int limit = Math.Min(Math.Max(1, Math.Min(9, maximumResults)), ordered.Count);
             for (int index = 0; index < limit; index++)
             {
                 result.Add(new ArtiCompletionItem(ordered[index].Key, ordered[index].Value));

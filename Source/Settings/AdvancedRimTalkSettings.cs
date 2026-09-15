@@ -28,25 +28,23 @@ namespace AdvancedRimTalk.Settings
 
         public bool EnablePlaceholderLayer = true;
         public bool ReplaceRimTalkPromptMechanism = false;
-        public string TakeoverArtiPromptDocument = DefaultTakeoverArtiPromptDocument;
         public List<ArtiPromptPart> TakeoverPromptParts = new List<ArtiPromptPart>();
         public int ArtiEditorUndoLimit = 100;
+        public int ArtiEditorCompletionLimit = 5;
+        public int TakeoverMaxPawnContextCount = 32;
+        public int TakeoverConversationHistoryCount = 40;
+        public int TakeoverPromptCharacterBudget = 24000;
 
         public override void ExposeData()
         {
             Scribe_Values.Look(ref EnablePlaceholderLayer, "enablePlaceholderLayer", true);
             Scribe_Values.Look(ref ReplaceRimTalkPromptMechanism, "replaceRimTalkPromptMechanism", false);
-            Scribe_Values.Look(
-                ref TakeoverArtiPromptDocument,
-                "takeoverArtiPromptDocument",
-                DefaultTakeoverArtiPromptDocument);
             Scribe_Collections.Look(ref TakeoverPromptParts, "takeoverPromptParts", LookMode.Deep);
             Scribe_Values.Look(ref ArtiEditorUndoLimit, "artiEditorUndoLimit", 100);
-            if (TakeoverArtiPromptDocument == null)
-            {
-                TakeoverArtiPromptDocument = DefaultTakeoverArtiPromptDocument;
-            }
-
+            Scribe_Values.Look(ref ArtiEditorCompletionLimit, "artiEditorCompletionLimit", 5);
+            Scribe_Values.Look(ref TakeoverMaxPawnContextCount, "takeoverMaxPawnContextCount", 32);
+            Scribe_Values.Look(ref TakeoverConversationHistoryCount, "takeoverConversationHistoryCount", 40);
+            Scribe_Values.Look(ref TakeoverPromptCharacterBudget, "takeoverPromptCharacterBudget", 24000);
             EnsureTakeoverPromptParts();
 
             if (ArtiEditorUndoLimit < 0)
@@ -57,13 +55,17 @@ namespace AdvancedRimTalk.Settings
             {
                 ArtiEditorUndoLimit = 500;
             }
+            ArtiEditorCompletionLimit = System.Math.Max(1, System.Math.Min(9, ArtiEditorCompletionLimit));
+            TakeoverMaxPawnContextCount = System.Math.Max(1, System.Math.Min(256, TakeoverMaxPawnContextCount));
+            TakeoverConversationHistoryCount = System.Math.Max(0, System.Math.Min(500, TakeoverConversationHistoryCount));
+            TakeoverPromptCharacterBudget = System.Math.Max(4000, System.Math.Min(200000, TakeoverPromptCharacterBudget));
         }
 
         public void EnsureTakeoverPromptParts()
         {
             if (TakeoverPromptParts == null || TakeoverPromptParts.Count == 0)
             {
-                TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(TakeoverArtiPromptDocument);
+                TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(DefaultTakeoverArtiPromptDocument);
             }
 
             foreach (ArtiPromptPart part in TakeoverPromptParts)
@@ -77,7 +79,7 @@ namespace AdvancedRimTalk.Settings
             TakeoverPromptParts.RemoveAll(part => part == null);
             if (TakeoverPromptParts.Count == 0)
             {
-                TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(TakeoverArtiPromptDocument);
+                TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(DefaultTakeoverArtiPromptDocument);
             }
         }
 
@@ -92,13 +94,12 @@ namespace AdvancedRimTalk.Settings
                 }
             }
 
-            return TakeoverArtiPromptDocument ?? DefaultTakeoverArtiPromptDocument;
+            return string.Empty;
         }
 
         public void SetPrimaryTakeoverSystemDocument(string document)
         {
             string normalized = document ?? DefaultTakeoverArtiPromptDocument;
-            TakeoverArtiPromptDocument = normalized;
             EnsureTakeoverPromptParts();
             foreach (ArtiPromptPart part in TakeoverPromptParts)
             {

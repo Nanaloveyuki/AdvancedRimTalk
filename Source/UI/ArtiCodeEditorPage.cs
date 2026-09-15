@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AdvancedRimTalk.Arti;
 using AdvancedRimTalk.Settings;
+using AdvancedRimTalk.Prompt;
 using UnityEngine;
 using Verse;
 
@@ -57,6 +58,12 @@ namespace AdvancedRimTalk.UI
         private GUIStyle diagnosticStyle;
         private float lineAdvance;
         private bool stylesInitialized;
+        private readonly ArtiPromptPart boundPart;
+
+        public ArtiCodeEditorPage(ArtiPromptPart part = null)
+        {
+            boundPart = part;
+        }
 
         public void Draw(Rect inRect)
         {
@@ -503,7 +510,8 @@ namespace AdvancedRimTalk.UI
 
         private void SyncFromSettings(AdvancedRimTalkSettings settings)
         {
-            string configured = ArtiEditorText.NormalizeLineEndings(settings.TakeoverArtiPromptDocument);
+            string configured = ArtiEditorText.NormalizeLineEndings(
+                boundPart == null ? settings.GetPrimaryTakeoverSystemDocument() : boundPart.Content);
             if (!initialized)
             {
                 source = configured;
@@ -748,7 +756,10 @@ namespace AdvancedRimTalk.UI
             }
 
             source = value;
-            AdvancedRimTalk.AdvancedRimTalkMod.Settings.TakeoverArtiPromptDocument = source;
+            if (boundPart == null)
+                AdvancedRimTalk.AdvancedRimTalkMod.Settings.SetPrimaryTakeoverSystemDocument(source);
+            else
+                boundPart.Content = source;
             lastBoundSource = source;
             analyzedSource = null;
             analysis = null;
@@ -1062,7 +1073,9 @@ namespace AdvancedRimTalk.UI
                 IList<ArtiCompletionItem> candidates = intelligence.GetCompletionCandidates(
                     source,
                     editor.cursorIndex,
-                    analysis);
+                    analysis,
+                    null,
+                    GetCompletionLimit());
                 if (candidates.Count == 1 && (prefix.Length > 0 || IsMemberContext(editor.cursorIndex)))
                 {
                     completions.Clear();
@@ -1099,7 +1112,9 @@ namespace AdvancedRimTalk.UI
             IList<ArtiCompletionItem> candidates = intelligence.GetCompletionCandidates(
                 source,
                 editor.cursorIndex,
-                analysis);
+                analysis,
+                null,
+                GetCompletionLimit());
             if (candidates.Count == 0)
             {
                 ClearCompletion();
@@ -1330,7 +1345,9 @@ namespace AdvancedRimTalk.UI
                     IList<ArtiCompletionItem> candidates = intelligence.GetCompletionCandidates(
                         source,
                         resultEditor.cursorIndex,
-                        analysis);
+                        analysis,
+                        null,
+                        GetCompletionLimit());
                     if (candidates.Count > 0)
                     {
                         SetCompletions(candidates, prefixStart, prefix);
@@ -1350,6 +1367,13 @@ namespace AdvancedRimTalk.UI
                     value,
                     position,
                     GetCodeRangeStart(position));
+        }
+
+        private static int GetCompletionLimit()
+        {
+            return AdvancedRimTalkMod.Settings == null
+                ? 5
+                : Math.Max(1, Math.Min(9, AdvancedRimTalkMod.Settings.ArtiEditorCompletionLimit));
         }
 
         private bool CanEditAt(int position)

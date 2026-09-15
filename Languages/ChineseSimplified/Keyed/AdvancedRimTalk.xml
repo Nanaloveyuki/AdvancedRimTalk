@@ -8,6 +8,7 @@
   <AdvancedRimTalk.Settings.EnablePlaceholderLayer>启用动态 Prompt 占位符</AdvancedRimTalk.Settings.EnablePlaceholderLayer>
   <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>在嵌入模式下，于生成 Prompt 时展开 Advanced RimTalk 占位符。</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
   <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>编辑器撤销步数</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
+  <AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>最大补全联想数量</AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>接管模式 Arti system 文档</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
   <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>这里只执行 {{% ... %}} Arti 代码块，其余文本会作为 system 消息发送。</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>接管 RimTalk Prompt 构建</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
@@ -51,4 +52,16 @@
   <AdvancedRimTalk.Documentation.Compatibility>兼容</AdvancedRimTalk.Documentation.Compatibility>
   <AdvancedRimTalk.Documentation.SelectDocument>选择一个文档。</AdvancedRimTalk.Documentation.SelectDocument>
   <AdvancedRimTalk.Documentation.Unavailable>Arti 文档库不可用。</AdvancedRimTalk.Documentation.Unavailable>
+  <AdvancedRimTalk.Settings.PawnLimit>接管模式角色上下文数量上限</AdvancedRimTalk.Settings.PawnLimit>
+  <AdvancedRimTalk.Settings.HistoryLimit>接管模式历史消息数量上限</AdvancedRimTalk.Settings.HistoryLimit>
+  <AdvancedRimTalk.Settings.CharacterBudget>接管模式提示词字符预算</AdvancedRimTalk.Settings.CharacterBudget>
+  <AdvancedRimTalk.Preview.Title>提示词预览</AdvancedRimTalk.Preview.Title>
+  <AdvancedRimTalk.Preview.Text>纯文本</AdvancedRimTalk.Preview.Text>
+  <AdvancedRimTalk.Preview.Json>原始消息 JSON</AdvancedRimTalk.Preview.Json>
+  <AdvancedRimTalk.Preview.NoCapture>当前存档尚无此模式生成的提示词。</AdvancedRimTalk.Preview.NoCapture>
+  <AdvancedRimTalk.Preview.Experimental>实验性上下文执行</AdvancedRimTalk.Preview.Experimental>
+  <AdvancedRimTalk.Preview.Generate>生成上下文预览</AdvancedRimTalk.Preview.Generate>
+  <AdvancedRimTalk.Preview.ContextResult>上下文预览</AdvancedRimTalk.Preview.ContextResult>
+  <AdvancedRimTalk.Preview.CapturedResult>最近生成的消息</AdvancedRimTalk.Preview.CapturedResult>
+  <AdvancedRimTalk.Preview.Request>预览请求</AdvancedRimTalk.Preview.Request>
 </LanguageData>
