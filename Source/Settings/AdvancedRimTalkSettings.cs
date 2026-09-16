@@ -17,6 +17,8 @@ namespace AdvancedRimTalk.Settings
         public bool EnablePlaceholderLayer = true;
         public bool ReplaceRimTalkPromptMechanism = false;
         public List<ArtiPromptPart> TakeoverPromptParts = new List<ArtiPromptPart>();
+        public List<ArtiPromptPreset> TakeoverPresets = new List<ArtiPromptPreset>();
+        public string ActiveTakeoverPresetId = string.Empty;
         public int ArtiEditorUndoLimit = 100;
         public int ArtiEditorCompletionLimit = 5;
         public int TakeoverMaxPawnContextCount = 32;
@@ -39,6 +41,8 @@ namespace AdvancedRimTalk.Settings
             Scribe_Values.Look(ref EnablePlaceholderLayer, "enablePlaceholderLayer", true);
             Scribe_Values.Look(ref ReplaceRimTalkPromptMechanism, "replaceRimTalkPromptMechanism", false);
             Scribe_Collections.Look(ref TakeoverPromptParts, "takeoverPromptParts", LookMode.Deep);
+            Scribe_Collections.Look(ref TakeoverPresets, "takeoverPresets", LookMode.Deep);
+            Scribe_Values.Look(ref ActiveTakeoverPresetId, "activeTakeoverPresetId", string.Empty);
             Scribe_Values.Look(ref ArtiEditorUndoLimit, "artiEditorUndoLimit", 100);
             Scribe_Values.Look(ref ArtiEditorCompletionLimit, "artiEditorCompletionLimit", 5);
             Scribe_Values.Look(ref TakeoverMaxPawnContextCount, "takeoverMaxPawnContextCount", 32);
@@ -73,6 +77,23 @@ namespace AdvancedRimTalk.Settings
 
         public void EnsureTakeoverPromptParts()
         {
+            if (TakeoverPresets == null) TakeoverPresets = new List<ArtiPromptPreset>();
+            TakeoverPresets.RemoveAll(preset => preset == null);
+            foreach (var preset in TakeoverPresets) preset.Normalize();
+            if (TakeoverPresets.Count > 0)
+            {
+                var active = TakeoverPresets.Find(preset => preset.Id == ActiveTakeoverPresetId);
+                if (active == null)
+                {
+                    active = TakeoverPresets[0];
+                    ActiveTakeoverPresetId = active.Id;
+                    TakeoverPromptParts = active.Parts;
+                }
+                else
+                {
+                    active.Parts = TakeoverPromptParts ?? active.Parts;
+                }
+            }
             if (TakeoverPromptParts == null || TakeoverPromptParts.Count == 0)
             {
                 TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(DefaultTakeoverArtiPromptDocument);
@@ -91,6 +112,42 @@ namespace AdvancedRimTalk.Settings
             {
                 TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(DefaultTakeoverArtiPromptDocument);
             }
+            if (TakeoverPresets.Count == 0)
+            {
+                var initial = new ArtiPromptPreset { Parts = TakeoverPromptParts };
+                TakeoverPresets.Add(initial);
+                ActiveTakeoverPresetId = initial.Id;
+            }
+            TakeoverPresets.Find(preset => preset.Id == ActiveTakeoverPresetId).Parts = TakeoverPromptParts;
+        }
+
+        public ArtiPromptPreset ActiveTakeoverPreset
+        {
+            get
+            {
+                EnsureTakeoverPromptParts();
+                return TakeoverPresets.Find(preset => preset.Id == ActiveTakeoverPresetId);
+            }
+        }
+
+        public void ActivateTakeoverPreset(string id)
+        {
+            EnsureTakeoverPromptParts();
+            var preset = TakeoverPresets.Find(item => item.Id == id);
+            if (preset == null) return;
+            ActiveTakeoverPresetId = preset.Id;
+            TakeoverPromptParts = preset.Parts;
+        }
+
+        public void AddTakeoverPreset(ArtiPromptPreset preset)
+        {
+            EnsureTakeoverPromptParts();
+            preset.Normalize();
+            string name = preset.Name;
+            int suffix = 2;
+            while (TakeoverPresets.Exists(item => item.Name == preset.Name))
+                preset.Name = name + " (" + suffix++ + ")";
+            TakeoverPresets.Add(preset);
         }
 
         public string GetPrimaryTakeoverSystemDocument()

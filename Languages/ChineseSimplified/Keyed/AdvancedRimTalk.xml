@@ -9,8 +9,6 @@
   <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>在嵌入模式下，于生成 Prompt 时展开 Advanced RimTalk 占位符。</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
   <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>编辑器撤销步数</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
   <AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>最大补全联想数量</AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>
-  <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>接管模式 Arti system 文档</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
-  <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>这里只执行 {{% ... %}} Arti 代码块，其余文本会作为 system 消息发送。</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>接管 RimTalk Prompt 构建</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>改由 Advanced RimTalk 构建请求消息，不走 RimTalk 预设和 Scriban 渲染。RimTalk 仍负责触发和模型客户端。</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
   <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
@@ -34,7 +32,6 @@
   <AdvancedRimTalk.PromptParts.Enabled>启用</AdvancedRimTalk.PromptParts.Enabled>
   <AdvancedRimTalk.PromptParts.Role>角色:</AdvancedRimTalk.PromptParts.Role>
   <AdvancedRimTalk.PromptParts.CustomRole>自定义角色:</AdvancedRimTalk.PromptParts.CustomRole>
-  <AdvancedRimTalk.PromptParts.Help>接管模式会按左侧顺序渲染已启用片段；这里只执行 {{% ... %}} Arti 块，不再走 RimTalk Prompt 预设或 Scriban。</AdvancedRimTalk.PromptParts.Help>
   <AdvancedRimTalk.PromptParts.NoLocalPrompts>没有找到 RimTalk 本地 Prompt 预设。</AdvancedRimTalk.PromptParts.NoLocalPrompts>
   <AdvancedRimTalk.PromptParts.NoSharedPrompts>没有找到 RimTalk 分享 Prompt 文件；可先打开分享目录放入 .json 预设。</AdvancedRimTalk.PromptParts.NoSharedPrompts>
   <AdvancedRimTalk.PromptParts.ImportFailed>导入 Prompt 失败。</AdvancedRimTalk.PromptParts.ImportFailed>
@@ -52,10 +49,25 @@
   <AdvancedRimTalk.Documentation.Compatibility>兼容</AdvancedRimTalk.Documentation.Compatibility>
   <AdvancedRimTalk.Documentation.SelectDocument>选择一个文档。</AdvancedRimTalk.Documentation.SelectDocument>
   <AdvancedRimTalk.Documentation.Unavailable>Arti 文档库不可用。</AdvancedRimTalk.Documentation.Unavailable>
+  <AdvancedRimTalk.Documentation.Source>源文本</AdvancedRimTalk.Documentation.Source>
+  <AdvancedRimTalk.Documentation.Copy>复制全文</AdvancedRimTalk.Documentation.Copy>
   <AdvancedRimTalk.Settings.PawnLimit>接管模式角色上下文数量上限</AdvancedRimTalk.Settings.PawnLimit>
   <AdvancedRimTalk.Settings.HistoryLimit>接管模式历史消息数量上限</AdvancedRimTalk.Settings.HistoryLimit>
   <AdvancedRimTalk.Settings.CharacterBudget>接管模式提示词字符预算</AdvancedRimTalk.Settings.CharacterBudget>
   <AdvancedRimTalk.Preview.Title>提示词预览</AdvancedRimTalk.Preview.Title>
+  <AdvancedRimTalk.Presets.Title>预设</AdvancedRimTalk.Presets.Title>
+  <AdvancedRimTalk.Presets.New>新预设</AdvancedRimTalk.Presets.New>
+  <AdvancedRimTalk.Presets.Activate>激活</AdvancedRimTalk.Presets.Activate>
+  <AdvancedRimTalk.Presets.Copy>复制</AdvancedRimTalk.Presets.Copy>
+  <AdvancedRimTalk.Presets.Delete>删除预设</AdvancedRimTalk.Presets.Delete>
+  <AdvancedRimTalk.Presets.DeleteConfirm>删除预设“{0}”？</AdvancedRimTalk.Presets.DeleteConfirm>
+  <AdvancedRimTalk.Preview.Active>正在使用：{0} / {1}</AdvancedRimTalk.Preview.Active>
+  <AdvancedRimTalk.Preview.Preset>预览预设</AdvancedRimTalk.Preview.Preset>
+  <AdvancedRimTalk.Preview.Takeover>接管模式</AdvancedRimTalk.Preview.Takeover>
+  <AdvancedRimTalk.Preview.Embed>RimTalk</AdvancedRimTalk.Preview.Embed>
+  <AdvancedRimTalk.Preview.ResultSource>{0}：{1}</AdvancedRimTalk.Preview.ResultSource>
+  <AdvancedRimTalk.Documentation.Back>返回</AdvancedRimTalk.Documentation.Back>
+  <AdvancedRimTalk.Documentation.LinkUnavailable>无法打开文档链接：{0}</AdvancedRimTalk.Documentation.LinkUnavailable>
   <AdvancedRimTalk.Preview.Text>纯文本</AdvancedRimTalk.Preview.Text>
   <AdvancedRimTalk.Preview.Json>原始消息 JSON</AdvancedRimTalk.Preview.Json>
   <AdvancedRimTalk.Preview.NoCapture>当前存档尚无此模式生成的提示词。</AdvancedRimTalk.Preview.NoCapture>

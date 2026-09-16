@@ -35,23 +35,137 @@ namespace AdvancedRimTalk.PromptChecks
             }, "Imported");
             if (imported.Content != source || imported.Enabled || imported.Role != PromptRole.Assistant
                 || imported.CustomRole != "Narrator") throw new Exception("Import must preserve source and part metadata.");
+
+            var original = settings.ActiveTakeoverPreset;
+            if (!ReferenceEquals(original.Parts, settings.TakeoverPromptParts)) throw new Exception("Legacy parts must migrate without copying away edits.");
+            var copy = original.Copy("Second");
+            settings.TakeoverPresets.Add(copy);
+            copy.Parts[0].Content = "independent";
+            if (original.Parts[0].Content == "independent") throw new Exception("Presets must not share mutable parts.");
+            settings.ActivateTakeoverPreset(copy.Id);
+            if (settings.GetPrimaryTakeoverSystemDocument() != "independent") throw new Exception("Activation must change runtime parts.");
+            settings.ActivateTakeoverPreset(original.Id);
+            if (!ReferenceEquals(settings.TakeoverPromptParts, original.Parts)) throw new Exception("Switching back lost original parts.");
+            var preview = copy.Copy("Preview");
+            preview.Parts[0].Content = "preview mutation";
+            if (copy.Parts[0].Content != "independent" || settings.ActiveTakeoverPresetId != original.Id)
+                throw new Exception("Preview clone modified source or active preset.");
+            settings.AddTakeoverPreset(original.Copy(original.Name));
+            settings.AddTakeoverPreset(original.Copy(original.Name));
+            if (settings.TakeoverPresets[2].Name == settings.TakeoverPresets[3].Name)
+                throw new Exception("Duplicate preset names were not disambiguated.");
+            Verse.TestScribe.BeginSave();
+            settings.ExposeData();
+            var persisted = Verse.TestScribe.Data;
+            Verse.TestScribe.BeginLoad(persisted);
+            var restored = new AdvancedRimTalkSettings();
+            restored.ExposeData();
+            if (restored.TakeoverPresets.Count != settings.TakeoverPresets.Count
+                || restored.ActiveTakeoverPresetId != original.Id
+                || restored.TakeoverPromptParts[0].Content != original.Parts[0].Content)
+                throw new Exception("Preset serialization contract lost active state or parts.");
+            restored.ActivateTakeoverPreset(copy.Id);
+            if (restored.TakeoverPromptParts[0].Content != "independent")
+                throw new Exception("Inactive preset content was not persisted.");
+            persisted.Remove("takeoverPresets");
+            persisted.Remove("activeTakeoverPresetId");
+            Verse.TestScribe.BeginLoad(persisted);
+            var migrated = new AdvancedRimTalkSettings();
+            migrated.ExposeData();
+            if (migrated.TakeoverPresets.Count != 1 || migrated.TakeoverPromptParts[0].Content != original.Parts[0].Content)
+                throw new Exception("Legacy settings migration lost prompt content.");
+
+            var blocks = AdvancedRimTalk.Documentation.DocumentationBlocks.Parse(
+                "| Name | Meaning |\n| --- | :---: |\n| [array](array.md) | `a|b` |\n\n```arti\n| not | a table |\n| --- | --- |\n```\n");
+            if (blocks.Count != 5 || !blocks[0].Header || blocks[1].Cells[1] != "`a|b`" || !blocks[3].Code)
+                throw new Exception("Table parsing must preserve code fences and inline pipes.");
+            var cells = AdvancedRimTalk.Documentation.DocumentationBlocks.Cells("| a\\|b | c |");
+            if (cells.Length != 2 || cells[0] != "a|b") throw new Exception("Escaped table pipe was split.");
+
+            var root = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+            while (root != null && !System.IO.File.Exists(System.IO.Path.Combine(root.FullName, "AdvancedRimTalk.csproj"))) root = root.Parent;
+            if (root == null) throw new Exception("Documentation checks require the repository root.");
+            var catalog = AdvancedRimTalk.Documentation.AdvancedRimTalkDocumentationCatalog.Create(root.FullName);
+            if (!catalog.IsAvailable) throw new Exception("Documentation catalog is unavailable.");
+            int documents = 0, links = 0;
+            foreach (var document in catalog.Entries)
+            {
+                documents++;
+                if (catalog.Find(document.RelativePath) != document) throw new Exception("Search ID does not resolve to its document.");
+                foreach (var block in AdvancedRimTalk.Documentation.DocumentationBlocks.Parse(document.Markdown))
+                {
+                    if (block.Code) continue;
+                    string text = block.Cells == null ? block.Text : string.Join(" ", block.Cells);
+                    foreach (System.Text.RegularExpressions.Match match in AdvancedRimTalk.Documentation.DocumentationBlocks.Link.Matches(text))
+                    {
+                        string path = AdvancedRimTalk.Documentation.AdvancedRimTalkDocumentationCatalog.ResolvePath(document.RelativePath, match.Groups[2].Value);
+                        if (path == null || !path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (catalog.Find(path) == null) throw new Exception("Unresolvable document link: " + document.RelativePath + " -> " + path);
+                        links++;
+                    }
+                }
+            }
+            Console.WriteLine("Documentation checks passed: " + documents + " searchable documents, " + links + " local links.");
         }
     }
 }
 
-// Persistence and game types are host doubles; these checks exercise settings logic, not Scribe round-trips.
+// This checks the serialized field contract using host doubles, not RimWorld's XML loader.
 namespace Verse
 {
+    internal static class TestScribe
+    {
+        internal static Dictionary<string, object> Data = new Dictionary<string, object>();
+        internal static bool Loading;
+        internal static void BeginSave() { Loading = false; Data = new Dictionary<string, object>(); }
+        internal static void BeginLoad(Dictionary<string, object> data) { Loading = true; Data = data; }
+    }
     public interface IExposable { void ExposeData(); }
     public class ModSettings { public virtual void ExposeData() { } }
     public enum LookMode { Deep }
     public static class Scribe_Values
     {
-        public static void Look<T>(ref T value, string name, T defaultValue) { }
+        public static void Look<T>(ref T value, string name, T defaultValue)
+        {
+            if (!TestScribe.Loading) TestScribe.Data[name] = value;
+            else value = TestScribe.Data.TryGetValue(name, out var stored) ? (T)stored : defaultValue;
+        }
     }
     public static class Scribe_Collections
     {
-        public static void Look<T>(ref List<T> value, string name, LookMode mode) { }
+        public static void Look<T>(ref List<T> value, string name, LookMode mode)
+        {
+            var parent = TestScribe.Data;
+            try
+            {
+                if (TestScribe.Loading)
+                {
+                    value = null;
+                    if (!parent.TryGetValue(name, out var stored) || stored == null) return;
+                    value = new List<T>();
+                    foreach (var node in (List<Dictionary<string, object>>)stored)
+                    {
+                        TestScribe.Data = node;
+                        T item = Activator.CreateInstance<T>();
+                        ((IExposable)item).ExposeData();
+                        value.Add(item);
+                    }
+                }
+                else
+                {
+                    var nodes = new List<Dictionary<string, object>>();
+                    parent[name] = value == null ? null : nodes;
+                    if (value == null) return;
+                    foreach (T item in value)
+                    {
+                        TestScribe.Data = new Dictionary<string, object>();
+                        ((IExposable)item).ExposeData();
+                        nodes.Add(TestScribe.Data);
+                    }
+                }
+            }
+            finally { TestScribe.Data = parent; }
+        }
     }
 }
 

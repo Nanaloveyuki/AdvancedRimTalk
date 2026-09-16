@@ -29,6 +29,11 @@
     <Compile Include="ArtiDocumentRenderChecks.cs" />
     <Compile Include="..\Source\Integration\ArtiPromptDocumentRenderer.cs" Link="ArtiPromptDocumentRenderer.cs" />
     <Compile Include="PromptSettingsChecks.cs" />
+    <Compile Include="ArtiPartEditorWindowChecks.cs" />
+    <Compile Include="..\Source\UI\ArtiPartEditorWindow.cs" Link="ArtiPartEditorWindow.cs" />
+    <Compile Include="..\Source\Documentation\DocumentationBlocks.cs" Link="DocumentationBlocks.cs" />
+    <Compile Include="..\Source\Documentation\AdvancedRimTalkDocumentationCatalog.cs" Link="AdvancedRimTalkDocumentationCatalog.cs" />
+    <Compile Include="..\Source\Prompt\ArtiPromptPreset.cs" Link="ArtiPromptPreset.cs" />
     <Compile Include="..\Source\Settings\AdvancedRimTalkSettings.cs" Link="AdvancedRimTalkSettings.cs" />
     <Compile Include="..\Source\Prompt\ArtiPromptPart.cs" Link="ArtiPromptPart.cs" />
     <Compile Include="MemoryLayerTransferChecks.cs" />

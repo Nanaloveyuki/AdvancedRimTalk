@@ -24,6 +24,8 @@ namespace AdvancedRimTalk.UI
         private Vector2 partListScrollPosition = Vector2.zero;
         private Vector2 contentScrollPosition = Vector2.zero;
         private string selectedPartId;
+        private string selectedPresetId;
+        private Vector2 presetScroll;
         private readonly ArtiEditorIntelligence contentIntelligence = new ArtiEditorIntelligence();
         private ArtiEditorAnalysis contentAnalysis;
         private string analyzedContent;
@@ -42,8 +44,6 @@ namespace AdvancedRimTalk.UI
             }
 
             settings.EnsureTakeoverPromptParts();
-            List<ArtiPromptPart> parts = settings.TakeoverPromptParts;
-            EnsureSelection(parts);
 
             Rect leftRect = new Rect(inRect.x, inRect.y, LeftPanelWidth, inRect.height);
             Rect rightRect = new Rect(
@@ -52,8 +52,85 @@ namespace AdvancedRimTalk.UI
                 Mathf.Max(1f, inRect.width - LeftPanelWidth - PanelGap),
                 inRect.height);
 
-            DrawPartList(leftRect, settings, parts);
+            DrawPresets(new Rect(leftRect.x, leftRect.y, leftRect.width, 196f), settings);
+            ArtiPromptPreset preset = SelectedPreset(settings);
+            List<ArtiPromptPart> parts = preset.Parts;
+            EnsureSelection(parts);
+            DrawPartList(new Rect(leftRect.x, leftRect.y + 202f, leftRect.width,
+                Mathf.Max(1f, leftRect.height - 202f)), settings, parts);
             DrawPartEditor(rightRect, parts.FirstOrDefault(part => part.Id == selectedPartId));
+        }
+
+        private ArtiPromptPreset SelectedPreset(AdvancedRimTalkSettings settings)
+        {
+            return settings.TakeoverPresets.Find(preset => preset.Id == selectedPresetId)
+                ?? settings.ActiveTakeoverPreset;
+        }
+
+        private void SelectPreset(ArtiPromptPreset preset)
+        {
+            selectedPresetId = preset.Id;
+            selectedPartId = null;
+            partListScrollPosition = contentScrollPosition = Vector2.zero;
+            GUI.FocusControl(null);
+        }
+
+        private void DrawPresets(Rect rect, AdvancedRimTalkSettings settings)
+        {
+            Widgets.DrawBoxSolid(rect, LeftPanelBackground);
+            var selected = SelectedPreset(settings);
+            Widgets.Label(new Rect(rect.x + 5f, rect.y, rect.width - 36f, 24f),
+                "AdvancedRimTalk.Presets.Title".Translate());
+            if (Widgets.ButtonText(new Rect(rect.xMax - 27f, rect.y + 2f, 22f, 22f), "+"))
+            {
+                var created = new ArtiPromptPreset { Name = "AdvancedRimTalk.Presets.New".Translate(),
+                    Parts = ArtiPromptPart.CreateDefaultParts(AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument) };
+                settings.AddTakeoverPreset(created);
+                SelectPreset(created);
+                selected = created;
+            }
+            Rect list = new Rect(rect.x + 4f, rect.y + 26f, rect.width - 8f, 82f);
+            Rect view = new Rect(0f, 0f, list.width - 16f, Mathf.Max(82f, settings.TakeoverPresets.Count * 26f));
+            Widgets.BeginScrollView(list, ref presetScroll, view);
+            try
+            {
+                float y = 0f;
+                foreach (var preset in settings.TakeoverPresets)
+                {
+                    Rect row = new Rect(0f, y, view.width, 24f);
+                    if (preset == selected) Widgets.DrawHighlight(row);
+                    string label = (preset.Id == settings.ActiveTakeoverPresetId ? "▶ " : string.Empty) + preset.Name;
+                    if (Widgets.ButtonText(row, label, false)) SelectPreset(preset);
+                    y += 26f;
+                }
+            }
+            finally { Widgets.EndScrollView(); }
+            selected = SelectedPreset(settings);
+            selected.Name = Widgets.TextField(new Rect(rect.x + 5f, rect.y + 112f, rect.width - 10f, 24f), selected.Name);
+            float half = (rect.width - 15f) / 2f;
+            if (Widgets.ButtonText(new Rect(rect.x + 5f, rect.y + 140f, half, 24f), "AdvancedRimTalk.Presets.Activate".Translate()))
+                settings.ActivateTakeoverPreset(selected.Id);
+            if (Widgets.ButtonText(new Rect(rect.x + 10f + half, rect.y + 140f, half, 24f), "AdvancedRimTalk.Presets.Copy".Translate()))
+            {
+                var copy = selected.Copy(selected.Name);
+                settings.AddTakeoverPreset(copy);
+                SelectPreset(copy);
+            }
+            bool enabled = GUI.enabled;
+            GUI.enabled = enabled && settings.TakeoverPresets.Count > 1;
+            if (Widgets.ButtonText(new Rect(rect.x + 5f, rect.y + 168f, rect.width - 10f, 24f), "AdvancedRimTalk.Presets.Delete".Translate()))
+            {
+                var removed = selected;
+                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation("AdvancedRimTalk.Presets.DeleteConfirm".Translate(removed.Name), () =>
+                {
+                    if (settings.TakeoverPresets.Count <= 1) return;
+                    if (settings.ActiveTakeoverPresetId == removed.Id)
+                        settings.ActivateTakeoverPreset(settings.TakeoverPresets.First(p => p.Id != removed.Id).Id);
+                    settings.TakeoverPresets.Remove(removed);
+                    SelectPreset(settings.ActiveTakeoverPreset);
+                }));
+            }
+            GUI.enabled = enabled;
         }
 
         private void EnsureSelection(List<ArtiPromptPart> parts)
@@ -156,10 +233,11 @@ namespace AdvancedRimTalk.UI
                     "AdvancedRimTalk.PromptParts.ResetDefaultsConfirm".Translate(),
                     delegate
                     {
-                        settings.TakeoverPromptParts = ArtiPromptPart.CreateDefaultParts(
-                            AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument);
+                        parts.Clear();
+                        parts.AddRange(ArtiPromptPart.CreateDefaultParts(
+                            AdvancedRimTalkSettings.DefaultTakeoverArtiPromptDocument));
                         selectedPartId = null;
-                        EnsureSelection(settings.TakeoverPromptParts);
+                        EnsureSelection(parts);
                     }));
             }
 
@@ -221,13 +299,6 @@ namespace AdvancedRimTalk.UI
             Widgets.Label(new Rect(inputX + dropdownWidth + 12f, y, 85f, 24f), "AdvancedRimTalk.PromptParts.CustomRole".Translate());
             part.CustomRole = Widgets.TextField(new Rect(inputX + dropdownWidth + 100f, y, inputWidth, 24f), part.CustomRole ?? string.Empty);
             y += 30f;
-
-            Text.Font = GameFont.Tiny;
-            GUI.color = Color.gray;
-            Widgets.Label(new Rect(labelX, y, rect.width - 20f, 20f), "AdvancedRimTalk.PromptParts.Help".Translate());
-            GUI.color = Color.white;
-            Text.Font = GameFont.Small;
-            y += 22f;
 
             if (Widgets.ButtonText(new Rect(labelX, y, Mathf.Min(240f, rect.width - 20f), 28f),
                 "AdvancedRimTalk.ArtiEditor.Title".Translate()))
@@ -449,7 +520,8 @@ namespace AdvancedRimTalk.UI
             }
 
             settings.EnsureTakeoverPromptParts();
-            List<ArtiPromptPart> parts = settings.TakeoverPromptParts;
+            var importedPreset = new ArtiPromptPreset { Name = sourceName };
+            List<ArtiPromptPart> parts = importedPreset.Parts;
             int imported = 0;
             string firstImportedId = null;
             foreach (PromptEntry entry in preset.Entries)
@@ -467,6 +539,8 @@ namespace AdvancedRimTalk.UI
 
             if (firstImportedId != null)
             {
+                settings.AddTakeoverPreset(importedPreset);
+                SelectPreset(importedPreset);
                 selectedPartId = firstImportedId;
                 contentScrollPosition = Vector2.zero;
             }

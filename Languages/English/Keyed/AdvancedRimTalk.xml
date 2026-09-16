@@ -9,8 +9,6 @@
   <AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>In embed mode, expand Advanced RimTalk placeholders when a prompt is generated.</AdvancedRimTalk.Settings.EnablePlaceholderLayerTooltip>
   <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>Editor undo entries</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
   <AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>Maximum completion suggestions</AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>
-  <AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>Takeover Arti system document</AdvancedRimTalk.Settings.TakeoverArtiPromptDocument>
-  <AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>Only {{% ... %}} Arti blocks execute here. Other text becomes the system message.</AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>Replace RimTalk prompt builder</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>Build request messages with Advanced RimTalk instead of RimTalk presets and Scriban rendering. RimTalk still handles triggers and the model client.</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
   <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
@@ -34,7 +32,6 @@
   <AdvancedRimTalk.PromptParts.Enabled>Enabled</AdvancedRimTalk.PromptParts.Enabled>
   <AdvancedRimTalk.PromptParts.Role>Role:</AdvancedRimTalk.PromptParts.Role>
   <AdvancedRimTalk.PromptParts.CustomRole>Custom role:</AdvancedRimTalk.PromptParts.CustomRole>
-  <AdvancedRimTalk.PromptParts.Help>Takeover mode renders enabled parts in the left-side order. Only {{% ... %}} Arti blocks execute here; RimTalk prompt presets and Scriban are not used.</AdvancedRimTalk.PromptParts.Help>
   <AdvancedRimTalk.PromptParts.NoLocalPrompts>No local RimTalk prompt presets were found.</AdvancedRimTalk.PromptParts.NoLocalPrompts>
   <AdvancedRimTalk.PromptParts.NoSharedPrompts>No shared RimTalk prompt files were found. Open the shared folder and place .json presets there.</AdvancedRimTalk.PromptParts.NoSharedPrompts>
   <AdvancedRimTalk.PromptParts.ImportFailed>Prompt import failed.</AdvancedRimTalk.PromptParts.ImportFailed>
@@ -52,10 +49,25 @@
   <AdvancedRimTalk.Documentation.Compatibility>Compatibility</AdvancedRimTalk.Documentation.Compatibility>
   <AdvancedRimTalk.Documentation.SelectDocument>Select a document.</AdvancedRimTalk.Documentation.SelectDocument>
   <AdvancedRimTalk.Documentation.Unavailable>The Arti documentation library is unavailable.</AdvancedRimTalk.Documentation.Unavailable>
+  <AdvancedRimTalk.Documentation.Source>Source</AdvancedRimTalk.Documentation.Source>
+  <AdvancedRimTalk.Documentation.Copy>Copy all</AdvancedRimTalk.Documentation.Copy>
   <AdvancedRimTalk.Settings.PawnLimit>Takeover pawn context limit</AdvancedRimTalk.Settings.PawnLimit>
   <AdvancedRimTalk.Settings.HistoryLimit>Takeover history limit</AdvancedRimTalk.Settings.HistoryLimit>
   <AdvancedRimTalk.Settings.CharacterBudget>Takeover character budget</AdvancedRimTalk.Settings.CharacterBudget>
   <AdvancedRimTalk.Preview.Title>Prompt Preview</AdvancedRimTalk.Preview.Title>
+  <AdvancedRimTalk.Presets.Title>Presets</AdvancedRimTalk.Presets.Title>
+  <AdvancedRimTalk.Presets.New>New preset</AdvancedRimTalk.Presets.New>
+  <AdvancedRimTalk.Presets.Activate>Activate</AdvancedRimTalk.Presets.Activate>
+  <AdvancedRimTalk.Presets.Copy>Duplicate</AdvancedRimTalk.Presets.Copy>
+  <AdvancedRimTalk.Presets.Delete>Delete preset</AdvancedRimTalk.Presets.Delete>
+  <AdvancedRimTalk.Presets.DeleteConfirm>Delete preset "{0}"?</AdvancedRimTalk.Presets.DeleteConfirm>
+  <AdvancedRimTalk.Preview.Active>Active: {0} / {1}</AdvancedRimTalk.Preview.Active>
+  <AdvancedRimTalk.Preview.Preset>Preview preset</AdvancedRimTalk.Preview.Preset>
+  <AdvancedRimTalk.Preview.Takeover>Takeover</AdvancedRimTalk.Preview.Takeover>
+  <AdvancedRimTalk.Preview.Embed>RimTalk</AdvancedRimTalk.Preview.Embed>
+  <AdvancedRimTalk.Preview.ResultSource>{0}: {1}</AdvancedRimTalk.Preview.ResultSource>
+  <AdvancedRimTalk.Documentation.Back>Back</AdvancedRimTalk.Documentation.Back>
+  <AdvancedRimTalk.Documentation.LinkUnavailable>Document link unavailable: {0}</AdvancedRimTalk.Documentation.LinkUnavailable>
   <AdvancedRimTalk.Preview.Text>Plain text</AdvancedRimTalk.Preview.Text>
   <AdvancedRimTalk.Preview.Json>Raw messages JSON</AdvancedRimTalk.Preview.Json>
   <AdvancedRimTalk.Preview.NoCapture>No generated prompt for this mode in the current game.</AdvancedRimTalk.Preview.NoCapture>

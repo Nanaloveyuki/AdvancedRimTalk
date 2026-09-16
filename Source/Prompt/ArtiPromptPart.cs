@@ -76,6 +76,13 @@ namespace AdvancedRimTalk.Prompt
             }
         }
 
+        public ArtiPromptPart Copy()
+        {
+            var copy = (ArtiPromptPart)MemberwiseClone();
+            copy.Id = Guid.NewGuid().ToString("N");
+            return copy;
+        }
+
         public RimTalk.Data.Role ToMessageRole()
         {
             if (!string.IsNullOrWhiteSpace(CustomRole))

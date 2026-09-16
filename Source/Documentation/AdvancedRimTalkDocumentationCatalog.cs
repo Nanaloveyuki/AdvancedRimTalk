@@ -86,6 +86,7 @@ namespace AdvancedRimTalk.Documentation
         public DocumentationEntry Overview { get; }
 
         public List<DocumentationCategory> Categories { get; }
+        public IEnumerable<DocumentationEntry> Entries => entriesByPath.Values;
 
         public bool IsAvailable
         {
@@ -313,7 +314,7 @@ namespace AdvancedRimTalk.Documentation
             return fallback;
         }
 
-        private static string ResolvePath(string currentPath, string link)
+        internal static string ResolvePath(string currentPath, string link)
         {
             if (string.IsNullOrWhiteSpace(link)
                 || link.StartsWith("#", StringComparison.Ordinal)

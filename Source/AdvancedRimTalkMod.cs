@@ -125,18 +125,6 @@ namespace AdvancedRimTalk
             DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.HistoryLimit".Translate(), ref Settings.TakeoverConversationHistoryCount, ref _takeoverHistoryLimitBuffer, 0, 500);
             DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.CharacterBudget".Translate(), ref Settings.TakeoverPromptCharacterBudget, ref _takeoverBudgetBuffer, 4000, 200000);
 
-            if (Settings.ReplaceRimTalkPromptMechanism)
-            {
-                listing.Label("AdvancedRimTalk.Settings.TakeoverArtiPromptDocument".Translate());
-                string primarySystemDocument = Settings.GetPrimaryTakeoverSystemDocument();
-                string updatedSystemDocument = listing.TextEntry(primarySystemDocument, 10);
-                if (updatedSystemDocument != primarySystemDocument)
-                {
-                    Settings.SetPrimaryTakeoverSystemDocument(updatedSystemDocument);
-                }
-
-                listing.Label("AdvancedRimTalk.Settings.TakeoverArtiPromptDocumentTooltip".Translate());
-            }
         }
 
         private static void DrawIntegerSetting(
@@ -191,6 +179,8 @@ namespace AdvancedRimTalk
         {
             _documentationPage.Draw(inRect);
         }
+
+        internal DocumentationPage Documentation => _documentationPage;
 
         internal void DrawResponseSettings(Rect inRect)
         {

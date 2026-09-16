@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Collections.Generic;
 using AdvancedRimTalk.UI;
 using UnityEngine;
 using Verse;
@@ -94,11 +95,40 @@ namespace AdvancedRimTalk.Integration
                         "documentation",
                         documentationTitle,
                         owner.DrawDocumentation);
+                    typeof(IrisMenusSettingsIntegration).GetMethod(nameof(RegisterDocumentSearch),
+                        BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(
+                            registryType.Assembly.GetType("IrisMenus.MenuSearchEntry", true))
+                        .Invoke(null, new object[] { registryType, owner });
                 }
             }
             catch (Exception exception)
             {
                 Log.Warning("Advanced RimTalk could not register its IrisMenus pages: " + exception);
+            }
+        }
+
+        private static void RegisterDocumentSearch<T>(Type registryType, AdvancedRimTalkMod owner)
+        {
+            Func<IEnumerable<T>> provider = () => DocumentSearchEntries<T>(owner);
+            Action<string> focus = owner.Documentation.Focus;
+            MethodInfo register = registryType.GetMethod("RegisterSearchProvider", new[]
+                { typeof(Mod), typeof(string), typeof(Func<IEnumerable<T>>), typeof(Action<string>) });
+            if (register == null)
+            {
+                Log.Warning("[Advanced RimTalk] IrisMenus document search API is unavailable.");
+                return;
+            }
+            register.Invoke(null, new object[] { owner, "documentation", provider, focus });
+        }
+
+        private static IEnumerable<T> DocumentSearchEntries<T>(AdvancedRimTalkMod owner)
+        {
+            foreach (var entry in owner.Documentation.Entries)
+            {
+                Func<string> title = () => entry.Title;
+                Func<string> keywords = () => entry.RelativePath;
+                Func<string> context = () => "AdvancedRimTalk.Documentation.Title".Translate().ToString();
+                yield return (T)Activator.CreateInstance(typeof(T), entry.RelativePath, title, keywords, context);
             }
         }
 

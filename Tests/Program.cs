@@ -23,6 +23,7 @@ namespace AdvancedRimTalk.PromptChecks
             MemoryApiMethodResolverChecks.Run();
             ArtiChecks.Run();
             ArtiEditorTextChecks.Run();
+            ArtiPartEditorWindowChecks.Run();
             ArtiExecutorChecks.Run();
             ArtiPawnInfoChecks.Run();
             CheckMultilineAndMultipleExpressions();

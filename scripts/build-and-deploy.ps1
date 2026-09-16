@@ -39,7 +39,7 @@ if (Get-Process -Name @("RimWorldWin64", "RimWorldWin64Steam", "RimWorldWin", "R
     throw "RimWorld is running. Exit the game before deploying."
 }
 
-foreach ($requiredFile in @($projectPath, $sourceAbout)) {
+foreach ($requiredFile in @($projectPath, $sourceAbout, (Join-Path $repoRoot "README.md"), (Join-Path $repoRoot "LICENSE"))) {
     if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
         throw "Required source file not found: $requiredFile"
     }
@@ -110,14 +110,24 @@ if ($languageFiles.Count -eq 0) {
 
 $targetFiles = @(
     [pscustomobject]@{
-        SourcePath = $sourceAbout
-        RelativePath = "About\About.xml"
-    }
-    [pscustomobject]@{
         SourcePath = $sourceAssembly
         RelativePath = "Assemblies\AdvancedRimTalk.dll"
     }
 )
+
+foreach ($aboutFile in @(Get-ChildItem -LiteralPath (Split-Path -Parent $sourceAbout) -File -Recurse)) {
+    $targetFiles += [pscustomobject]@{
+        SourcePath = $aboutFile.FullName
+        RelativePath = $aboutFile.FullName.Substring($repoRoot.Length).TrimStart([char[]]"\/")
+    }
+}
+
+foreach ($rootFile in @("README.md", "LICENSE")) {
+    $targetFiles += [pscustomobject]@{
+        SourcePath = Join-Path $repoRoot $rootFile
+        RelativePath = $rootFile
+    }
+}
 
 if (Test-Path -LiteralPath $sourcePdb -PathType Leaf) {
     $targetFiles += [pscustomobject]@{
@@ -138,7 +148,7 @@ foreach ($docFile in @(Get-ChildItem -LiteralPath $sourceDocs -File -Recurse)) {
     $relativeDocPath = $docFile.FullName.Substring($sourceDocs.Length).TrimStart([char[]]"/\")
     $targetFiles += [pscustomobject]@{
         SourcePath = $docFile.FullName
-        RelativePath = Join-Path "Documentation" $relativeDocPath
+        RelativePath = Join-Path "docs" $relativeDocPath
     }
 }
 

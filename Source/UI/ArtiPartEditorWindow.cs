@@ -14,6 +14,8 @@ namespace AdvancedRimTalk.UI
             this.part = part;
             editor = new ArtiCodeEditorPage(part);
             doCloseX = true;
+            // Let the multiline editor receive Enter before the window consumes it.
+            closeOnAccept = false;
             draggable = true;
             resizeable = true;
             absorbInputAroundWindow = true;

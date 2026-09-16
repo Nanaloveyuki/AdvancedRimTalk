@@ -12,7 +12,8 @@ namespace AdvancedRimTalk.Prompt
 {
     internal static class ContextPromptPreview
     {
-        internal static PromptPreview Build(bool takeover, string request, out string diagnostics)
+        internal static PromptPreview Build(bool takeover, string request, out string diagnostics,
+            ArtiPromptPreset takeoverPreset = null, PromptPreset rimTalkPreset = null)
         {
             if (Current.ProgramState != ProgramState.Playing || Current.Game == null)
                 throw new InvalidOperationException("Context preview requires a loaded game.");
@@ -98,7 +99,7 @@ namespace AdvancedRimTalk.Prompt
                 {
                     List<PromptMessageSegment> segments = new List<PromptMessageSegment>();
                     AdvancedRimTalkMod.Settings.EnsureTakeoverPromptParts();
-                    foreach (ArtiPromptPart part in AdvancedRimTalkMod.Settings.TakeoverPromptParts)
+                    foreach (ArtiPromptPart part in (takeoverPreset ?? AdvancedRimTalkMod.Settings.ActiveTakeoverPreset).Copy("Preview").Parts)
                     {
                         if (!part.Enabled) continue;
                         string text = render(part.Content);
@@ -113,11 +114,12 @@ namespace AdvancedRimTalk.Prompt
                 }
                 else
                 {
-                    PromptPreset preset = PromptManager.Instance.GetActivePreset();
+                    PromptPreset preset = rimTalkPreset ?? PromptManager.Instance.GetActivePreset();
                     if (preset == null) throw new InvalidOperationException("No active RimTalk preset.");
+                    bool useSimpleInstruction = preset.Id == PromptManager.Instance.GetActivePreset()?.Id;
                     preset = preset.Clone();
                     var settings = RimTalk.Settings.Get();
-                    if (!settings.UseAdvancedPromptMode)
+                    if (useSimpleInstruction && !settings.UseAdvancedPromptMode)
                     {
                         PromptEntry baseEntry = preset.Entries.FirstOrDefault(entry =>
                             string.Equals(entry.Name, "Base Instruction", StringComparison.OrdinalIgnoreCase));

@@ -75,6 +75,12 @@ When `Nanaloveyuki.IrisMenus` is active, Advanced RimTalk registers its settings
 
 `Prompt Parts` opens a focused Arti Editor window for the selected part. Edits write directly to that part; the standalone Editor targets the first System part. Opening the editor does not execute a prompt.
 
+Takeover presets are stored separately from RimTalk presets. Existing takeover parts become the first preset without losing their content. The preset list supports creating, duplicating, renaming, deleting, and activating presets. Selecting a preset edits it; only Activate changes the runtime preset. Local/shared imports create a separate takeover preset instead of appending to the current parts. The redundant System document field has been removed from the main settings page.
+
+Prompt Preview identifies the active mode/preset separately from the preview selection. Context previews can render another preset without activating it. Captured messages and generated context previews are separate results, labeled with their source preset and capture/generation time. Output uses a dark, selectable plain-text surface; rich-text-looking prompt content remains literal.
+
+The documentation reader lays out Markdown tables and opens local Markdown links, with a Back action. HTTP(S) links open in the browser. IrisMenus search indexes document titles and paths and opens the selected document directly. Source mode and Copy all retain the Markdown text for copying.
+
 `Prompt Preview` offers raw message-array JSON and plain text, with separate embed/takeover selection. This JSON describes prompt messages, not an AI response or a complete provider request body. By default it shows the latest messages generated in the current game. Viewing a capture does not execute scripts, write memories, or call the model. Outside a running game, or before a matching result exists, the page shows an empty state.
 
 Experimental context execution is off by default. When enabled in a running game, it renders current templates against the selected pawn, or a colonist on the current map, and the entered preview request. Available pawn context and history are included; failed context reads and template errors appear separately from the output. Erroring Arti blocks and unresolved Scriban entries are skipped. Embed uses RimTalk preset assembly and request decoration; takeover uses its configured parts and message budget. Results are labeled as context previews, not captured requests. They are not an exact replay of every event, announcement, participant group, or third-party hook.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AdvancedRimTalk.Documentation;
 using AdvancedRimTalk.Integration;
 using UnityEngine;
@@ -21,6 +22,15 @@ namespace AdvancedRimTalk.UI
         private Vector2 navigationScrollPosition = Vector2.zero;
         private Vector2 documentScrollPosition = Vector2.zero;
         private DocumentationEntry selectedEntry;
+        private bool sourceMode;
+        private GUIStyle sourceStyle;
+        private string pendingPath;
+        private bool pendingBack;
+        private bool focusNavigation;
+        private readonly Stack<DocumentationEntry> back = new Stack<DocumentationEntry>();
+        public IEnumerable<DocumentationEntry> Entries => catalog.Entries;
+
+        public void Focus(string path) { pendingPath = path; }
 
         public DocumentationPage(string contentRoot)
         {
@@ -33,10 +43,38 @@ namespace AdvancedRimTalk.UI
                         : selectedEntry.Markdown;
                 });
             selectedEntry = catalog.Overview;
+            if (markdown != null) markdown.OpenLink = OpenLink;
+        }
+
+        private void OpenLink(string link)
+        {
+            if (Uri.TryCreate(link, UriKind.Absolute, out Uri uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                Application.OpenURL(link);
+                return;
+            }
+            string path = AdvancedRimTalkDocumentationCatalog.ResolvePath(selectedEntry.RelativePath, Uri.UnescapeDataString(link));
+            if (path != null && catalog.Find(path) != null) Focus(path);
+            else Messages.Message("AdvancedRimTalk.Documentation.LinkUnavailable".Translate(link), RimWorld.MessageTypeDefOf.RejectInput);
         }
 
         public void Draw(Rect inRect)
         {
+            if (pendingBack && back.Count > 0)
+            {
+                selectedEntry = back.Pop();
+                focusNavigation = true;
+                documentScrollPosition = Vector2.zero;
+                GUI.FocusControl(null);
+            }
+            pendingBack = false;
+            if (pendingPath != null)
+            {
+                var entry = catalog.Find(pendingPath);
+                if (entry != null) Select(entry);
+                pendingPath = null;
+            }
             if (!catalog.IsAvailable)
             {
                 Widgets.Label(
@@ -121,6 +159,7 @@ namespace AdvancedRimTalk.UI
                     if (categoryIndex == selectedEntry)
                     {
                         Widgets.DrawHighlight(header);
+                        FocusNavigationRow(header.y);
                     }
 
                     GUI.color = SectionColor;
@@ -168,6 +207,7 @@ namespace AdvancedRimTalk.UI
             if (entry == selectedEntry)
             {
                 Widgets.DrawHighlight(row);
+                FocusNavigationRow(row.y);
             }
 
             if (Widgets.ButtonText(row, label, false))
@@ -213,16 +253,51 @@ namespace AdvancedRimTalk.UI
                 selectedEntry.RelativePath);
             GUI.color = Color.white;
             Text.Font = GameFont.Small;
+            float toolbarY = rect.y + 34f + titleHeight;
+            bool enabled = GUI.enabled;
+            GUI.enabled = enabled && back.Count > 0;
+            if (Widgets.ButtonText(new Rect(rect.x + 12f, toolbarY, 28f, 24f), "◀"))
+            {
+                pendingBack = true;
+            }
+            GUI.enabled = enabled;
+            TooltipHandler.TipRegion(new Rect(rect.x + 12f, toolbarY, 28f, 24f), "AdvancedRimTalk.Documentation.Back".Translate());
+            Rect sourceToggle = new Rect(rect.x + 48f, toolbarY,
+                Mathf.Max(1f, rect.width - 156f), 24f);
+            bool previousSourceMode = sourceMode;
+            Widgets.CheckboxLabeled(sourceToggle,
+                "AdvancedRimTalk.Documentation.Source".Translate().ToString(), ref sourceMode);
+            if (sourceMode != previousSourceMode)
+            {
+                documentScrollPosition = Vector2.zero;
+                GUI.FocusControl(null);
+            }
+            Rect copyButton = new Rect(rect.xMax - 102f, toolbarY, 90f, 24f);
+            if (Widgets.ButtonText(copyButton, "AdvancedRimTalk.Documentation.Copy".Translate().ToString()))
+            {
+                GUIUtility.systemCopyBuffer = selectedEntry.Markdown ?? string.Empty;
+            }
+            Text.Font = GameFont.Small;
 
             Rect viewport = new Rect(
                 rect.x + 8f,
-                rect.y + 34f + titleHeight,
+                rect.y + 64f + titleHeight,
                 Mathf.Max(1f, rect.width - 16f),
-                Mathf.Max(1f, rect.height - 42f - titleHeight));
+                Mathf.Max(1f, rect.height - 72f - titleHeight));
             float contentWidth = Mathf.Max(1f, viewport.width - 20f);
-            float measuredHeight = markdown == null || markdown.Failed
-                ? Text.CalcHeight(selectedEntry.Markdown, contentWidth)
-                : markdown.Measure(contentWidth);
+            if (sourceStyle == null)
+            {
+                sourceStyle = new GUIStyle(Text.CurTextAreaReadOnlyStyle) { richText = false };
+            }
+
+            bool showSource = sourceMode || markdown == null || markdown.Failed;
+            float measuredHeight = showSource ? 0f : markdown.Measure(contentWidth);
+            showSource = showSource || markdown.Failed;
+            if (showSource)
+            {
+                measuredHeight = sourceStyle.CalcHeight(
+                    new GUIContent(selectedEntry.Markdown ?? string.Empty), contentWidth);
+            }
             float contentHeight = Mathf.Max(
                 viewport.height,
                 measuredHeight + 12f);
@@ -236,9 +311,10 @@ namespace AdvancedRimTalk.UI
                     0f,
                     contentWidth,
                     Mathf.Max(contentHeight, measuredHeight));
-                if (markdown == null || markdown.Failed)
+                if (showSource)
                 {
-                    Widgets.Label(contentRect, selectedEntry.Markdown);
+                    // Ignore edits: this is a selectable snapshot, never a document editor.
+                    GUI.TextArea(contentRect, selectedEntry.Markdown ?? string.Empty, sourceStyle);
                 }
                 else
                 {
@@ -258,8 +334,18 @@ namespace AdvancedRimTalk.UI
                 return;
             }
 
+            if (selectedEntry != null) back.Push(selectedEntry);
             selectedEntry = entry;
+            focusNavigation = true;
             documentScrollPosition = Vector2.zero;
+            GUI.FocusControl(null);
+        }
+
+        private void FocusNavigationRow(float y)
+        {
+            if (!focusNavigation) return;
+            navigationScrollPosition.y = Mathf.Max(0f, y - 30f);
+            focusNavigation = false;
         }
     }
 }
