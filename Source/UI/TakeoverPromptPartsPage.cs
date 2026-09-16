@@ -370,10 +370,8 @@ namespace AdvancedRimTalk.UI
                             contentHeight
                                 - contentInputStyle.padding.top
                                 - contentInputStyle.padding.bottom));
-                    GUI.Label(
-                        syntaxRect,
-                        ArtiSyntaxRendering.ToRichText(content, contentAnalysis),
-                        contentSyntaxStyle);
+                    ArtiSyntaxRendering.DrawSyntax(
+                        syntaxRect, content, contentAnalysis, contentSyntaxStyle, contentLineAdvance);
                     GUI.SetNextControlName("AdvancedRimTalk.PromptParts.Content");
                     string edited = GUI.TextArea(
                         new Rect(0f, 0f, contentWidth, contentHeight),

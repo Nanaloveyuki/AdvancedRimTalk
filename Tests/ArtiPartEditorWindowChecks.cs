@@ -37,7 +37,12 @@ namespace Verse
 
 namespace UnityEngine
 {
-    internal struct Vector2 { public Vector2(float x, float y) { } }
+    internal struct Vector2
+    {
+        public float x, y;
+        public Vector2(float x, float y) { this.x = x; this.y = y; }
+        public static Vector2 zero => new Vector2(0, 0);
+    }
     internal struct Rect
     {
         public float x, y, width, height;

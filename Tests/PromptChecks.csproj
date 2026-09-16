@@ -19,6 +19,8 @@
       <HintPath>$(RimTalkAssemblyDir)\Scriban.dll</HintPath>
     </Reference>
     <Compile Include="Program.cs" />
+    <Compile Include="ArtiSyntaxRenderingChecks.cs" />
+    <Compile Include="..\Source\UI\ArtiSyntaxRendering.cs" Link="ArtiSyntaxRendering.cs" />
     <Compile Include="ResponseProcessingChecks.cs" />
     <Compile Include="..\Source\Integration\ResponseJsonRepair.cs" Link="ResponseJsonRepair.cs" />
     <Compile Include="..\Source\Integration\RimTalkResponseProcessor.cs" Link="RimTalkResponseProcessor.cs" />

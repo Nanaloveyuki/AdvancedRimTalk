@@ -36,9 +36,58 @@ namespace AdvancedRimTalk.UI
             GUIStyle style = new GUIStyle(inputStyle);
             style.padding = new RectOffset(0, 0, 0, 0);
             style.contentOffset = Vector2.zero;
-            style.richText = true;
+            style.richText = false;
             SetTextColors(style, Color.white);
             return style;
+        }
+
+        public static void DrawSyntax(Rect rect, string source, ArtiEditorAnalysis analysis,
+            GUIStyle style, float lineAdvance)
+        {
+            source = ArtiEditorText.NormalizeLineEndings(source);
+            int lineStart = 0;
+            float y = rect.y;
+            while (lineStart < source.Length)
+            {
+                int lineEnd = ArtiEditorText.GetLineEnd(source, lineStart);
+                int position = lineStart;
+                if (analysis != null && analysis.Highlights != null)
+                {
+                    foreach (ArtiHighlightSpan highlight in analysis.Highlights)
+                    {
+                        if (highlight == null || highlight.EndOffset <= position) continue;
+                        if (highlight.StartOffset >= lineEnd) break;
+                        int start = Math.Max(position, highlight.StartOffset);
+                        int end = Math.Min(lineEnd, highlight.EndOffset);
+                        if (end <= start) continue;
+                        DrawRun(rect.x, y, source, lineStart, position, start, IdentifierColor, style, lineAdvance);
+                        DrawRun(rect.x, y, source, lineStart, start, end, GetSyntaxColor(highlight.Role), style, lineAdvance);
+                        position = end;
+                    }
+                }
+                DrawRun(rect.x, y, source, lineStart, position, lineEnd, IdentifierColor, style, lineAdvance);
+                lineStart = lineEnd + 1;
+                y += lineAdvance;
+            }
+        }
+
+        private static void DrawRun(float x, float y, string source, int lineStart, int start, int end,
+            Color color, GUIStyle style, float lineAdvance)
+        {
+            if (end <= start) return;
+            string value = source.Substring(start, end - start);
+            float offset = style.CalcSize(new GUIContent(source.Substring(lineStart, start - lineStart))).x;
+            float width = style.CalcSize(new GUIContent(value)).x;
+            Color previous = GUI.color;
+            try
+            {
+                GUI.color = color;
+                GUI.Label(new Rect(x + offset, y, Mathf.Max(1f, width + 2f), lineAdvance), value, style);
+            }
+            finally
+            {
+                GUI.color = previous;
+            }
         }
 
         public static string ToRichText(string source, ArtiEditorAnalysis analysis)
