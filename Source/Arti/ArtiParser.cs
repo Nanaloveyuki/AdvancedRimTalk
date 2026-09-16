@@ -133,11 +133,24 @@ namespace AdvancedRimTalk.Arti
             return new ArtiUseStatement(span, packageId, alias, isOptional, isGroup);
         }
 
-        private ArtiVariableDeclarationStatement ParseVariableDeclaration(bool isConst, ArtiToken keyword)
+        private ArtiStatement ParseVariableDeclaration(bool isConst, ArtiToken keyword)
         {
             ArtiToken name = ExpectIdentifier();
+            if (!isConst && Check(ArtiTokenKind.Comma))
+            {
+                var targets = new ArtiArrayExpression(name.Span);
+                targets.Items.Add(new ArtiNameExpression(name.Span, name.Text));
+                while (Match(ArtiTokenKind.Comma))
+                {
+                    ArtiToken next = ExpectIdentifier();
+                    targets.Items.Add(new ArtiNameExpression(next.Span, next.Text));
+                }
+                Expect(ArtiTokenKind.Equal, 2009);
+                ArtiExpression values = ParseExpressionList();
+                return new ArtiUnpackDeclarationStatement(Combine(keyword.Span, values.Span), targets, values);
+            }
             Expect(ArtiTokenKind.Equal, 2009);
-            ArtiExpression value = ParseExpression();
+            ArtiExpression value = ParseExpressionList();
             return new ArtiVariableDeclarationStatement(Combine(keyword.Span, value.Span), name.Text, isConst, value);
         }
 
@@ -236,7 +249,7 @@ namespace AdvancedRimTalk.Arti
         private ArtiReturnStatement ParseReturn()
         {
             ArtiToken returnToken = Advance();
-            ArtiExpression value = IsStatementTerminator(Current.Kind) ? null : ParseExpression();
+            ArtiExpression value = IsStatementTerminator(Current.Kind) ? null : ParseExpressionList();
             return new ArtiReturnStatement(Combine(returnToken.Span, value == null ? returnToken.Span : value.Span), value);
         }
 
@@ -273,15 +286,27 @@ namespace AdvancedRimTalk.Arti
 
         private ArtiStatement ParseExpressionOrAssignment()
         {
-            ArtiExpression target = ParseExpression();
+            ArtiExpression target = ParseExpressionList();
             if (IsAssignmentOperator(Current.Kind))
             {
                 ArtiTokenKind op = Advance().Kind;
-                ArtiExpression value = ParseExpression();
+                ArtiExpression value = ParseExpressionList();
                 return new ArtiAssignmentStatement(Combine(target.Span, value.Span), target, op, value);
             }
 
             return new ArtiExpressionStatement(target.Span, target);
+        }
+
+        private ArtiExpression ParseExpressionList()
+        {
+            ArtiExpression first = ParseExpression();
+            if (!Check(ArtiTokenKind.Comma)) return first;
+            // Multiple values use the existing ordered array representation.
+            var values = new ArtiArrayExpression(first.Span);
+            values.Items.Add(first);
+            while (Match(ArtiTokenKind.Comma)) values.Items.Add(ParseExpression());
+            values.Span = Combine(first.Span, values.Items[values.Items.Count - 1].Span);
+            return values;
         }
 
         private ArtiExpression ParseExpression(int minimumPrecedence = 0)
@@ -391,6 +416,8 @@ namespace AdvancedRimTalk.Arti
                 case ArtiTokenKind.Float:
                     Advance();
                     return new ArtiLiteralExpression(token.Span, token.Value);
+                case ArtiTokenKind.InterpolatedStringStart:
+                    return ParseInterpolatedString();
                 case ArtiTokenKind.True:
                     Advance();
                     return new ArtiLiteralExpression(token.Span, true);
@@ -405,7 +432,7 @@ namespace AdvancedRimTalk.Arti
                     return new ArtiNameExpression(token.Span, token.Text);
                 case ArtiTokenKind.LeftParen:
                     Advance();
-                    ArtiExpression grouped = ParseExpression();
+                    ArtiExpression grouped = ParseExpressionList();
                     Expect(ArtiTokenKind.RightParen, 2016);
                     return grouped;
                 case ArtiTokenKind.LeftBracket:
@@ -421,6 +448,33 @@ namespace AdvancedRimTalk.Arti
 
                     return new ArtiErrorExpression(token.Span);
             }
+        }
+
+        private ArtiInterpolatedStringExpression ParseInterpolatedString()
+        {
+            ArtiToken start = Advance();
+            var result = new ArtiInterpolatedStringExpression(start.Span);
+            while (!Check(ArtiTokenKind.InterpolatedStringEnd) && !Check(ArtiTokenKind.EndOfFile))
+            {
+                if (Check(ArtiTokenKind.String))
+                {
+                    ArtiToken text = Advance();
+                    result.Parts.Add(new ArtiLiteralExpression(text.Span, text.Value));
+                }
+                else if (Match(ArtiTokenKind.InterpolationStart))
+                {
+                    result.Parts.Add(ParseExpression());
+                    Expect(ArtiTokenKind.InterpolationEnd, 1009);
+                }
+                else
+                {
+                    ReportError(2005, Current.Span);
+                    Advance();
+                }
+            }
+            ArtiToken end = Expect(ArtiTokenKind.InterpolatedStringEnd, 1006);
+            result.Span = Combine(start.Span, end.Span);
+            return result;
         }
 
         private ArtiArrayExpression ParseArray()

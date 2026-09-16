@@ -306,7 +306,7 @@ namespace AdvancedRimTalk.Arti
                     Binding binding;
                     return scope.TryResolve(name, out binding) && binding.Kind == BindingKind.Constant;
                 })) ReportError(3016, variable.Span);
-                if (!scope.TryDeclare(
+                if (variable.Name != "_" && !scope.TryDeclare(
                     variable.Name,
                     variable.IsConst ? BindingKind.Constant : BindingKind.Variable,
                     _allowExternalGlobalRedeclare))
@@ -318,13 +318,26 @@ namespace AdvancedRimTalk.Arti
                 return;
             }
 
+            if (statement is ArtiUnpackDeclarationStatement unpack)
+            {
+                AnalyzeExpression(unpack.Value, scope);
+                foreach (ArtiExpression target in unpack.Targets.Items)
+                {
+                    var binding = target as ArtiNameExpression;
+                    if (binding == null) ReportError(3014, target.Span);
+                    else if (binding.Name != "_" && !scope.TryDeclare(binding.Name, BindingKind.Variable, _allowExternalGlobalRedeclare))
+                        ReportError(3001, binding.Span, binding.Name);
+                }
+                return;
+            }
+
             ArtiFunctionDeclarationStatement function = statement as ArtiFunctionDeclarationStatement;
             if (function != null)
             {
                 Scope functionScope = new Scope(scope);
                 foreach (string parameter in function.Parameters)
                 {
-                    if (!functionScope.TryDeclare(parameter, BindingKind.Parameter))
+                    if (parameter != "_" && !functionScope.TryDeclare(parameter, BindingKind.Parameter))
                     {
                         ReportError(3003, function.Span, parameter);
                     }
@@ -363,7 +376,7 @@ namespace AdvancedRimTalk.Arti
             {
                 AnalyzeExpression(loop.Source, scope);
                 Scope loopScope = new Scope(scope, true);
-                if (!loopScope.TryDeclare(loop.VariableName, BindingKind.Variable))
+                if (loop.VariableName != "_" && !loopScope.TryDeclare(loop.VariableName, BindingKind.Variable))
                 {
                     ReportError(3001, loop.Span, loop.VariableName);
                 }
@@ -428,11 +441,26 @@ namespace AdvancedRimTalk.Arti
 
         private void AnalyzeAssignment(ArtiAssignmentStatement assignment, Scope scope)
         {
+            if (assignment.Target is ArtiArrayExpression targets)
+            {
+                if (assignment.Operator != ArtiTokenKind.Equal) ReportError(3014, assignment.Span);
+                foreach (ArtiExpression target in targets.Items)
+                {
+                    if (target is ArtiArrayExpression) ReportError(3014, target.Span);
+                    else AnalyzeAssignment(new ArtiAssignmentStatement(target.Span, target, assignment.Operator, null), scope);
+                }
+                AnalyzeExpression(assignment.Value, scope);
+                return;
+            }
             ArtiNameExpression name = assignment.Target as ArtiNameExpression;
             if (name != null)
             {
                 Binding binding;
-                if (!scope.TryResolve(name.Name, out binding))
+                if (name.Name == "_")
+                {
+                    if (assignment.Operator != ArtiTokenKind.Equal) ReportError(3014, name.Span);
+                }
+                else if (!scope.TryResolve(name.Name, out binding))
                 {
                     ReportError(3007, name.Span, name.Name);
                 }
@@ -497,6 +525,11 @@ namespace AdvancedRimTalk.Arti
             }
 
             ArtiNameExpression name = expression as ArtiNameExpression;
+            if (expression is ArtiInterpolatedStringExpression interpolated)
+            {
+                foreach (ArtiExpression part in interpolated.Parts) AnalyzeExpression(part, scope);
+                return;
+            }
             if (name != null)
             {
                 Binding ignored;

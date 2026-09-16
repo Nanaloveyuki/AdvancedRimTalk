@@ -29,7 +29,7 @@ namespace AdvancedRimTalk.Arti
                     foreach (ArtiStatement statement in parsed.Program.Statements)
                     {
                         if (statement is ArtiFunctionDeclarationStatement
-                            || statement is ArtiVariableDeclarationStatement variable && variable.IsConst)
+                            || statement is ArtiVariableDeclarationStatement variable && variable.IsConst && variable.Name != "_")
                         {
                             ArtiStatement definition = statement;
                             if (statement is ArtiFunctionDeclarationStatement function)

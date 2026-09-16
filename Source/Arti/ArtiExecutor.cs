@@ -410,7 +410,7 @@ namespace AdvancedRimTalk.Arti
                 if (variable.IsConst && !ArtiConstantExpression.IsStatic(variable.Value, scope.IsConstant))
                     RuntimeError(variable.Span, "const requires a static expression; use a function for dynamic values.");
                 object value = Evaluate(variable.Value, scope);
-                if (!scope.TryDeclare(
+                if (variable.Name != "_" && !scope.TryDeclare(
                     variable.Name,
                     value,
                     variable.IsConst,
@@ -420,7 +420,13 @@ namespace AdvancedRimTalk.Arti
                 }
 
                 _lastValue = value;
-                if (variable.IsConst) scope.MarkConstant(variable.Name);
+                if (variable.IsConst && variable.Name != "_") scope.MarkConstant(variable.Name);
+                return;
+            }
+
+            if (statement is ArtiUnpackDeclarationStatement unpack)
+            {
+                AssignUnpacked(unpack.Targets, Evaluate(unpack.Value, scope), scope, unpack);
                 return;
             }
 
@@ -434,10 +440,25 @@ namespace AdvancedRimTalk.Arti
             if (assignment != null)
             {
                 object value = Evaluate(assignment.Value, scope);
+                if (assignment.Target is ArtiArrayExpression targets)
+                {
+                    if (assignment.Operator != ArtiTokenKind.Equal)
+                        RuntimeError(assignment.Span, "Unpacking only supports =.");
+                    AssignUnpacked(targets, value, scope, null);
+                    return;
+                }
                 ArtiNameExpression name = assignment.Target as ArtiNameExpression;
                 if (name == null)
                 {
                     RuntimeError(assignment.Target == null ? assignment.Span : assignment.Target.Span, "Only a variable name can be assigned.");
+                }
+
+                if (name.Name == "_")
+                {
+                    if (assignment.Operator != ArtiTokenKind.Equal)
+                        RuntimeError(name.Span, "A discard only supports =.");
+                    _lastValue = value;
+                    return;
                 }
 
                 if (assignment.Operator != ArtiTokenKind.Equal)
@@ -490,7 +511,7 @@ namespace AdvancedRimTalk.Arti
                 foreach (object item in Enumerate(source, loop.Source == null ? loop.Span : loop.Source.Span))
                 {
                     Touch(loop.Span);
-                    if (!loopScope.TryDeclare(loop.VariableName, item, false, false, loop))
+                    if (loop.VariableName != "_" && !loopScope.TryDeclare(loop.VariableName, item, false, false, loop))
                     {
                         RuntimeError(loop.Span, "The loop variable '" + loop.VariableName + "' is already declared.");
                     }
@@ -563,6 +584,41 @@ namespace AdvancedRimTalk.Arti
             }
         }
 
+        private void AssignUnpacked(ArtiArrayExpression targets, object value, RuntimeScope scope,
+            ArtiUnpackDeclarationStatement declaration)
+        {
+            var values = value as IList;
+            if (values == null || values.Count != targets.Items.Count)
+                RuntimeError(targets.Span, "Unpacking expects " + targets.Items.Count + " values, got "
+                    + (values == null ? "a non-array value" : values.Count.ToString(CultureInfo.InvariantCulture)) + ".");
+
+            // Validate and snapshot every slot before changing any binding.
+            var captured = new object[targets.Items.Count];
+            var declared = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < targets.Items.Count; i++)
+            {
+                var name = targets.Items[i] as ArtiNameExpression;
+                if (name == null) RuntimeError(targets.Items[i].Span, "Unpacking targets must be variable names or _.");
+                captured[i] = values[i];
+                if (name.Name == "_") continue;
+                if (declaration != null)
+                {
+                    if (!declared.Add(name.Name) || !scope.CanDeclare(name.Name, false, ShouldAllowRedeclare(scope), declaration))
+                        RuntimeError(name.Span, "The name '" + name.Name + "' is already declared.");
+                }
+                else if (!scope.CanAssign(name.Name, out string error)) RuntimeError(name.Span, error);
+            }
+            for (int i = 0; i < targets.Items.Count; i++)
+            {
+                var name = (ArtiNameExpression)targets.Items[i];
+                if (name.Name == "_") continue;
+                if (declaration != null)
+                    scope.TryDeclare(name.Name, captured[i], false, ShouldAllowRedeclare(scope), declaration);
+                else scope.TryAssign(name.Name, captured[i], out _);
+            }
+            _lastValue = value;
+        }
+
         private void ExecuteBlock(ArtiBlockStatement block, RuntimeScope parent)
         {
             if (block == null)
@@ -590,6 +646,13 @@ namespace AdvancedRimTalk.Arti
             }
 
             Touch(expression.Span);
+
+            if (expression is ArtiInterpolatedStringExpression interpolated)
+            {
+                var text = new StringBuilder();
+                foreach (ArtiExpression part in interpolated.Parts) text.Append(ToText(Evaluate(part, scope)));
+                return text.ToString();
+            }
 
             ArtiLiteralExpression literal = expression as ArtiLiteralExpression;
             if (literal != null)
@@ -883,6 +946,7 @@ namespace AdvancedRimTalk.Arti
                     int parameterIndex;
                     if (argument.Name != null)
                     {
+                        if (argument.Name == "_") throw new RuntimeFault("Discard parameters must be supplied positionally.");
                         parameterIndex = -1;
                         for (int index = 0; index < function.Parameters.Count; index++)
                         {
@@ -919,7 +983,8 @@ namespace AdvancedRimTalk.Arti
                     }
 
                     assigned[parameterIndex] = true;
-                    functionScope.TryDeclare(function.Parameters[parameterIndex], argument.Value, false);
+                    if (function.Parameters[parameterIndex] != "_")
+                        functionScope.TryDeclare(function.Parameters[parameterIndex], argument.Value, false);
                 }
 
                 for (int index = 0; index < assigned.Length; index++)
@@ -2093,6 +2158,14 @@ namespace AdvancedRimTalk.Arti
 
             public bool TryDeclare(string name, object value, bool isConst, bool allowReplace, object declaration = null)
             {
+                if (!CanDeclare(name, isConst, allowReplace, declaration)) return false;
+                _bindings[name] = new Binding(value, isConst, declaration, transparent);
+                _declared.Add(name);
+                return true;
+            }
+
+            public bool CanDeclare(string name, bool isConst, bool allowReplace, object declaration)
+            {
                 if (string.IsNullOrEmpty(name))
                 {
                     return false;
@@ -2109,13 +2182,9 @@ namespace AdvancedRimTalk.Arti
                         return false;
                     }
 
-                    _bindings[name] = new Binding(value, isConst, declaration, transparent);
-                    _declared.Add(name);
                     return true;
                 }
 
-                _bindings.Add(name, new Binding(value, isConst, declaration, transparent));
-                _declared.Add(name);
                 return true;
             }
 
@@ -2130,6 +2199,18 @@ namespace AdvancedRimTalk.Arti
 
                 value = null;
                 return Parent != null && Parent.TryGet(name, out value);
+            }
+
+            public bool CanAssign(string name, out string error)
+            {
+                if (_bindings.TryGetValue(name, out Binding binding))
+                {
+                    error = binding.IsConst ? "The name '" + name + "' cannot be assigned." : null;
+                    return !binding.IsConst;
+                }
+                if (Parent != null) return Parent.CanAssign(name, out error);
+                error = "The name '" + name + "' is not declared.";
+                return false;
             }
 
             public bool TryAssign(string name, object value, out string error)

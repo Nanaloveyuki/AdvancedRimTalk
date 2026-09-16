@@ -33,6 +33,7 @@ namespace AdvancedRimTalk.UI
         private static readonly Color InvalidColor = new Color(1f, 0.35f, 0.35f);
 
         private readonly ArtiEditorIntelligence intelligence = new ArtiEditorIntelligence();
+        private readonly ArtiPromptAnalysisContext promptAnalysisContext = new ArtiPromptAnalysisContext();
         private readonly List<ArtiCompletionItem> completions = new List<ArtiCompletionItem>();
         private readonly List<EditorSnapshot> undoStack = new List<EditorSnapshot>();
         private readonly List<EditorSnapshot> redoStack = new List<EditorSnapshot>();
@@ -542,13 +543,18 @@ namespace AdvancedRimTalk.UI
 
         private void RefreshAnalysis()
         {
-            if (analysis != null
+            var settings = AdvancedRimTalkMod.Settings;
+            var parts = settings == null ? null : settings.TakeoverPromptParts;
+            var current = boundPart ?? parts?.Find(part => part != null && part.Role == RimTalk.Prompt.PromptRole.System);
+            bool contextChanged = promptAnalysisContext.Refresh(parts, current);
+            if (!contextChanged && analysis != null
                 && string.Equals(analyzedSource, source, StringComparison.Ordinal))
             {
                 return;
             }
 
-            analysis = intelligence.AnalyzeDocument(source);
+            analysis = intelligence.AnalyzeDocument(source, promptAnalysisContext.Names);
+            if (contextChanged) ClearCompletion();
             analyzedSource = source;
         }
 
@@ -1077,7 +1083,7 @@ namespace AdvancedRimTalk.UI
                     source,
                     editor.cursorIndex,
                     analysis,
-                    null,
+                    promptAnalysisContext.Names,
                     GetCompletionLimit());
                 if (candidates.Count == 1 && (prefix.Length > 0 || IsMemberContext(editor.cursorIndex)))
                 {
@@ -1116,7 +1122,7 @@ namespace AdvancedRimTalk.UI
                 source,
                 editor.cursorIndex,
                 analysis,
-                null,
+                promptAnalysisContext.Names,
                 GetCompletionLimit());
             if (candidates.Count == 0)
             {
@@ -1359,7 +1365,7 @@ namespace AdvancedRimTalk.UI
                         source,
                         resultEditor.cursorIndex,
                         analysis,
-                        null,
+                        promptAnalysisContext.Names,
                         GetCompletionLimit());
                     if (candidates.Count > 0)
                     {

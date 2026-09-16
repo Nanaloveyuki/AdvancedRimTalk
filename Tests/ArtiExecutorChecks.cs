@@ -13,6 +13,8 @@ namespace AdvancedRimTalk.PromptChecks
             UsesVariableCallbacks();
             SharesControlFlowScope();
             DetectsExistence();
+            ReturnsAndUnpacksValues();
+            InterpolatesStrings();
             ExecutesModulesAndRandomValues();
             ExecutesRuntimeModuleValues();
             ExecutesStringFunctionsAndMethods();
@@ -21,6 +23,72 @@ namespace AdvancedRimTalk.PromptChecks
             PersistsVariablesBetweenExecutions();
             AllowsReplRedeclarationBetweenExecutions();
             RejectsRuntimeStepOverflow();
+        }
+
+        private static void InterpolatesStrings()
+        {
+            AssertOutput("let value = \"world\"; core.emit(f\"hello {value}\")", "hello world", "interpolate name");
+            AssertOutput("fn name() { return \"player\" }; core.emit(f\"hello {name()}\")", "hello player", "interpolate call");
+            AssertOutput("let n = 0; fn next() { n += 1; return n }; core.emit(f\"{next()}:{next()}\"); core.emit(n)", "1:22", "ordered single evaluation");
+            AssertOutput("let data = { name: \"玩家\" }; core.emit(f\"{data.name} {1 + 2} {false}\")", "玩家 3 false", "Arti expression interpolation");
+            AssertOutput("let value = 3; core.emit(f\"{{{value}}}\\n\")", "{3}\n", "literal braces and escapes");
+            AssertOutput("core.emit(f\"plain\"); core.emit(f\"\"); core.emit(\"{plain}\")", "plain{plain}", "ordinary strings unchanged");
+            AssertOutput("core.emit(f'{true}:{null}')", "true:", "native text conversion");
+            AssertOutput("fn echo(x) { return x }; core.emit(f\"{echo(\"inside\")}\")", "inside", "quoted call argument");
+            AssertOutput("const n = 1; const text = f\"n={n}\"; core.emit(text)", "n=1", "constant interpolation");
+            AssertOutput("fn data() { return true, f\"{1 + 2}\" }; let status, text = data(); core.emit(f\"{status}:{text}\")", "true:3", "interpolated multiple return");
+            foreach (string source in new[] { "core.emit(f\"{missing}\")", "core.emit(f\"{1:04}\")",
+                "core.emit(f\"{1!r}\")", "core.emit(f\"{}\")", "core.emit(f\"}\")",
+                "core.emit(f\"{value\")", "core.emit(f\"unterminated", "core.emit(f\"{1 / 0}\")",
+                "fn f() { return 1 }; const value = f\"{f()}\"" })
+                Assert(new ArtiExecutor().Execute(source).HasErrors, "invalid interpolation rejected: " + source);
+
+            string code = "core.emit(f\"hello {missing}\")";
+            var parsed = new ArtiParser().Parse(code, 40, 3, 5);
+            var diagnostics = new ArtiAnalyzer().Analyze(parsed.Program).Diagnostics;
+            Assert(diagnostics.Count == 1 && diagnostics[0].Code == "ART3009"
+                && diagnostics[0].Span.StartOffset == 40 + code.IndexOf("missing", StringComparison.Ordinal)
+                && diagnostics[0].Span.Line == 3
+                && diagnostics[0].Span.Column == 5 + code.IndexOf("missing", StringComparison.Ordinal), "interpolation source spans");
+        }
+
+        private static void ReturnsAndUnpacksValues()
+        {
+            const string function = "fn pair() { return true, \"ready\" }; ";
+            AssertOutput(function + "let status, text = pair(); core.emit(status); core.emit(text)", "trueready", "declare multiple results");
+            AssertOutput(function + "let status = false; status, _ = pair(); core.emit(status); core.emit(_.exists())", "truefalse", "assign and discard");
+            AssertOutput(function + "let _, text = pair(); core.emit(text)", "ready", "discard first result");
+            AssertOutput(function + "let _, _ = pair(); _, _ = pair(); _ = pair(); core.emit(_.exists())", "false", "repeated discard has no binding");
+            AssertOutput(function + "let result = pair(); core.emit(result[0]); core.emit(result[1])", "trueready", "capture aggregate result");
+            AssertOutput("let a, b = 1, 2; a, b = b, a; core.emit(a); core.emit(b)", "21", "parallel assignment");
+            AssertOutput("fn pair() { return (false, \"no\") }; let status, text = pair(); core.emit(status); core.emit(text)", "falseno", "parenthesized results");
+            AssertOutput("fn forward() { return pair() }; " + function + "let a, b = forward(); core.emit(a); core.emit(b)", "trueready", "forward multiple results");
+            AssertOutput("fn use_first(value, _, _) { return value }; core.emit(use_first(7, 8, 9))", "7", "discard parameters");
+            AssertOutput("let n = 0; fn pair() { n += 1; return n, \"x\" }; let a, _ = pair(); core.emit(n)", "1", "evaluate RHS once");
+            AssertOutput("fn pair(x) { return x, x + 1 }; for i in [1, 2] { let a, b = pair(i) }; core.emit(a); core.emit(b)", "23", "unpack in repeated loop");
+            AssertOutput("fn no_value() { return }; fn one() { return 7 }; core.emit(no_value() == null); core.emit(one())", "true7", "existing returns unchanged");
+            foreach (string source in new[] { "let a, b = [1]", "let a, b = [1, 2, 3]", "let a, b = true",
+                "let a, a = [1, 2]", "missing, _ = [1, 2]", "const a = 1; a, _ = [2, 3]",
+                "let a = 1; a, _ += [1, 2]", "let a = [1]; a[0], _ = [2, 3]",
+                "let a, b = [1, 2]; core.emit(_)", "fn ignored(_) { return _ }", "_ += 1",
+                "fn ignored(_, _) { return 1 }; ignored(1)", "fn ignored(_) { return 1 }; ignored(_: 1)" })
+                Assert(new ArtiExecutor().Execute(source).HasErrors, "invalid unpack rejected: " + source);
+
+            foreach (string assignment in new[] { "a, b = [1]", "a, fixed_value = [1, 2]", "let fresh, fixed_value = [1, 2]" })
+            {
+                var context = new ArtiExecutionContext(options: new ArtiExecutionOptions { PersistVariables = true });
+                // Exercise runtime validation independently of the analyzer.
+                var result = new ArtiExecutor().Execute(new ArtiParser().Parse(
+                    "let a = 7; let b = 8; const fixed_value = 9; " + assignment).Program, context);
+                Assert(result.HasErrors && Convert.ToInt64(context.Globals["a"]) == 7
+                    && Convert.ToInt64(context.Globals["b"]) == 8 && !context.Globals.ContainsKey("fresh"),
+                    "invalid unpack does not partially assign: " + assignment);
+            }
+
+            var runtime = new ArtiGlobalRuntime();
+            Assert(!runtime.Execute(function, "intro").HasErrors, "register multi-return function");
+            var call = runtime.Execute("let status, _ = pair(); core.emit(status)", "system");
+            Assert(!call.HasErrors && call.Output == "true", "multi-return works across prompt blocks");
         }
 
         private static void SharesControlFlowScope()

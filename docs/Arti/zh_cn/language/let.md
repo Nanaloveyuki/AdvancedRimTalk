@@ -14,6 +14,15 @@ count += 1
 
 ## 重新赋值
 
+也可以一次声明多个变量，并用 `_` 丢弃不需要的值：
+
+```arti
+fn result() { return true, "ready" }
+let status, _ = result()
+```
+
+返回值数量必须与接收位置数量一致；已有变量的接收和交换见 [assignment](assignment.md)。
+
 ```arti
 let value = "before"
 value = "after"

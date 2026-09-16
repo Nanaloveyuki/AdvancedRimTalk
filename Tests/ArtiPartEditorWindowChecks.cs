@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using AdvancedRimTalk.Arti;
 using AdvancedRimTalk.Prompt;
 using AdvancedRimTalk.UI;
 
@@ -13,6 +16,37 @@ namespace AdvancedRimTalk.PromptChecks
                 throw new Exception("Part editor must retain Enter without passing input to underlying windows.");
             window.OnAcceptKeyPressed();
             if (window.Closed) throw new Exception("Accept must not close the multiline editor.");
+            CheckPreviousDefinitions();
+        }
+
+        private static void CheckPreviousDefinitions()
+        {
+            var intro = new ArtiPromptPart { Content = "{{% fn mod_status(id) { return true, id }; const title = \"test\"; let private_value = 1 %}}" };
+            var disabled = new ArtiPromptPart { Enabled = false, Content = "{{% fn disabled_fn() { return false } %}}" };
+            var current = new ArtiPromptPart { Content = "{{% let status, _ = mod_status(title) %}}" };
+            var later = new ArtiPromptPart { Content = "{{% fn later_fn() { return true } %}}" };
+            var parts = new List<ArtiPromptPart> { intro, disabled, current, later };
+            var context = new ArtiPromptAnalysisContext();
+            if (!context.Refresh(parts, current) || !new HashSet<string>(context.Names).SetEquals(new[] { "mod_status", "title" }))
+                throw new Exception("Part analysis must collect only earlier enabled top-level fn/const names.");
+            var parsed = new ArtiDocumentParser().Parse(current.Content).CodeBlocks[0].ParseResult;
+            if (new ArtiAnalyzer(externalGlobals: context.Names).Analyze(parsed.Program).HasErrors)
+                throw new Exception("Earlier function and constant remain unavailable to current part.");
+            if (context.Refresh(parts, current)) throw new Exception("Unchanged part context should stay cached.");
+            intro.Enabled = false;
+            if (!context.Refresh(parts, current) || context.Names.Any()) throw new Exception("Disabled definitions remained cached.");
+            intro.Enabled = true;
+            intro.Content = "{{% fn renamed() { const hidden = 1 }; if true { fn nested() { return 1 } } %}}";
+            if (!context.Refresh(parts, current) || !context.Names.SequenceEqual(new[] { "renamed" }))
+                throw new Exception("Renamed definitions or nested declarations leaked into context.");
+            parts.Remove(intro); parts.Add(intro);
+            if (!context.Refresh(parts, current) || context.Names.Any()) throw new Exception("Reordered definitions remained visible.");
+            context.Refresh(parts, new ArtiPromptPart());
+            if (context.Names.Any()) throw new Exception("Detached editor collected unrelated parts.");
+            intro.Content = "{{% fn broken( %}}";
+            parts.Remove(intro); parts.Insert(0, intro);
+            context.Refresh(parts, current);
+            if (context.Names.Any()) throw new Exception("Invalid preceding block exported names.");
         }
     }
 }

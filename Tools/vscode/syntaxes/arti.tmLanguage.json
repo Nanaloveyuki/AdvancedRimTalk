@@ -109,6 +109,25 @@
     "strings": {
       "patterns": [
         {
+          "name": "string.interpolated.arti",
+          "begin": "\\bf([\"'])",
+          "end": "\\1|(?=\\r?$)",
+          "patterns": [
+            { "include": "#string-escape" },
+            { "include": "#invalid-string-escape" },
+            { "name": "constant.character.escape.arti", "match": "\\{\\{|\\}\\}" },
+            {
+              "name": "meta.interpolation.arti",
+              "begin": "\\{",
+              "end": "\\}",
+              "patterns": [
+                { "include": "#interpolation-braces" },
+                { "include": "#arti-body" }
+              ]
+            }
+          ]
+        },
+        {
           "name": "string.quoted.double.arti",
           "begin": "\"",
           "beginCaptures": {
@@ -154,6 +173,14 @@
             }
           ]
         }
+      ]
+    },
+    "interpolation-braces": {
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        { "include": "#interpolation-braces" },
+        { "include": "#arti-body" }
       ]
     },
     "string-escape": {

@@ -8,6 +8,8 @@ namespace AdvancedRimTalk.Arti
         internal static bool IsStatic(ArtiExpression expression, Func<string, bool> isConstant)
         {
             if (expression is ArtiLiteralExpression) return true;
+            if (expression is ArtiInterpolatedStringExpression interpolated)
+                return interpolated.Parts.All(part => IsStatic(part, isConstant));
             if (expression is ArtiNameExpression name) return isConstant(name.Name);
             if (expression is ArtiUnaryExpression unary) return IsStatic(unary.Operand, isConstant);
             if (expression is ArtiBinaryExpression binary)

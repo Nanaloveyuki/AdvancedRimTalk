@@ -254,6 +254,13 @@ namespace AdvancedRimTalk.Arti
                     continue;
                 }
 
+                if (current == 'f' && index + 1 < source.Length
+                    && (source[index + 1] == '"' || source[index + 1] == '\''))
+                {
+                    index = ArtiLexer.SkipInterpolatedString(source, index) - 1;
+                    continue;
+                }
+
                 if (current == '/' && index + 1 < source.Length && source[index + 1] == '/')
                 {
                     lineComment = true;

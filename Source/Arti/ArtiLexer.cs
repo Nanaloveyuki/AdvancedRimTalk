@@ -129,6 +129,12 @@ namespace AdvancedRimTalk.Arti
                 return;
             }
 
+            if (current == 'f' && (Peek(1) == '"' || Peek(1) == '\''))
+            {
+                ReadInterpolatedString();
+                return;
+            }
+
             if (IsIdentifierStart(current))
             {
                 ReadIdentifier();
@@ -277,45 +283,7 @@ namespace AdvancedRimTalk.Arti
                     continue;
                 }
 
-                Advance();
-                if (End)
-                {
-                    break;
-                }
-
-                char escaped = Current;
-                Advance();
-                switch (escaped)
-                {
-                    case 'n':
-                        value.Append('\n');
-                        break;
-                    case 'r':
-                        value.Append('\r');
-                        break;
-                    case 't':
-                        value.Append('\t');
-                        break;
-                    case '0':
-                        value.Append('\0');
-                        break;
-                    case '\\':
-                        value.Append('\\');
-                        break;
-                    case '"':
-                        value.Append('"');
-                        break;
-                    case '\'':
-                        value.Append('\'');
-                        break;
-                    case 'u':
-                        value.Append(ReadUnicodeEscape(start, line, column));
-                        break;
-                    default:
-                        ReportError(1005, CurrentSpan(0), escaped);
-                        value.Append(escaped);
-                        break;
-                }
+                ReadEscape(value, start, line, column);
             }
 
             if (!closed)
@@ -328,6 +296,89 @@ namespace AdvancedRimTalk.Arti
                 _source.Substring(start, _position - start),
                 value.ToString(),
                 CreateSpan(start, _position - start, line, column)));
+        }
+
+        private void ReadEscape(StringBuilder value, int start, int line, int column)
+        {
+            Advance();
+            if (End) return;
+            char escaped = Current;
+            Advance();
+            switch (escaped)
+            {
+                case 'n': value.Append('\n'); break;
+                case 'r': value.Append('\r'); break;
+                case 't': value.Append('\t'); break;
+                case '0': value.Append('\0'); break;
+                case '\\': case '"': case '\'': value.Append(escaped); break;
+                case 'u': value.Append(ReadUnicodeEscape(start, line, column)); break;
+                default:
+                    ReportError(1005, CurrentSpan(0), escaped);
+                    value.Append(escaped);
+                    break;
+            }
+        }
+
+        internal static int SkipInterpolatedString(string source, int start)
+        {
+            var lexer = new ArtiLexer { _source = source, _position = start, _line = 1, _column = 1,
+                _result = new ArtiLexResult() };
+            lexer.ReadInterpolatedString();
+            return lexer._position;
+        }
+
+        private void ReadInterpolatedString()
+        {
+            int start = _position, line = _line, column = _column;
+            Advance();
+            char quote = Current;
+            Advance();
+            _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolatedStringStart,
+                _source.Substring(start, 2), null, CreateSpan(start, 2, line, column)));
+            while (!End && Current != quote)
+            {
+                int textStart = _position, textLine = _line, textColumn = _column;
+                var text = new StringBuilder();
+                while (!End && Current != quote)
+                {
+                    if ((Current == '{' || Current == '}') && Peek(1) == Current)
+                    {
+                        text.Append(Current); Advance(); Advance();
+                    }
+                    else if (Current == '{') break;
+                    else if (Current == '}')
+                    {
+                        ReportError(1009, CurrentSpan(1)); text.Append(Current); Advance();
+                    }
+                    else if (Current == '\\') ReadEscape(text, textStart, textLine, textColumn);
+                    else { text.Append(Current); Advance(); }
+                }
+                if (_position > textStart)
+                    _result.Tokens.Add(new ArtiToken(ArtiTokenKind.String,
+                        _source.Substring(textStart, _position - textStart), text.ToString(),
+                        CreateSpan(textStart, _position - textStart, textLine, textColumn)));
+                if (End || Current == quote) break;
+
+                _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolationStart, "{", null, CurrentSpan(1)));
+                Advance();
+                int depth = 0;
+                while (!End)
+                {
+                    if (Current == '}' && depth == 0) break;
+                    if (Current == '{') depth++;
+                    else if (Current == '}') depth--;
+                    ReadNextToken();
+                }
+                if (End) { ReportError(1009, CurrentSpan(0)); break; }
+                _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolationEnd, "}", null, CurrentSpan(1)));
+                Advance();
+            }
+            if (End) ReportError(1006, CreateSpan(start, _position - start, line, column));
+            else
+            {
+                _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolatedStringEnd, quote.ToString(), null, CurrentSpan(1)));
+                Advance();
+            }
         }
 
         private char ReadUnicodeEscape(int start, int line, int column)

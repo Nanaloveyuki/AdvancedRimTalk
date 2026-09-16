@@ -40,6 +40,7 @@ namespace AdvancedRimTalk.Arti
                 { 1006, Define(1006, "字符串缺少结束引号。", "The string is missing its closing quote.") },
                 { 1007, Define(1007, "Unicode 转义需要四位十六进制数字。", "A Unicode escape requires four hexadecimal digits.") },
                 { 1008, Define(1008, "运算符必须写成完整形式。", "The operator must use its complete form.") },
+                { 1009, Define(1009, "字符串插值缺少匹配的大括号；字面大括号请写成 {{ 或 }}。", "Interpolation braces must match; use {{ or }} for literal braces.") },
 
                 { 2001, Define(2001, "语句之间需要换行或分号。", "Statements must be separated by a newline or semicolon.") },
                 { 2002, Define(2002, "group 后只能跟 use。", "group must be followed by use.") },

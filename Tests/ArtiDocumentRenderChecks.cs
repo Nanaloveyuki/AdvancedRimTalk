@@ -13,6 +13,10 @@ namespace AdvancedRimTalk.PromptChecks
             var preview = new PromptContext { IsPreview = true };
             var valid = ArtiPromptDocumentRenderer.Render("before {{% core.emit(\"value\") %}} after", preview);
             Check(valid.Text == "before value after" && !valid.HasErrors, "valid block");
+            var interpolated = ArtiPromptDocumentRenderer.Render(
+                "before {{% fn echo_marker(value) { return value }; core.emit(f\"{echo_marker(\"%}}\")}\") %}} after", preview);
+            Check(!interpolated.HasErrors && interpolated.Text == "before %}} after",
+                "interpolation quotes must not terminate the document block: " + string.Join(";", interpolated.Diagnostics));
             var language = ArtiPromptDocumentRenderer.Render(
                 "{{% let lang = \"简体中文\"\n"
                 + "core.emit(\"1.自主扮演游戏中的角色\", true)\n"

@@ -285,6 +285,7 @@ namespace AdvancedRimTalk.UI
             EnsureCatalogs();
 
             ArtiDocumentParseResult parsed = new ArtiDocumentParser().Parse(source);
+            var visibleGlobals = new HashSet<string>(externalGlobals ?? new string[0], StringComparer.Ordinal);
             List<ArtiToken> tokens = new List<ArtiToken>();
             List<ArtiDiagnostic> diagnostics = new List<ArtiDiagnostic>();
             List<ArtiCodeRange> codeRanges = new List<ArtiCodeRange>();
@@ -312,9 +313,11 @@ namespace AdvancedRimTalk.UI
                         ArtiAnalysisResult semantic = new ArtiAnalyzer(
                             moduleCatalog,
                             symbolCatalog,
-                            externalGlobals,
+                            visibleGlobals,
                             allowExternalGlobalRedeclare).Analyze(block.ParseResult.Program);
                         AddDiagnostics(diagnostics, semantic.Diagnostics);
+                        if (!block.HasErrors && !semantic.HasErrors)
+                            AdvancedRimTalk.Prompt.ArtiPromptAnalysisContext.AddDeclarations(block.ParseResult.Program, visibleGlobals);
                     }
                     catch (Exception exception)
                     {
@@ -550,7 +553,12 @@ namespace AdvancedRimTalk.UI
                 case ArtiTokenKind.Null:
                     return ArtiSyntaxRole.Boolean;
                 case ArtiTokenKind.String:
+                case ArtiTokenKind.InterpolatedStringStart:
+                case ArtiTokenKind.InterpolatedStringEnd:
                     return ArtiSyntaxRole.String;
+                case ArtiTokenKind.InterpolationStart:
+                case ArtiTokenKind.InterpolationEnd:
+                    return ArtiSyntaxRole.Marker;
                 case ArtiTokenKind.Integer:
                 case ArtiTokenKind.Float:
                     return ArtiSyntaxRole.Number;

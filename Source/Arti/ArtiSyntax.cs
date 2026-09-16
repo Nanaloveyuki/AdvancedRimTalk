@@ -125,7 +125,11 @@ namespace AdvancedRimTalk.Arti
         OrOr,
         Pipe,
         QuestionQuestion,
-        Unknown
+        Unknown,
+        InterpolatedStringStart,
+        InterpolatedStringEnd,
+        InterpolationStart,
+        InterpolationEnd
     }
 
     public sealed class ArtiToken
@@ -213,6 +217,19 @@ namespace AdvancedRimTalk.Arti
 
         public string Name { get; }
         public bool IsConst { get; }
+        public ArtiExpression Value { get; }
+    }
+
+    public sealed class ArtiUnpackDeclarationStatement : ArtiStatement
+    {
+        public ArtiUnpackDeclarationStatement(ArtiSourceSpan span, ArtiArrayExpression targets, ArtiExpression value)
+            : base(span)
+        {
+            Targets = targets;
+            Value = value;
+        }
+
+        public ArtiArrayExpression Targets { get; }
         public ArtiExpression Value { get; }
     }
 
@@ -362,6 +379,16 @@ namespace AdvancedRimTalk.Arti
         }
 
         public object Value { get; }
+    }
+
+    public sealed class ArtiInterpolatedStringExpression : ArtiExpression
+    {
+        public ArtiInterpolatedStringExpression(ArtiSourceSpan span) : base(span)
+        {
+            Parts = new List<ArtiExpression>();
+        }
+
+        public IList<ArtiExpression> Parts { get; }
     }
 
     public sealed class ArtiNameExpression : ArtiExpression
