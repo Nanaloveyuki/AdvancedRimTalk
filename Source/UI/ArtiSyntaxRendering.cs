@@ -147,16 +147,10 @@ namespace AdvancedRimTalk.UI
             builder.Append("<color=#");
             builder.Append(ColorUtility.ToHtmlStringRGB(color));
             builder.Append('>');
-            builder.Append(EscapeRichText(value));
+            builder.Append("<noparse>");
+            builder.Append(value);
+            builder.Append("</noparse>");
             builder.Append("</color>");
-        }
-
-        private static string EscapeRichText(string value)
-        {
-            return value
-                .Replace("&", "&amp;")
-                .Replace("<", "&lt;")
-                .Replace(">", "&gt;");
         }
 
         private static void RemoveBackgrounds(GUIStyle style)

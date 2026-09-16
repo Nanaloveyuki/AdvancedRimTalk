@@ -10,6 +10,23 @@ namespace AdvancedRimTalk.PromptChecks
     {
         internal static void Run()
         {
+            var missingMirror = new AdvancedRimTalkSettings();
+            var recoveredPreset = new ArtiPromptPreset
+            {
+                Parts = new List<ArtiPromptPart> { new ArtiPromptPart("Saved", PromptRole.System, "keep this") }
+            };
+            missingMirror.TakeoverPresets.Add(recoveredPreset);
+            missingMirror.ActiveTakeoverPresetId = recoveredPreset.Id;
+            missingMirror.TakeoverPromptParts = null;
+            missingMirror.EnsureTakeoverPromptParts();
+            if (missingMirror.GetPrimaryTakeoverSystemDocument() != "keep this")
+                throw new Exception("Missing legacy mirror discarded saved preset content.");
+            var duplicate = recoveredPreset.Copy("Duplicate");
+            duplicate.Id = recoveredPreset.Id;
+            missingMirror.TakeoverPresets.Add(duplicate);
+            missingMirror.EnsureTakeoverPromptParts();
+            if (duplicate.Id == recoveredPreset.Id || missingMirror.ActiveTakeoverPreset != recoveredPreset)
+                throw new Exception("Duplicate ID repair changed the active preset.");
             var settings = new AdvancedRimTalkSettings();
             settings.EnsureTakeoverPromptParts();
             int count = settings.TakeoverPromptParts.Count;

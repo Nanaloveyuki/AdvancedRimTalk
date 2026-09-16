@@ -19,6 +19,10 @@
       <HintPath>$(RimTalkAssemblyDir)\Scriban.dll</HintPath>
     </Reference>
     <Compile Include="Program.cs" />
+    <Compile Include="ResponseProcessingChecks.cs" />
+    <Compile Include="..\Source\Integration\ResponseJsonRepair.cs" Link="ResponseJsonRepair.cs" />
+    <Compile Include="..\Source\Integration\RimTalkResponseProcessor.cs" Link="RimTalkResponseProcessor.cs" />
+    <Compile Include="..\Source\Integration\RimTalkResponsePatch.cs" Link="RimTalkResponsePatch.cs" />
     <Compile Include="GlobalRuntimeProperties.cs" />
     <Compile Include="..\Source\Arti\ArtiGlobalRuntime.cs" Link="ArtiGlobalRuntime.cs" />
     <Compile Include="GlobalDefinitionProperties.cs" />

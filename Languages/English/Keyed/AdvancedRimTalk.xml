@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
+  <AdvancedRimTalk.Settings.Incompatible>RimTalk integration is disabled: {0}</AdvancedRimTalk.Settings.Incompatible>
   <AdvancedRimTalk.Init.Enable>Enable declared memory sources</AdvancedRimTalk.Init.Enable>
   <AdvancedRimTalk.ArtiLog.Title>Arti Logs</AdvancedRimTalk.ArtiLog.Title>
   <AdvancedRimTalk.ArtiLog.Clear>Clear</AdvancedRimTalk.ArtiLog.Clear>

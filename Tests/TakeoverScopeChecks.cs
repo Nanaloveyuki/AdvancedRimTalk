@@ -69,7 +69,7 @@ namespace AdvancedRimTalk.PromptChecks
             finally
             {
                 original.Context = context;
-                AdvancedRimTalkMod.Settings = new ScopeSettings();
+                AdvancedRimTalkMod.Settings = new Settings.AdvancedRimTalkSettings();
                 AdvancedRimTalkMod.ShouldReplaceRimTalkPromptMechanism = false;
             }
         }
@@ -96,12 +96,7 @@ namespace AdvancedRimTalk
     internal static class AdvancedRimTalkMod
     {
         internal static bool ShouldReplaceRimTalkPromptMechanism;
-        internal static ScopeSettings Settings = new ScopeSettings();
-    }
-    internal sealed class ScopeSettings
-    {
-        public int TakeoverMaxPawnContextCount = 32;
-        public int TakeoverConversationHistoryCount = 40;
+        internal static Settings.AdvancedRimTalkSettings Settings = new Settings.AdvancedRimTalkSettings();
     }
 }
 

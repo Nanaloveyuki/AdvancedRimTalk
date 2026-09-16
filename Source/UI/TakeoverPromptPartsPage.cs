@@ -59,8 +59,8 @@ namespace AdvancedRimTalk.UI
             EnsureSelection(parts);
             DrawPartList(new Rect(leftRect.x, leftRect.y + 202f, leftRect.width,
                 Mathf.Max(1f, leftRect.height - 202f)), settings, parts);
-            DrawInitSummary(new Rect(rightRect.x, rightRect.y, rightRect.width, 92f), preset);
-            DrawPartEditor(new Rect(rightRect.x, rightRect.y + 98f, rightRect.width, Mathf.Max(1f, rightRect.height - 98f)), parts.FirstOrDefault(part => part.Id == selectedPartId));
+            DrawInitSummary(new Rect(rightRect.x, rightRect.y, rightRect.width, 112f), preset);
+            DrawPartEditor(new Rect(rightRect.x, rightRect.y + 118f, rightRect.width, Mathf.Max(1f, rightRect.height - 118f)), parts.FirstOrDefault(part => part.Id == selectedPartId));
         }
 
         private static void DrawInitSummary(Rect rect, ArtiPromptPreset preset)
@@ -68,10 +68,10 @@ namespace AdvancedRimTalk.UI
             Widgets.DrawBoxSolid(rect, new Color(.08f, .08f, .08f, .8f));
             ArtiPromptInit init = preset.Init ?? new ArtiPromptInit();
             bool enabled = init.EnabledByPlayer;
-            Widgets.CheckboxLabeled(new Rect(rect.x + rect.width - 190f, rect.y + 4f, 180f, 24f), "AdvancedRimTalk.Init.Enable".Translate(), ref enabled);
+            Widgets.CheckboxLabeled(new Rect(rect.x + 6f, rect.y + 4f, rect.width - 12f, 24f), "AdvancedRimTalk.Init.Enable".Translate(), ref enabled);
             init.EnabledByPlayer = enabled;
             string text = string.IsNullOrWhiteSpace(init.Title) ? "AdvancedRimTalk.Init.None".Translate().ToString() : init.Title + "\n" + init.Description;
-            Widgets.Label(new Rect(rect.x + 6f, rect.y + 30f, rect.width - 12f, rect.height - 34f), text);
+            Widgets.Label(new Rect(rect.x + 6f, rect.y + 32f, rect.width - 12f, rect.height - 36f), text);
         }
 
         private ArtiPromptPreset SelectedPreset(AdvancedRimTalkSettings settings)

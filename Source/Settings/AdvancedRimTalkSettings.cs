@@ -59,6 +59,8 @@ namespace AdvancedRimTalk.Settings
             Scribe_Values.Look(ref ResponseWhitelistRegex, "responseWhitelistRegex", string.Empty);
             Scribe_Values.Look(ref ResponseBlacklistRegex, "responseBlacklistRegex", string.Empty);
             Scribe_Values.Look(ref ResponseModelIds, "responseModelIds", string.Empty);
+            if (float.IsNaN(IgnoreIntervalSeconds) || float.IsInfinity(IgnoreIntervalSeconds) || IgnoreIntervalSeconds < 0)
+                IgnoreIntervalSeconds = 0;
             EnsureTakeoverPromptParts();
 
             if (ArtiEditorUndoLimit < 0)
@@ -79,7 +81,12 @@ namespace AdvancedRimTalk.Settings
         {
             if (TakeoverPresets == null) TakeoverPresets = new List<ArtiPromptPreset>();
             TakeoverPresets.RemoveAll(preset => preset == null);
-            foreach (var preset in TakeoverPresets) preset.Normalize();
+            var ids = new HashSet<string>();
+            foreach (var preset in TakeoverPresets)
+            {
+                preset.Normalize();
+                while (!ids.Add(preset.Id)) preset.Id = System.Guid.NewGuid().ToString("N");
+            }
             if (TakeoverPresets.Count > 0)
             {
                 var active = TakeoverPresets.Find(preset => preset.Id == ActiveTakeoverPresetId);
@@ -91,7 +98,8 @@ namespace AdvancedRimTalk.Settings
                 }
                 else
                 {
-                    active.Parts = TakeoverPromptParts ?? active.Parts;
+                    TakeoverPromptParts = TakeoverPromptParts ?? active.Parts;
+                    active.Parts = TakeoverPromptParts;
                 }
             }
             if (TakeoverPromptParts == null || TakeoverPromptParts.Count == 0)

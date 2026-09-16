@@ -8,6 +8,7 @@ namespace AdvancedRimTalk.PromptChecks
     {
         private static void Main()
         {
+            ResponseProcessingChecks.Run();
             GlobalRuntimeProperties.Run();
             GlobalDefinitionProperties.Run();
             PreviewSessionPatchChecks.Run();

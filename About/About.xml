@@ -15,7 +15,7 @@
     </li>
     <li>
       <packageId>cj.rimtalk</packageId>
-      <displayName>RimTalk</displayName>
+      <displayName>RimTalk (1.2.13+)</displayName>
     </li>
   </modDependencies>
   <loadAfter>

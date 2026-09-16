@@ -1,4 +1,5 @@
 using System.Reflection;
+using System;
 using AdvancedRimTalk.Integration;
 using AdvancedRimTalk.Settings;
 using AdvancedRimTalk.UI;
@@ -23,6 +24,7 @@ namespace AdvancedRimTalk
         private string _takeoverPawnLimitBuffer;
         private string _takeoverHistoryLimitBuffer;
         private string _takeoverBudgetBuffer;
+        private string _initializationError;
 
         internal static AdvancedRimTalkSettings Settings { get; private set; }
 
@@ -46,10 +48,23 @@ namespace AdvancedRimTalk
         {
             _documentationPage = new DocumentationPage(content.RootDir);
             Settings = GetSettings<AdvancedRimTalkSettings>();
+            var harmony = new Harmony("advancedrimtalk.prompt");
+            try
+            {
+                RimTalkCompatibility.Validate();
+                harmony.PatchAll(Assembly.GetExecutingAssembly());
+            }
+            catch (Exception exception)
+            {
+                _initializationError = exception.GetBaseException().Message;
+                Log.Error("Advanced RimTalk integration disabled: " + exception);
+                // Roll back only our patches, including a partially completed PatchAll.
+                harmony.UnpatchAll(harmony.Id);
+                return;
+            }
             RimTalkExpandMemoryArtiBridge.Detect();
             RimTalkArtiPromptRegistration.Register();
             IrisMenusSettingsIntegration.TryRegister(this);
-            new Harmony("advancedrimtalk.prompt").PatchAll(Assembly.GetExecutingAssembly());
             Log.Message("Advanced RimTalk Prompt initialized.");
         }
 
@@ -74,6 +89,11 @@ namespace AdvancedRimTalk
 
         internal void DrawSettingsPage(Listing_Standard listing)
         {
+            if (_initializationError != null)
+            {
+                listing.Label("AdvancedRimTalk.Settings.Incompatible".Translate(_initializationError));
+                return;
+            }
             listing.Label("AdvancedRimTalk.Settings.PromptIntegrationMode".Translate());
             if (listing.RadioButton(
                 "AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt".Translate(),

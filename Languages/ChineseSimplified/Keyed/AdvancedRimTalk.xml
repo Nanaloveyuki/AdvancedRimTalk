@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
+  <AdvancedRimTalk.Settings.Incompatible>RimTalk 集成已停用：{0}</AdvancedRimTalk.Settings.Incompatible>
   <AdvancedRimTalk.Init.Enable>启用提示词声明的记忆来源</AdvancedRimTalk.Init.Enable>
   <AdvancedRimTalk.ArtiLog.Title>Arti 日志</AdvancedRimTalk.ArtiLog.Title>
   <AdvancedRimTalk.ArtiLog.Clear>清空</AdvancedRimTalk.ArtiLog.Clear>

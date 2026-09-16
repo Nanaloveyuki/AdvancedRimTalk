@@ -1027,19 +1027,6 @@ namespace AdvancedRimTalk.UI
                 }
             }
 
-            if (!command && !current.alt
-                && (current.keyCode == KeyCode.Return || current.keyCode == KeyCode.KeypadEnter))
-            {
-                string before = source;
-                int beforeCursor = editor.cursorIndex;
-                int beforeSelect = editor.selectIndex;
-                editor.ReplaceSelection("\n");
-                HandleTextAreaResult(before, editor.text, beforeCursor, beforeSelect);
-                ClearCompletion();
-                current.Use();
-                return;
-            }
-
             if (command && current.keyCode == KeyCode.Space)
             {
                 ShowCompletion(editor);
