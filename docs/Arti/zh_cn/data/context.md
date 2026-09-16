@@ -63,7 +63,14 @@ game
 
 `json.format` 提供 RimTalk 当前使用的 JSON 回复约束文本，`lang` 是当前语言文本。它们都是生成时读取的只读值。
 
-如果需要读取 RimTalk 设置对象，可以检查 `settings` 是否存在，再读取 `apply_mood_and_social_effects`、`use_advanced_prompt_mode`、`player_persona`、`simple_mode_instruction`、`player_dialogue_mode` 和 `context`。
+如果需要读取 RimTalk 设置对象，可以检查 `settings` 是否存在，再读取 `apply_mood_and_social_effects`、`use_advanced_prompt_mode`、`player_name`、`player_persona`、`simple_mode_instruction`、`player_dialogue_mode` 和 `context`。
+
+`settings.player_name`（也支持 `settings.playername`）读取 RimTalk 的玩家称呼；字段为 `null` 时返回空字符串：
+
+```arti
+let player_name = settings.player_name
+core.emit("玩家称呼：" + player_name, newline: true)
+```
 
 ## 自定义上下文变量
 

@@ -1129,6 +1129,10 @@ namespace AdvancedRimTalk.Integration
                 case "useadvancedpromptmode":
                     value = settings.UseAdvancedPromptMode;
                     return true;
+                case "player_name":
+                case "playername":
+                    value = settings.PlayerName ?? string.Empty;
+                    return true;
                 case "player_persona":
                 case "playerpersona":
                     value = settings.PlayerPersona ?? string.Empty;
