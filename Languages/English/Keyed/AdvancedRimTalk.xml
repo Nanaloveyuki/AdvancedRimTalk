@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
+  <AdvancedRimTalk.Init.Enable>Enable declared memory sources</AdvancedRimTalk.Init.Enable>
+  <AdvancedRimTalk.ArtiLog.Title>Arti Logs</AdvancedRimTalk.ArtiLog.Title>
+  <AdvancedRimTalk.ArtiLog.Clear>Clear</AdvancedRimTalk.ArtiLog.Clear>
+  <AdvancedRimTalk.Settings.Unavailable>Advanced RimTalk settings are not available.</AdvancedRimTalk.Settings.Unavailable>
+  <AdvancedRimTalk.Init.None>Prompt init: none</AdvancedRimTalk.Init.None>
+  <AdvancedRimTalk.Init.ImportedTitle>Imported memory sources</AdvancedRimTalk.Init.ImportedTitle>
+  <AdvancedRimTalk.PromptParts.Export>Export</AdvancedRimTalk.PromptParts.Export>
+  <AdvancedRimTalk.PromptParts.Exported>Prompt exported.</AdvancedRimTalk.PromptParts.Exported>
+  <AdvancedRimTalk.PromptParts.ExportFailed>Prompt export failed.</AdvancedRimTalk.PromptParts.ExportFailed>
   <AdvancedRimTalk.Settings.PromptIntegrationMode>Prompt integration mode</AdvancedRimTalk.Settings.PromptIntegrationMode>
   <AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt>Embed Arti into the existing RimTalk prompt</AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt>
   <AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPromptTooltip>Keep RimTalk's presets, message roles, chat history, and assembler. Evaluate {{% ... %}} Arti blocks when an existing prompt entry is rendered.</AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPromptTooltip>

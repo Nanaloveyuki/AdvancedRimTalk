@@ -57,7 +57,12 @@ namespace Verse
     internal sealed class Game { }
     internal static class Current { internal static Game Game = new Game(); }
     internal static class Prefs { internal static bool DevMode => false; }
-    internal static class Log { public static void Warning(string text) { } }
+    internal static class Log
+    {
+        public static void Warning(string text) { }
+        public static void Error(string text) { }
+        public static void Message(string text) { }
+    }
 }
 namespace AdvancedRimTalk.Integration
 {

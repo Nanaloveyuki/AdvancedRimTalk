@@ -53,6 +53,16 @@ namespace AdvancedRimTalk.Documentation
                 "memory/",
                 "AdvancedRimTalk.Documentation.Memory"),
             new CategoryDefinition(
+                "examples",
+                "examples/index.md",
+                "examples/",
+                "AdvancedRimTalk.Documentation.Examples"),
+            new CategoryDefinition(
+                "regex",
+                "regex.md",
+                "regex/",
+                "AdvancedRimTalk.Documentation.Regex"),
+            new CategoryDefinition(
                 "compatibility",
                 "compatibility/index.md",
                 "compatibility/",
@@ -415,12 +425,7 @@ namespace AdvancedRimTalk.Documentation
                 markdown = ReadEmbedded(relativePath);
                 if (markdown == null && !string.IsNullOrWhiteSpace(contentRoot))
                 {
-                    string externalPath = Path.Combine(
-                        contentRoot,
-                        "docs",
-                        "Arti",
-                        "zh_cn",
-                        relativePath.Replace('/', Path.DirectorySeparatorChar));
+                    string externalPath = FindExternalPath(contentRoot, relativePath);
                     if (File.Exists(externalPath))
                     {
                         try
@@ -442,6 +447,28 @@ namespace AdvancedRimTalk.Documentation
 
                 cache[relativePath] = markdown;
                 return markdown != null;
+            }
+
+            private static string FindExternalPath(string root, string relativePath)
+            {
+                string preferred = LanguageDirectory();
+                string[] languages = string.IsNullOrEmpty(preferred) ? new[] { "zh_cn" } : new[] { preferred, "zh_cn" };
+                foreach (string language in languages)
+                {
+                    string path = Path.Combine(root, "docs", "Arti", language, relativePath.Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(path)) return path;
+                }
+                return Path.Combine(root, "docs", "Arti", "zh_cn", relativePath.Replace('/', Path.DirectorySeparatorChar));
+            }
+
+            private static string LanguageDirectory()
+            {
+                Type database = typeof(AdvancedRimTalkDocumentationCatalog).Assembly.GetType("Verse.LanguageDatabase", false);
+                object active = database == null ? null : database.GetField("activeLanguage", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                string language = active?.GetType().GetField("folderName", BindingFlags.Public | BindingFlags.Instance)?.GetValue(active) as string;
+                if (string.Equals(language, "ChineseSimplified", StringComparison.OrdinalIgnoreCase)) return "zh_cn";
+                if (string.Equals(language, "English", StringComparison.OrdinalIgnoreCase)) return "en";
+                return null;
             }
 
             private string ReadEmbedded(string relativePath)

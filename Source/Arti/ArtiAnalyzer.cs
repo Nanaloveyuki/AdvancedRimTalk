@@ -60,6 +60,7 @@ namespace AdvancedRimTalk.Arti
         private static readonly ISet<string> BuiltinNames = new HashSet<string>(StringComparer.Ordinal)
         {
             "core",
+            "try_call",
             "range",
             "array",
             "date",

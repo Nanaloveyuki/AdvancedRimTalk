@@ -11,6 +11,8 @@ namespace AdvancedRimTalk
     public sealed class AdvancedRimTalkMod : Mod
     {
         private readonly ArtiReplPage _artiReplPage = new ArtiReplPage();
+        private readonly ArtiLogPage _artiLogPage = new ArtiLogPage();
+        internal void DrawArtiLog(Rect rect) { _artiLogPage.Draw(rect); }
         private readonly PromptPreviewPage _promptPreviewPage = new PromptPreviewPage();
         private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
         private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();

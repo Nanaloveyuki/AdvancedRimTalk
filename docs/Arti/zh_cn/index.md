@@ -41,6 +41,8 @@ core.emit("话题：" + topic, newline: true)
 | 查找一个函数 | 从下方的函数索引进入 |
 | 处理旧模板 | [art](compatibility/art.md) |
 | 排查执行问题 | [error](guide/error.md) |
+| 按场景组织提示词 | [examples](examples/index.md) |
+| 使用正则处理文本 | [regex](regex.md) |
 
 ## 语言和模板的边界
 
@@ -86,6 +88,7 @@ Arti 与 RimTalk 中已有的两种模板语法并存：
 - [number](language/number.md)
 - [array](language/array.md)
 - [object](language/object.md)
+- [literal](language/literal.md)
 - [operator](language/operator.md)
 - [scope](language/scope.md)
 - [use](language/use.md)
@@ -93,6 +96,7 @@ Arti 与 RimTalk 中已有的两种模板语法并存：
 - [group](language/group.md)
 - [let](language/let.md)
 - [const](language/const.md)
+- [assignment](language/assignment.md)
 - [function](language/function.md)
 - [method](language/method.md)
 - [if](language/if.md)
@@ -215,6 +219,18 @@ Arti 与 RimTalk 中已有的两种模板语法并存：
 - [random_float](compatibility/random_float.md)
 - [choose](compatibility/choose.md)
 - [join](compatibility/join.md)
+
+### 实战示例
+
+- [examples](examples/index.md)
+- [context-filter](examples/context-filter.md)
+- [optional-mod](examples/optional-mod.md)
+- [raw-data](examples/raw-data.md)
+- [regex](examples/regex.md)
+
+### 文本处理
+
+- [regex](regex.md)
 
 ## 文档约定
 

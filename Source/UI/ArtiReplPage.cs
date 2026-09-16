@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using AdvancedRimTalk.Arti;
+using AdvancedRimTalk.Diagnostics;
 using AdvancedRimTalk.Integration;
 using RimTalk.Prompt;
 using UnityEngine;
@@ -991,10 +992,6 @@ namespace AdvancedRimTalk.UI
             context.WarningSink = delegate(string message)
             {
                 warnings.Add(message ?? string.Empty);
-                if (Prefs.DevMode)
-                {
-                    Log.Warning("Advanced RimTalk Arti REPL: " + message);
-                }
             };
             executor = new ArtiExecutor();
         }

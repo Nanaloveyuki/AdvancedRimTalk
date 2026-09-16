@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using AdvancedRimTalk.Arti;
+using AdvancedRimTalk.Diagnostics;
 using RimTalk.Prompt;
 using Verse;
 
@@ -120,10 +121,6 @@ namespace AdvancedRimTalk.Integration
                 symbols);
             executionContext.WarningSink = delegate(string message)
             {
-                if (Prefs.DevMode)
-                {
-                    Log.Warning("Advanced RimTalk Arti: " + message);
-                }
             };
             Dictionary<string, object> previewVariables = promptContext.IsPreview
                 ? PromptPreviewSession.Variables ?? new Dictionary<string, object>(StringComparer.Ordinal) : null;

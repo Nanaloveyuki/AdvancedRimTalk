@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using AdvancedRimTalk.Prompt;
 using AdvancedRimTalk.Settings;
 using RimTalk.Prompt;
@@ -39,7 +40,7 @@ namespace AdvancedRimTalk.UI
             AdvancedRimTalkSettings settings = AdvancedRimTalkMod.Settings;
             if (settings == null)
             {
-                Widgets.Label(inRect, "Advanced RimTalk settings are not available.");
+                Widgets.Label(inRect, "AdvancedRimTalk.Settings.Unavailable".Translate());
                 return;
             }
 
@@ -58,7 +59,19 @@ namespace AdvancedRimTalk.UI
             EnsureSelection(parts);
             DrawPartList(new Rect(leftRect.x, leftRect.y + 202f, leftRect.width,
                 Mathf.Max(1f, leftRect.height - 202f)), settings, parts);
-            DrawPartEditor(rightRect, parts.FirstOrDefault(part => part.Id == selectedPartId));
+            DrawInitSummary(new Rect(rightRect.x, rightRect.y, rightRect.width, 92f), preset);
+            DrawPartEditor(new Rect(rightRect.x, rightRect.y + 98f, rightRect.width, Mathf.Max(1f, rightRect.height - 98f)), parts.FirstOrDefault(part => part.Id == selectedPartId));
+        }
+
+        private static void DrawInitSummary(Rect rect, ArtiPromptPreset preset)
+        {
+            Widgets.DrawBoxSolid(rect, new Color(.08f, .08f, .08f, .8f));
+            ArtiPromptInit init = preset.Init ?? new ArtiPromptInit();
+            bool enabled = init.EnabledByPlayer;
+            Widgets.CheckboxLabeled(new Rect(rect.x + rect.width - 190f, rect.y + 4f, 180f, 24f), "AdvancedRimTalk.Init.Enable".Translate(), ref enabled);
+            init.EnabledByPlayer = enabled;
+            string text = string.IsNullOrWhiteSpace(init.Title) ? "AdvancedRimTalk.Init.None".Translate().ToString() : init.Title + "\n" + init.Description;
+            Widgets.Label(new Rect(rect.x + 6f, rect.y + 30f, rect.width - 12f, rect.height - 34f), text);
         }
 
         private ArtiPromptPreset SelectedPreset(AdvancedRimTalkSettings settings)
@@ -225,6 +238,7 @@ namespace AdvancedRimTalk.UI
             {
                 ShowSharedImportMenu(settings);
             }
+            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY - 28f, rect.width - 10f, 24f), "AdvancedRimTalk.PromptParts.Export".Translate())) ExportPreset(settings.ActiveTakeoverPreset);
 
             buttonY += 28f;
             if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY, rect.width - 10f, 24f), "AdvancedRimTalk.PromptParts.ResetDefaults".Translate()))
@@ -526,6 +540,7 @@ namespace AdvancedRimTalk.UI
             string firstImportedId = null;
             foreach (PromptEntry entry in preset.Entries)
             {
+                if (TryReadInit(entry, importedPreset.Init)) continue;
                 string baseName = string.IsNullOrWhiteSpace(entry.Name) ? preset.Name : entry.Name;
                 ArtiPromptPart part = ArtiPromptPart.FromRimTalkEntry(entry, UniqueName(parts, baseName));
                 parts.Add(part);
@@ -550,6 +565,38 @@ namespace AdvancedRimTalk.UI
                 imported,
                 sourceName);
             Messages.Message(message, MessageTypeDefOf.PositiveEvent);
+        }
+
+        private static bool TryReadInit(PromptEntry entry, ArtiPromptInit init)
+        {
+            string name = entry.Name ?? string.Empty;
+            string content = entry.Content ?? string.Empty;
+            if (!name.Equals("[ArtiInit]", StringComparison.OrdinalIgnoreCase)
+                && !content.StartsWith("[ArtiInit]\n", StringComparison.OrdinalIgnoreCase)) return false;
+            string body = content.StartsWith("[ArtiInit]\n", StringComparison.OrdinalIgnoreCase) ? content.Substring(10) : content;
+            init.Title = string.IsNullOrWhiteSpace(name) || name == "[ArtiInit]" ? "AdvancedRimTalk.Init.ImportedTitle".Translate().ToString() : name;
+            init.Description = body.Trim();
+            init.EnabledByPlayer = false;
+            return true;
+        }
+
+        private static void ExportPreset(ArtiPromptPreset preset)
+        {
+            try
+            {
+                Type type = typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.PresetSerializer", true);
+                Type entryType = typeof(PromptEntry);
+                object native = Activator.CreateInstance(typeof(PromptPreset), preset.Name, "Advanced RimTalk export");
+                var entries = ((PromptPreset)native).Entries;
+                ArtiPromptInit init = preset.Init ?? new ArtiPromptInit();
+                if (!string.IsNullOrWhiteSpace(init.Title) || init.Sources.Count > 0 || init.Anchors.Count > 0)
+                    entries.Add(new PromptEntry("[ArtiInit]", init.Title + "\n" + init.Description + "\nSources: " + string.Join(",", init.Sources) + "\nAnchors: " + string.Join(",", init.Anchors)));
+                foreach (ArtiPromptPart part in preset.Parts) entries.Add(new PromptEntry(part.Name, part.Content, part.Role) { Enabled = part.Enabled, CustomRole = part.CustomRole });
+                MethodInfo export = type.GetMethod("ExportToFile", BindingFlags.Public | BindingFlags.Static);
+                bool ok = export != null && (bool)export.Invoke(null, new object[] { native, null });
+                Messages.Message((ok ? "AdvancedRimTalk.PromptParts.Exported" : "AdvancedRimTalk.PromptParts.ExportFailed").Translate(), ok ? MessageTypeDefOf.PositiveEvent : MessageTypeDefOf.RejectInput);
+            }
+            catch (Exception exception) { Log.Warning("Advanced RimTalk export failed: " + exception.Message); }
         }
 
         private static string UniqueName(List<ArtiPromptPart> parts, string baseName)

@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
+  <AdvancedRimTalk.Init.Enable>启用提示词声明的记忆来源</AdvancedRimTalk.Init.Enable>
+  <AdvancedRimTalk.ArtiLog.Title>Arti 日志</AdvancedRimTalk.ArtiLog.Title>
+  <AdvancedRimTalk.ArtiLog.Clear>清空</AdvancedRimTalk.ArtiLog.Clear>
+  <AdvancedRimTalk.Settings.Unavailable>Advanced RimTalk 设置不可用。</AdvancedRimTalk.Settings.Unavailable>
+  <AdvancedRimTalk.Init.None>没有提示词初始化声明</AdvancedRimTalk.Init.None>
+  <AdvancedRimTalk.Init.ImportedTitle>导入的记忆来源</AdvancedRimTalk.Init.ImportedTitle>
+  <AdvancedRimTalk.PromptParts.Export>导出</AdvancedRimTalk.PromptParts.Export>
+  <AdvancedRimTalk.PromptParts.Exported>提示词已导出。</AdvancedRimTalk.PromptParts.Exported>
+  <AdvancedRimTalk.PromptParts.ExportFailed>提示词导出失败。</AdvancedRimTalk.PromptParts.ExportFailed>
   <AdvancedRimTalk.Settings.PromptIntegrationMode>Prompt 接入模式</AdvancedRimTalk.Settings.PromptIntegrationMode>
   <AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt>将 Arti 嵌入现有 RimTalk Prompt</AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPrompt>
   <AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPromptTooltip>保留 RimTalk 的预设、消息角色、聊天历史和 assembler，在现有 Prompt 条目渲染时执行 {{% ... %}} Arti 代码块。</AdvancedRimTalk.Settings.EmbedArtiIntoRimTalkPromptTooltip>

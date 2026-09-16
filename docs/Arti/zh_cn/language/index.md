@@ -29,11 +29,13 @@ if name != null {
 - [number](number.md)：支持整数、小数和指数形式。
 - [array](array.md)：使用 `[ ... ]` 创建数组。
 - [object](object.md)：使用 `{ key: value }` 创建对象。
+- [literal](literal.md)：集中了解 `true`、`false`、`null` 和复合字面量。
 
 ## 变量和作用域
 
 - [let](let.md)：声明可重新赋值的局部变量。
 - [const](const.md)：声明不可重新赋值的局部变量。
+- [assignment](assignment.md)：使用复合赋值更新 `let` 变量。
 - [scope](scope.md)：了解代码块、函数和模块别名的可见范围。
 - [use](use.md)：绑定一个模块。
 - [optional](optional.md)：声明可选模块。

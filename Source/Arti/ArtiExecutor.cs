@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Security;
 using System.Text;
+using AdvancedRimTalk.Diagnostics;
 
 namespace AdvancedRimTalk.Arti
 {
@@ -1019,6 +1020,22 @@ namespace AdvancedRimTalk.Arti
             core.Set("append", new RuntimeCallable(Emit));
             core.Set("emit_if", new RuntimeCallable(EmitIf));
             core.Set("log", new RuntimeCallable(Warn));
+            RuntimeObject log = new RuntimeObject();
+            log.Set("debug", new RuntimeCallable(delegate(RuntimeArguments a) { ArtiLogBuffer.Add("DEBUG", ToText(a.Get(0, "message", true))); return null; }));
+            log.Set("info", new RuntimeCallable(delegate(RuntimeArguments a) { ArtiLogBuffer.Add("INFO", ToText(a.Get(0, "message", true))); return null; }));
+            log.Set("warn", new RuntimeCallable(Warn));
+            log.Set("error", new RuntimeCallable(delegate(RuntimeArguments a) { ArtiLogBuffer.Add("ERROR", ToText(a.Get(0, "message", true))); return null; }));
+            core.Set("logger", log);
+
+            RuntimeObject time = new RuntimeObject();
+            time.Set("now", new RuntimeCallable(delegate(RuntimeArguments arguments) { return CreateSystemTime(false); }));
+            time.Set("utc_now", new RuntimeCallable(delegate(RuntimeArguments arguments) { return CreateSystemTime(true); }));
+            time.Set("unix", new RuntimeCallable(delegate(RuntimeArguments arguments) { return DateTimeOffset.UtcNow.ToUnixTimeSeconds(); }));
+            time.Set("offset_minutes", new RuntimeCallable(delegate(RuntimeArguments arguments) { return (int)DateTimeOffset.Now.Offset.TotalMinutes; }));
+            time.Set("zone", new RuntimeCallable(delegate(RuntimeArguments arguments) { return TimeZoneInfo.Local.Id; }));
+            core.Set("time", time);
+
+            core.Set("try_call", new RuntimeCallable(TryCall));
 
             RuntimeObject stringModule = new RuntimeObject();
             foreach (string name in ArtiStringFunctions.Names)
@@ -1092,6 +1109,34 @@ namespace AdvancedRimTalk.Arti
             return core;
         }
 
+        private object CreateSystemTime(bool utc)
+        {
+            DateTimeOffset value = utc ? DateTimeOffset.UtcNow : DateTimeOffset.Now;
+            RuntimeObject result = new RuntimeObject();
+            result.Set("year", value.Year); result.Set("month", value.Month); result.Set("day", value.Day);
+            result.Set("hour", value.Hour); result.Set("minute", value.Minute); result.Set("second", value.Second);
+            result.Set("offset_minutes", (int)value.Offset.TotalMinutes); result.Set("zone", utc ? "UTC" : TimeZoneInfo.Local.Id);
+            result.Set("unix", value.ToUnixTimeSeconds()); result.Set("iso", value.ToString("o", CultureInfo.InvariantCulture));
+            return result;
+        }
+
+        private object TryCall(RuntimeArguments arguments)
+        {
+            object callable = arguments.Get(0, "callable", true);
+            RuntimeObject result = new RuntimeObject();
+            try
+            {
+                result.Set("ok", true);
+                result.Set("value", InvokeCallable(callable, new RuntimeArguments()));
+            }
+            catch (Exception exception)
+            {
+                result.Set("ok", false);
+                result.Set("error", exception.GetBaseException().Message);
+            }
+            return result;
+        }
+
         private object Emit(RuntimeArguments arguments)
         {
             object value = arguments.Get(0, "text", true);
@@ -1125,6 +1170,7 @@ namespace AdvancedRimTalk.Arti
         private object Warn(RuntimeArguments arguments)
         {
             string message = ToText(arguments.Get(0, "message", true));
+            ArtiLogBuffer.Add("WARN", message);
             if (_context.WarningSink != null)
             {
                 _context.WarningSink(message);

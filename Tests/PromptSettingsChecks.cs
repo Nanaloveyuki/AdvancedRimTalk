@@ -37,8 +37,18 @@ namespace AdvancedRimTalk.PromptChecks
                 || imported.CustomRole != "Narrator") throw new Exception("Import must preserve source and part metadata.");
 
             var original = settings.ActiveTakeoverPreset;
+            if (original.Init.EnabledByPlayer) throw new Exception("Init must default to disabled.");
+            original.Init.Title = "Knowledge anchors";
+            original.Init.Description = "Author-provided description";
+            original.Init.Sources.Add("common_knowledge");
+            original.Init.Anchors.Add("world rules");
+            original.Init.EnabledByPlayer = true;
             if (!ReferenceEquals(original.Parts, settings.TakeoverPromptParts)) throw new Exception("Legacy parts must migrate without copying away edits.");
             var copy = original.Copy("Second");
+            copy.Init.Anchors.Add("copy only");
+            if (original.Init.Anchors.Count != 1 || ReferenceEquals(original.Init, copy.Init)
+                || ReferenceEquals(original.Init.Sources, copy.Init.Sources))
+                throw new Exception("Preset copies must not share init declarations.");
             settings.TakeoverPresets.Add(copy);
             copy.Parts[0].Content = "independent";
             if (original.Parts[0].Content == "independent") throw new Exception("Presets must not share mutable parts.");
@@ -65,6 +75,12 @@ namespace AdvancedRimTalk.PromptChecks
                 || restored.TakeoverPromptParts[0].Content != original.Parts[0].Content)
                 throw new Exception("Preset serialization contract lost active state or parts.");
             restored.ActivateTakeoverPreset(copy.Id);
+            var restoredInit = restored.ActiveTakeoverPreset.Init;
+            if (!restoredInit.EnabledByPlayer || restoredInit.Title != copy.Init.Title
+                || restoredInit.Description != copy.Init.Description
+                || restoredInit.Sources.Count != 1 || restoredInit.Sources[0] != "common_knowledge"
+                || restoredInit.Anchors.Count != 2 || restoredInit.Anchors[1] != "copy only")
+                throw new Exception("Init serialization lost declaration or player selection.");
             if (restored.TakeoverPromptParts[0].Content != "independent")
                 throw new Exception("Inactive preset content was not persisted.");
             persisted.Remove("takeoverPresets");
@@ -122,7 +138,33 @@ namespace Verse
     }
     public interface IExposable { void ExposeData(); }
     public class ModSettings { public virtual void ExposeData() { } }
-    public enum LookMode { Deep }
+    public enum LookMode { Deep, Value }
+    public static class Scribe_Deep
+    {
+        public static void Look<T>(ref T value, string name) where T : class, IExposable, new()
+        {
+            var parent = TestScribe.Data;
+            try
+            {
+                if (TestScribe.Loading)
+                {
+                    value = null;
+                    if (!parent.TryGetValue(name, out var stored) || stored == null) return;
+                    TestScribe.Data = (Dictionary<string, object>)stored;
+                    value = new T();
+                    value.ExposeData();
+                }
+                else
+                {
+                    if (value == null) { parent[name] = null; return; }
+                    TestScribe.Data = new Dictionary<string, object>();
+                    parent[name] = TestScribe.Data;
+                    value.ExposeData();
+                }
+            }
+            finally { TestScribe.Data = parent; }
+        }
+    }
     public static class Scribe_Values
     {
         public static void Look<T>(ref T value, string name, T defaultValue)
@@ -135,6 +177,13 @@ namespace Verse
     {
         public static void Look<T>(ref List<T> value, string name, LookMode mode)
         {
+            if (mode == LookMode.Value)
+            {
+                if (TestScribe.Loading)
+                    value = TestScribe.Data.TryGetValue(name, out var stored) && stored != null ? new List<T>((List<T>)stored) : null;
+                else TestScribe.Data[name] = value == null ? null : new List<T>(value);
+                return;
+            }
             var parent = TestScribe.Data;
             try
             {
