@@ -11,6 +11,8 @@ namespace AdvancedRimTalk.PromptChecks
             ExecutesStatementsAndFunctions();
             EmitsWithoutImplicitNewlines();
             UsesVariableCallbacks();
+            SharesControlFlowScope();
+            DetectsExistence();
             ExecutesModulesAndRandomValues();
             ExecutesRuntimeModuleValues();
             ExecutesStringFunctionsAndMethods();
@@ -19,6 +21,72 @@ namespace AdvancedRimTalk.PromptChecks
             PersistsVariablesBetweenExecutions();
             AllowsReplRedeclarationBetweenExecutions();
             RejectsRuntimeStepOverflow();
+        }
+
+        private static void SharesControlFlowScope()
+        {
+            foreach (string language in new[] { "简体中文", "繁體中文", "English" })
+            {
+                string code = "let lang = \"" + language + "\"\n"
+                    + "if lang == \"简体中文\" { let language = \"必须使用通俗白话\" } "
+                    + "else if lang == \"繁體中文\" { let language = \"推荐使用通俗白话\" }\n"
+                    + "if language.exists() { core.emit(language) }";
+                AssertOutput(code, language == "简体中文" ? "必须使用通俗白话"
+                    : language == "繁體中文" ? "推荐使用通俗白话" : "", "conditional declaration");
+            }
+            AssertOutput("let x = 1\nif true { let x = 2 }\ncore.emit(x)", "2", "no block shadowing");
+            AssertOutput("if true { if true { let x = 3 } }\ncore.emit(x)", "3", "nested branches");
+            AssertOutput("{ let x = 4 }\ncore.emit(x)", "4", "plain block");
+            AssertOutput("for item in [1, 2] { let x = item; const c = 3 }\ncore.emit(x + item + c)", "7", "loop declarations reinitialize");
+            AssertOutput("let i = 0\nwhile i < 3 { let x = i; i += 1 }\ncore.emit(x)", "2", "while scope");
+            AssertOutput("for item in [] { let x = item }\ncore.emit(exists(item)); core.emit(exists(x))", "falsefalse", "empty loop");
+            AssertOutput("for item in [1, 2] { let x = item; continue }\ncore.emit(x)", "2", "continue retains declarations");
+            AssertOutput("while true { let x = 1; break }\ncore.emit(x)", "1", "break retains declarations");
+            AssertOutput("let x = 1\nfn f() { if true { let x = 2; let hidden = 3 }; return x }\ncore.emit(f()); core.emit(x); core.emit(hidden.exists())", "21false", "function isolation");
+            AssertOutput("let x = 1\nfn f() { return x }\nif true { let x = 2; core.emit(f()) }", "2", "closures see control-flow updates");
+            foreach (string code in new[] { "let x = 1; let x = 2", "if true { let x = 1; let x = 2 }",
+                "const x = 1; if true { let x = 2 }", "if true { const x = 1 }; x = 2",
+                "fn f() { let hidden = 1 }; f(); core.emit(hidden)" })
+                Assert(new ArtiExecutor().Execute(code).HasErrors, "invalid declaration remains rejected: " + code);
+        }
+
+        private static void DetectsExistence()
+        {
+            string setup = "let x = null; let data = { name: \"a\", empty: null }; let items = [null, 2]; ";
+            foreach (string expression in new[] { "x", "data", "data.name", "data.empty", "data[\"empty\"]",
+                "items[0]", "items[1]", "null", "false", "0", "\"\"", "[]", "{}", "core.emit" })
+            {
+                AssertOutput(setup + "core.emit(exists(" + expression + "))", "true", "exists value: " + expression);
+                AssertOutput(setup + "core.emit((" + expression + ").exists())", "true", "inverted exists: " + expression);
+            }
+            foreach (string expression in new[] { "missing", "missing.child", "data.missing", "data[\"missing\"]",
+                "items[-1]", "items[5]", "x.child", "missing[0].child" })
+            {
+                AssertOutput(setup + "core.emit(exists(" + expression + "))", "false", "missing value: " + expression);
+                AssertOutput(setup + "core.emit((" + expression + ").exists())", "false", "inverted missing: " + expression);
+            }
+            AssertOutput("core.emit(exists(value: missing)); core.emit(exists(value: null))", "falsetrue", "named exists");
+            AssertOutput("let check = exists; core.emit(check(42)); core.emit(check(null))", "truetrue", "first-class exists");
+            AssertOutput("fn exists(x) { return false }; core.emit(exists(1))", "false", "local function precedence");
+            AssertOutput("fn custom() { return false }; let data = { exists: custom }; core.emit(data.exists())", "false", "member callable precedence");
+            AssertOutput("let m = core.mod(\"missing\"); core.emit(exists(m)); core.emit(m.exists())", "truefalse", "module compatibility");
+            AssertOutput("let calls = 0; fn f() { calls += 1; return null }; core.emit(exists(f())); core.emit(f().exists()); core.emit(calls)", "truetrue2", "single evaluation");
+            var supplied = new ArtiExecutor().Execute("core.emit(exists(ambient)); core.emit(ambient.exists()); core.emit(exists(absent))",
+                new ArtiExecutionContext(valueProvider: new ExistenceProvider()));
+            Assert(!supplied.HasErrors && supplied.Output == "truetruefalse", "provider presence is distinct from null");
+            var failed = new ArtiExecutor().Execute("core.emit(exists(broken))",
+                new ArtiExecutionContext(valueProvider: new ExistenceProvider()));
+            Assert(failed.HasErrors, "existence checks report provider failures");
+            foreach (string code in new[] { "exists()", "exists(1, 2)", "1.exists(2)", "exists(other: 1)",
+                "let items = []; exists(items[unknown])", "fn f() { return 1 / 0 }; exists(f())" })
+                Assert(new ArtiExecutor().Execute(code).HasErrors, "exists does not hide invalid calls: " + code);
+        }
+
+        private static void AssertOutput(string source, string expected, string name)
+        {
+            var result = new ArtiExecutor().Execute(source);
+            Assert(!result.HasErrors, name + ": " + string.Join(" | ", result.Diagnostics));
+            AssertEqual(expected, result.Output, name);
         }
 
         private static void ExecutesStatementsAndFunctions()
@@ -359,6 +427,18 @@ core.emit(replaced)
                     : null;
                 return value != null;
             }
+        }
+
+        private sealed class ExistenceProvider : IArtiRuntimeValueProvider
+        {
+            public bool TryGetGlobal(string name, out object value)
+            {
+                if (name == "broken") throw new InvalidOperationException("provider failure");
+                value = null;
+                return name == "ambient";
+            }
+            public bool TryGetMember(object target, string member, out object value) { value = null; return false; }
+            public bool TryGetIndex(object target, object index, out object value) { value = null; return false; }
         }
 
         private sealed class EchoCallable : IArtiCallable

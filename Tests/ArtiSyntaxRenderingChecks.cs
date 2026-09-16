@@ -23,6 +23,8 @@ namespace AdvancedRimTalk.PromptChecks
                         for (int i = 0; i < source.Length; i += 3)
                             analysis.Highlights.Add(new ArtiHighlightSpan(i, Math.Min(2, source.Length - i), ArtiSyntaxRole.String));
                     }
+                    CheckRichText(source, ArtiSyntaxRendering.ToRichText(source, analysis));
+                    CheckRichText(source, ArtiSyntaxRendering.ToRichText(source, ArtiSyntaxRole.String));
                     ArtiSyntaxRendering.DrawSyntax(new Rect(0, 0, 800, 600), source, analysis, style, 20);
                     if (string.Concat(GUI.Runs.Select(run => run.Text)) != source.Replace("\n", ""))
                         throw new Exception("Syntax drawing inserted, dropped, or escaped prompt characters.");
@@ -35,6 +37,17 @@ namespace AdvancedRimTalk.PromptChecks
                     }
                 }
             }
+        }
+
+        private static void CheckRichText(string source, string rendered)
+        {
+            string literal = System.Text.RegularExpressions.Regex.Replace(
+                rendered, @"</?color(?:=#[0-9A-Fa-f]{6})?>", string.Empty);
+            if (literal != source)
+                throw new Exception("Documentation highlighting changed source characters.");
+            if (rendered.Contains("<noparse>") || rendered.Contains("</noparse>")
+                || rendered.Contains("<b>") || rendered.Contains("<color=red>"))
+                throw new Exception("Documentation highlighting emitted unsupported or literal rich-text tags.");
         }
     }
 }

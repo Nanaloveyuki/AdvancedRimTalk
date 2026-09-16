@@ -402,6 +402,7 @@ namespace AdvancedRimTalk.UI
 
         private void DrawCompletionPopup(float gutterWidth, float contentWidth)
         {
+            ValidateCompletion(GetEditor());
             if (completions.Count == 0 || completionStart < 0)
             {
                 return;
@@ -918,6 +919,7 @@ namespace AdvancedRimTalk.UI
             editor.text = source;
             ApplyPendingCaret(editor);
 
+            ValidateCompletion(editor);
             bool command = current.control || current.command;
             if (command)
             {
@@ -1133,7 +1135,7 @@ namespace AdvancedRimTalk.UI
             completions.Clear();
             foreach (ArtiCompletionItem item in values)
             {
-                if (item != null)
+                if (item != null && !string.Equals(item.Label, prefix, StringComparison.Ordinal))
                 {
                     completions.Add(item);
                 }
@@ -1150,6 +1152,14 @@ namespace AdvancedRimTalk.UI
             completionStart = -1;
             completionSelected = 0;
             completionPrefix = string.Empty;
+        }
+
+        private void ValidateCompletion(TextEditor editor)
+        {
+            if (completions.Count == 0) return;
+            if (editor == null || GUI.GetNameOfFocusedControl() != EditorControlName
+                || !ArtiEditorText.IsCompletionCurrent(source, editor.cursorIndex, editor.selectIndex,
+                    completionStart, completionPrefix)) ClearCompletion();
         }
 
         private void ApplyCompletion(int index)
@@ -1266,7 +1276,8 @@ namespace AdvancedRimTalk.UI
                     before,
                     edited,
                     out insertionIndex,
-                    out inserted);
+                    out inserted,
+                    beforeCursor);
 
             if (singleInsertion
                 && inserted == '\n'
@@ -1330,6 +1341,7 @@ namespace AdvancedRimTalk.UI
             }
 
             CommitSource(result, resultCursor, resultSelect);
+            ClearCompletion();
             TextEditor resultEditor = GetEditor();
             if (singleInsertion
                 && ArtiEditorText.IsIdentifierPart(inserted)

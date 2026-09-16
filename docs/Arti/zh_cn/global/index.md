@@ -6,5 +6,6 @@
 - [random](random.md)：兼容用法的随机整数入口。
 - [getvar](getvar.md)：读取会话变量。
 - [setvar](setvar.md)：写入文本会话变量。
+- [exists](exists.md)：检测名称、成员或索引是否存在，也支持倒置调用。
 
 复杂的随机、文本、转义和输出功能位于 [core](../core/index.md)。

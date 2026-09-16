@@ -176,6 +176,7 @@ namespace AdvancedRimTalk.UI
             "query",
             "setvar",
             "getvar",
+            "exists",
             "len",
             "remove_space",
             "remove_spaces",
@@ -389,6 +390,7 @@ namespace AdvancedRimTalk.UI
 
             if (memberAccess)
             {
+                AddCandidate(candidates, "exists", prefix, "builtin");
                 string requiredPrefix = qualifier + "." + prefix;
                 foreach (string path in CommonMemberPaths)
                 {

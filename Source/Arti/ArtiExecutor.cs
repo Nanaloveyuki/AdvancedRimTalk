@@ -414,7 +414,7 @@ namespace AdvancedRimTalk.Arti
                     variable.Name,
                     value,
                     variable.IsConst,
-                    ShouldAllowRedeclare(scope)))
+                    ShouldAllowRedeclare(scope), variable))
                 {
                     RuntimeError(variable.Span, "The name '" + variable.Name + "' is already declared.");
                 }
@@ -485,19 +485,14 @@ namespace AdvancedRimTalk.Arti
             if (loop != null)
             {
                 object source = Evaluate(loop.Source, scope);
-                RuntimeScope loopScope = new RuntimeScope(scope);
-                if (!loopScope.TryDeclare(loop.VariableName, null, false))
-                {
-                    RuntimeError(loop.Span, "The loop variable '" + loop.VariableName + "' is already declared.");
-                }
+                RuntimeScope loopScope = new RuntimeScope(scope, true);
 
                 foreach (object item in Enumerate(source, loop.Source == null ? loop.Span : loop.Source.Span))
                 {
                     Touch(loop.Span);
-                    string assignmentError;
-                    if (!loopScope.TryAssign(loop.VariableName, item, out assignmentError))
+                    if (!loopScope.TryDeclare(loop.VariableName, item, false, false, loop))
                     {
-                        RuntimeError(loop.Span, assignmentError);
+                        RuntimeError(loop.Span, "The loop variable '" + loop.VariableName + "' is already declared.");
                     }
 
                     try
@@ -575,7 +570,7 @@ namespace AdvancedRimTalk.Arti
                 return;
             }
 
-            RuntimeScope scope = new RuntimeScope(parent);
+            RuntimeScope scope = new RuntimeScope(parent, true);
             PrepareDeclarations(block.Statements, scope);
             ExecuteStatements(block.Statements, scope);
         }
@@ -666,7 +661,11 @@ namespace AdvancedRimTalk.Arti
                 object target;
                 if (memberTarget != null)
                 {
-                    receiver = Evaluate(memberTarget.Target, scope);
+                    if (memberTarget.Member == "exists")
+                    {
+                        if (!TryEvaluateExisting(memberTarget.Target, scope, out receiver)) receiver = MissingValue;
+                    }
+                    else receiver = Evaluate(memberTarget.Target, scope);
                     if (!TryGetMember(receiver, memberTarget.Member, out target))
                     {
                         RuntimeError(memberTarget.Span, "The member '" + memberTarget.Member + "' is not available.");
@@ -680,7 +679,13 @@ namespace AdvancedRimTalk.Arti
                 RuntimeArguments arguments = new RuntimeArguments();
                 foreach (ArtiArgument argument in call.Arguments)
                 {
-                    arguments.Add(new RuntimeArgument(argument == null ? null : argument.Name, Evaluate(argument == null ? null : argument.Value, scope)));
+                    object value;
+                    if (target is ExistsCallable)
+                    {
+                        if (!TryEvaluateExisting(argument.Value, scope, out value)) value = MissingValue;
+                    }
+                    else value = Evaluate(argument == null ? null : argument.Value, scope);
+                    arguments.Add(new RuntimeArgument(argument == null ? null : argument.Name, value));
                 }
 
                 try
@@ -943,8 +948,34 @@ namespace AdvancedRimTalk.Arti
             }
         }
 
+        private bool TryEvaluateExisting(ArtiExpression expression, RuntimeScope scope, out object value)
+        {
+            if (expression is ArtiNameExpression name)
+                return scope.TryGet(name.Name, out value) || TryGetBuiltin(name.Name, out value)
+                    || _context.TryGetGlobal(name.Name, out value);
+            if (expression is ArtiMemberExpression member)
+            {
+                value = null;
+                return TryEvaluateExisting(member.Target, scope, out object target)
+                    && TryGetMember(target, member.Member, out value);
+            }
+            if (expression is ArtiIndexExpression index)
+            {
+                value = null;
+                return TryEvaluateExisting(index.Target, scope, out object target)
+                    && TryGetIndex(target, Evaluate(index.Index, scope), out value);
+            }
+            value = Evaluate(expression, scope);
+            return true;
+        }
+
         private bool TryGetBuiltin(string name, out object value)
         {
+            if (name == "exists")
+            {
+                value = ExistsCallable.Instance;
+                return true;
+            }
             if (string.Equals(name, "core", StringComparison.Ordinal))
             {
                 value = _core;
@@ -1352,6 +1383,11 @@ namespace AdvancedRimTalk.Arti
 
         private bool TryGetMember(object target, string member, out object value)
         {
+            if (ReferenceEquals(target, MissingValue))
+            {
+                value = member == "exists" ? ExistsCallable.Instance : null;
+                return value != null;
+            }
             RuntimeObject runtimeObject = target as RuntimeObject;
             if (runtimeObject != null && runtimeObject.TryGet(member, out value))
             {
@@ -1428,6 +1464,11 @@ namespace AdvancedRimTalk.Arti
                 return true;
             }
 
+            if (member == "exists")
+            {
+                value = ExistsCallable.Instance;
+                return true;
+            }
             value = null;
             return false;
         }
@@ -1992,10 +2033,19 @@ namespace AdvancedRimTalk.Arti
             private readonly HashSet<string> _constantNames = new HashSet<string>(StringComparer.Ordinal);
             private readonly IDictionary<string, Binding> _bindings =
                 new Dictionary<string, Binding>(StringComparer.Ordinal);
+            private readonly HashSet<string> _declared = new HashSet<string>(StringComparer.Ordinal);
+            private readonly bool transparent;
 
-            public RuntimeScope(RuntimeScope parent)
+            public RuntimeScope(RuntimeScope parent, bool transparent = false)
             {
-                Parent = parent;
+                // Only function calls own a new binding table; braces share their owner's table.
+                this.transparent = transparent;
+                Parent = transparent ? parent.Parent : parent;
+                if (transparent)
+                {
+                    _bindings = parent._bindings;
+                    _constantNames = parent._constantNames;
+                }
             }
 
             public RuntimeScope Parent { get; }
@@ -2041,25 +2091,31 @@ namespace AdvancedRimTalk.Arti
                 return TryDeclare(name, value, isConst, false);
             }
 
-            public bool TryDeclare(string name, object value, bool isConst, bool allowReplace)
+            public bool TryDeclare(string name, object value, bool isConst, bool allowReplace, object declaration = null)
             {
                 if (string.IsNullOrEmpty(name))
                 {
                     return false;
                 }
 
-                if (_bindings.ContainsKey(name))
+                if (_bindings.TryGetValue(name, out Binding existing))
                 {
-                    if (!allowReplace)
+                    // A loop may execute the same declaration again, including a constant initializer.
+                    bool sameDeclaration = declaration != null && ReferenceEquals(existing.Declaration, declaration);
+                    bool blockVariable = !_declared.Contains(name) && !isConst && !existing.IsConst
+                        && (transparent || existing.FromBlock);
+                    if (!allowReplace && !sameDeclaration && !blockVariable)
                     {
                         return false;
                     }
 
-                    _bindings[name] = new Binding(value, isConst);
+                    _bindings[name] = new Binding(value, isConst, declaration, transparent);
+                    _declared.Add(name);
                     return true;
                 }
 
-                _bindings.Add(name, new Binding(value, isConst));
+                _bindings.Add(name, new Binding(value, isConst, declaration, transparent));
+                _declared.Add(name);
                 return true;
             }
 
@@ -2104,14 +2160,18 @@ namespace AdvancedRimTalk.Arti
 
         private sealed class Binding
         {
-            public Binding(object value, bool isConst)
+            public Binding(object value, bool isConst, object declaration = null, bool fromBlock = false)
             {
                 Value = value;
                 IsConst = isConst;
+                Declaration = declaration;
+                FromBlock = fromBlock;
             }
 
             public object Value { get; set; }
             public bool IsConst { get; }
+            public object Declaration { get; }
+            public bool FromBlock { get; }
         }
 
         private sealed class RuntimeObject
@@ -2171,6 +2231,31 @@ namespace AdvancedRimTalk.Arti
                         value = null;
                         return false;
                 }
+            }
+        }
+
+        private static readonly object MissingValue = new object();
+
+        private sealed class ExistsCallable : IArtiMethodCallable
+        {
+            public static readonly ExistsCallable Instance = new ExistsCallable();
+
+            public object Invoke(IList<object> positional, IDictionary<string, object> named)
+            {
+                if (positional.Count == 1 && named.Count == 0)
+                    return !ReferenceEquals(positional[0], MissingValue);
+                if (positional.Count == 0 && named.Count == 1 && named.TryGetValue("value", out object value))
+                    return !ReferenceEquals(value, MissingValue);
+                throw new RuntimeFault("exists expects exactly one argument: value.");
+            }
+
+            public bool TryInvokeWithReceiver(object receiver, IList<object> positional,
+                IDictionary<string, object> named, out object value)
+            {
+                if (positional.Count != 0 || named.Count != 0)
+                    throw new RuntimeFault("The inverted exists call does not accept extra arguments.");
+                value = !ReferenceEquals(receiver, MissingValue);
+                return true;
             }
         }
 

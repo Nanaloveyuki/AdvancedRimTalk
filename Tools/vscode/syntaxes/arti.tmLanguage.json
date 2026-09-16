@@ -371,7 +371,7 @@
     },
     "builtin-root": {
       "name": "support.variable.builtin.arti",
-      "match": "\\b(?:core|range|array|date|html|math|object|regex|string|timespan|ctx|pawn|recipient|pawns|map|settings|game|json|chat|prompt|context|setvar|getvar|random|lang|time|hour|day|quadrum|year|season|weather|temperature|wealth|events|Find|GenDate|PawnsFinder)\\b"
+      "match": "\\b(?:core|range|array|date|html|math|object|regex|string|timespan|ctx|pawn|recipient|pawns|map|settings|game|json|chat|prompt|context|setvar|getvar|exists|random|lang|time|hour|day|quadrum|year|season|weather|temperature|wealth|events|Find|GenDate|PawnsFinder)\\b"
     },
     "member-access": {
       "name": "variable.other.property.arti",

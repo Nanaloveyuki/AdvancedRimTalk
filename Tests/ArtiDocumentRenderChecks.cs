@@ -13,6 +13,17 @@ namespace AdvancedRimTalk.PromptChecks
             var preview = new PromptContext { IsPreview = true };
             var valid = ArtiPromptDocumentRenderer.Render("before {{% core.emit(\"value\") %}} after", preview);
             Check(valid.Text == "before value after" && !valid.HasErrors, "valid block");
+            var language = ArtiPromptDocumentRenderer.Render(
+                "{{% let lang = \"简体中文\"\n"
+                + "core.emit(\"1.自主扮演游戏中的角色\", true)\n"
+                + "core.emit(\"2.自动根据提供的信息以合适频率引出话题并模拟对话\", true)\n"
+                + "core.emit(\"3.对话语言需与世界观,人物性格和情绪,状态因素相符合\", true)\n"
+                + "if lang == \"简体中文\" { let language = \"必须使用通俗白话\"; setvar(\"language\", language) } "
+                + "else if lang == \"繁體中文\" { let language = \"推荐使用通俗白话\"; setvar(\"language\", language) }\n"
+                + "core.emit(\"4.禁止使用书面用语\", false)\n"
+                + "if exists(language) { core.emit(language, false) } %}}", preview);
+            Check(!language.HasErrors && language.Text.EndsWith("4.禁止使用书面用语必须使用通俗白话"),
+                "user language prompt through global runtime: " + string.Join(";", language.Diagnostics));
             var global = ArtiPromptDocumentRenderer.Render("{{% fn render_global() { return \"global\" } %}}", preview);
             var globalCall = ArtiPromptDocumentRenderer.Render("{{% core.emit(render_global()) %}}", preview);
             Check(!global.HasErrors && !globalCall.HasErrors && globalCall.Text == "global",

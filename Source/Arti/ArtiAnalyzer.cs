@@ -97,6 +97,7 @@ namespace AdvancedRimTalk.Arti
             "query",
             "setvar",
             "getvar",
+            "exists",
             "len",
             "remove_space",
             "remove_spaces",
@@ -175,6 +176,7 @@ namespace AdvancedRimTalk.Arti
             "query",
             "setvar",
             "getvar",
+            "exists",
             "random",
             "lang",
             "time",
@@ -345,12 +347,12 @@ namespace AdvancedRimTalk.Arti
                 foreach (ArtiIfBranch branch in conditional.Branches)
                 {
                     AnalyzeExpression(branch.Condition, scope);
-                    AnalyzeStatements(branch.Body.Statements, new Scope(scope), functionDepth, loopDepth, false);
+                    AnalyzeStatements(branch.Body.Statements, new Scope(scope, true), functionDepth, loopDepth, false);
                 }
 
                 if (conditional.ElseBody != null)
                 {
-                    AnalyzeStatements(conditional.ElseBody.Statements, new Scope(scope), functionDepth, loopDepth, false);
+                    AnalyzeStatements(conditional.ElseBody.Statements, new Scope(scope, true), functionDepth, loopDepth, false);
                 }
 
                 return;
@@ -360,7 +362,7 @@ namespace AdvancedRimTalk.Arti
             if (loop != null)
             {
                 AnalyzeExpression(loop.Source, scope);
-                Scope loopScope = new Scope(scope);
+                Scope loopScope = new Scope(scope, true);
                 if (!loopScope.TryDeclare(loop.VariableName, BindingKind.Variable))
                 {
                     ReportError(3001, loop.Span, loop.VariableName);
@@ -374,7 +376,7 @@ namespace AdvancedRimTalk.Arti
             if (whileLoop != null)
             {
                 AnalyzeExpression(whileLoop.Condition, scope);
-                AnalyzeStatements(whileLoop.Body.Statements, new Scope(scope), functionDepth, loopDepth + 1, false);
+                AnalyzeStatements(whileLoop.Body.Statements, new Scope(scope, true), functionDepth, loopDepth + 1, false);
                 return;
             }
 
@@ -413,7 +415,7 @@ namespace AdvancedRimTalk.Arti
             ArtiBlockStatement block = statement as ArtiBlockStatement;
             if (block != null)
             {
-                AnalyzeStatements(block.Statements, new Scope(scope), functionDepth, loopDepth, false);
+                AnalyzeStatements(block.Statements, new Scope(scope, true), functionDepth, loopDepth, false);
                 return;
             }
 
@@ -526,6 +528,18 @@ namespace AdvancedRimTalk.Arti
             ArtiCallExpression call = expression as ArtiCallExpression;
             if (call != null)
             {
+                if (call.Target is ArtiNameExpression check && check.Name == "exists"
+                    && !scope.TryResolve(check.Name, out Binding overridden))
+                {
+                    foreach (ArtiArgument argument in call.Arguments)
+                        AnalyzeExistenceTarget(argument.Value, scope);
+                    return;
+                }
+                if (call.Target is ArtiMemberExpression probe && probe.Member == "exists" && call.Arguments.Count == 0)
+                {
+                    AnalyzeExistenceTarget(probe.Target, scope);
+                    return;
+                }
                 AnalyzeExpression(call.Target, scope);
                 foreach (ArtiArgument argument in call.Arguments)
                 {
@@ -572,6 +586,18 @@ namespace AdvancedRimTalk.Arti
             }
         }
 
+        private void AnalyzeExistenceTarget(ArtiExpression target, Scope scope)
+        {
+            if (target is ArtiNameExpression) return;
+            if (target is ArtiMemberExpression member) AnalyzeExistenceTarget(member.Target, scope);
+            else if (target is ArtiIndexExpression index)
+            {
+                AnalyzeExistenceTarget(index.Target, scope);
+                AnalyzeExpression(index.Index, scope);
+            }
+            else AnalyzeExpression(target, scope);
+        }
+
         private static bool IsValidIdentifierName(string name)
         {
             if (string.IsNullOrEmpty(name))
@@ -608,21 +634,28 @@ namespace AdvancedRimTalk.Arti
 
         private sealed class Binding
         {
-            public Binding(BindingKind kind)
+            public Binding(BindingKind kind, bool fromBlock = false)
             {
                 Kind = kind;
+                FromBlock = fromBlock;
             }
 
             public BindingKind Kind { get; }
+            public bool FromBlock { get; }
         }
 
         private sealed class Scope
         {
             private readonly IDictionary<string, Binding> _bindings = new Dictionary<string, Binding>(StringComparer.Ordinal);
+            private readonly HashSet<string> _declared = new HashSet<string>(StringComparer.Ordinal);
+            private readonly bool transparent;
 
-            public Scope(Scope parent)
+            public Scope(Scope parent, bool transparent = false)
             {
-                Parent = parent;
+                // Blocks share function bindings but track duplicate declarations locally.
+                this.transparent = transparent;
+                Parent = transparent ? parent.Parent : parent;
+                if (transparent) _bindings = parent._bindings;
             }
 
             public Scope Parent { get; }
@@ -642,16 +675,20 @@ namespace AdvancedRimTalk.Arti
                 Binding existing;
                 if (_bindings.TryGetValue(name, out existing))
                 {
-                    if (allowExternalRedeclare && existing.Kind == BindingKind.External)
+                    if ((allowExternalRedeclare && existing.Kind == BindingKind.External)
+                        || (!_declared.Contains(name) && kind == BindingKind.Variable
+                            && existing.Kind == BindingKind.Variable && (transparent || existing.FromBlock)))
                     {
-                        _bindings[name] = new Binding(kind);
+                        _bindings[name] = new Binding(kind, transparent);
+                        _declared.Add(name);
                         return true;
                     }
 
                     return false;
                 }
 
-                _bindings.Add(name, new Binding(kind));
+                _bindings.Add(name, new Binding(kind, transparent));
+                _declared.Add(name);
                 return true;
             }
 

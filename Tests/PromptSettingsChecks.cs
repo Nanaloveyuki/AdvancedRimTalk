@@ -120,6 +120,17 @@ namespace AdvancedRimTalk.PromptChecks
             if (root == null) throw new Exception("Documentation checks require the repository root.");
             var catalog = AdvancedRimTalk.Documentation.AdvancedRimTalkDocumentationCatalog.Create(root.FullName);
             if (!catalog.IsAvailable) throw new Exception("Documentation catalog is unavailable.");
+            foreach (string language in new[] { "English", "ChineseSimplified" })
+            {
+                var translations = System.Xml.Linq.XDocument.Load(System.IO.Path.Combine(
+                    root.FullName, "Languages", language, "Keyed", "AdvancedRimTalk.xml"));
+                foreach (var category in catalog.Categories)
+                {
+                    string title = translations.Root.Element(category.TitleKey)?.Value;
+                    if (string.IsNullOrWhiteSpace(title) || title == category.TitleKey)
+                        throw new Exception("Missing documentation title: " + language + " / " + category.TitleKey);
+                }
+            }
             int documents = 0, links = 0;
             foreach (var document in catalog.Entries)
             {

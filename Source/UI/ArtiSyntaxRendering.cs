@@ -196,9 +196,10 @@ namespace AdvancedRimTalk.UI
             builder.Append("<color=#");
             builder.Append(ColorUtility.ToHtmlStringRGB(color));
             builder.Append('>');
-            builder.Append("<noparse>");
-            builder.Append(value);
-            builder.Append("</noparse>");
+            // IMGUI does not support noparse. Break literal tag openings with a
+            // color boundary so source such as <b> stays visible without extra characters.
+            string boundary = "</color><color=#" + ColorUtility.ToHtmlStringRGB(color) + ">";
+            builder.Append(value.Replace("<", "<" + boundary));
             builder.Append("</color>");
         }
 

@@ -15,7 +15,8 @@ namespace AdvancedRimTalk.UI
             string before,
             string after,
             out int index,
-            out char inserted)
+            out char inserted,
+            int expectedIndex = -1)
         {
             before = before ?? string.Empty;
             after = after ?? string.Empty;
@@ -24,6 +25,15 @@ namespace AdvancedRimTalk.UI
             if (after.Length != before.Length + 1)
             {
                 return false;
+            }
+
+            // Repeated characters (especially blank lines) make a text-only diff ambiguous.
+            if (expectedIndex >= 0 && expectedIndex <= before.Length
+                && string.Equals(after.Remove(expectedIndex, 1), before, StringComparison.Ordinal))
+            {
+                index = expectedIndex;
+                inserted = after[index];
+                return true;
             }
 
             int prefix = 0;
@@ -258,6 +268,13 @@ namespace AdvancedRimTalk.UI
             }
 
             return quote != '\0' || lineComment || blockComment;
+        }
+
+        public static bool IsCompletionCurrent(string source, int cursor, int select, int start, string prefix)
+        {
+            return source != null && prefix != null && start >= 0 && cursor == select
+                && cursor == start + prefix.Length && cursor <= source.Length
+                && string.Equals(source.Substring(start, prefix.Length), prefix, StringComparison.Ordinal);
         }
 
         public static bool IsIdentifierPart(char value)
