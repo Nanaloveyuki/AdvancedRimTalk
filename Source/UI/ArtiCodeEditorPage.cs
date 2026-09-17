@@ -47,6 +47,7 @@ namespace AdvancedRimTalk.UI
         private bool initialized;
         private bool focusEditor = true;
         private bool pendingCaret;
+        private int editorControlId;
         private int pendingCursor;
         private int pendingSelect;
         private int completionStart = -1;
@@ -182,12 +183,12 @@ namespace AdvancedRimTalk.UI
                 viewport.height,
                 lineCount * lineAdvance + inputStyle.padding.top + inputStyle.padding.bottom + 8f);
             Rect viewRect = new Rect(0f, 0f, contentWidth, contentHeight);
+            bool pointerInViewport = Event.current != null && viewport.Contains(Event.current.mousePosition);
 
-            ProcessEditorShortcuts();
             Widgets.BeginScrollView(viewport, ref editorScroll, viewRect);
             try
             {
-                DrawEditorContent(viewRect, gutterWidth, minimumCodeWidth);
+                DrawEditorContent(viewRect, gutterWidth, minimumCodeWidth, pointerInViewport);
             }
             finally
             {
@@ -197,15 +198,19 @@ namespace AdvancedRimTalk.UI
             if (focusEditor && Event.current != null && Event.current.type == EventType.Repaint)
             {
                 GUI.FocusControl(EditorControlName);
+                editorControlId = GUIUtility.keyboardControl;
                 focusEditor = false;
             }
         }
 
-        private void DrawEditorContent(Rect viewRect, float gutterWidth, float minimumCodeWidth)
+        private void DrawEditorContent(Rect viewRect, float gutterWidth, float minimumCodeWidth, bool pointerInViewport)
         {
+            ProcessEditorShortcuts();
+            // The overlay must consume pointer events before TextArea moves the caret.
+            if (pointerInViewport) DrawCompletionPopup(gutterWidth, viewRect.width, true);
             TextEditor editor = GetEditor();
             if (editor != null
-                && string.Equals(GUI.GetNameOfFocusedControl(), EditorControlName, StringComparison.Ordinal))
+                && HasEditorFocus())
             {
                 editor.text = source;
                 ApplyPendingCaret(editor);
@@ -240,6 +245,8 @@ namespace AdvancedRimTalk.UI
 
             GUI.SetNextControlName(EditorControlName);
             string edited = GUI.TextArea(codeRect, source, inputStyle);
+            if (string.Equals(GUI.GetNameOfFocusedControl(), EditorControlName, StringComparison.Ordinal))
+                editorControlId = GUIUtility.keyboardControl;
             HandleTextAreaResult(
                 before,
                 ArtiEditorText.NormalizeLineEndings(edited),
@@ -247,7 +254,7 @@ namespace AdvancedRimTalk.UI
                 beforeSelect);
 
             DrawDiagnosticDecorations(gutterWidth);
-            DrawCompletionPopup(gutterWidth, viewRect.width);
+            DrawCompletionPopup(gutterWidth, viewRect.width, false);
         }
 
         private void DrawLineNumbers(float gutterWidth)
@@ -401,7 +408,7 @@ namespace AdvancedRimTalk.UI
             }
         }
 
-        private void DrawCompletionPopup(float gutterWidth, float contentWidth)
+        private void DrawCompletionPopup(float gutterWidth, float contentWidth, bool inputOnly)
         {
             ValidateCompletion(GetEditor());
             if (completions.Count == 0 || completionStart < 0)
@@ -421,7 +428,23 @@ namespace AdvancedRimTalk.UI
             float rowHeight = 21f;
             float height = completions.Count * rowHeight + 4f;
             x = Mathf.Max(gutterWidth, Mathf.Min(x, contentWidth - width - 4f));
-            Widgets.DrawBoxSolid(new Rect(x, y, width, height), CompletionPanelColor);
+            Rect popup = new Rect(x, y, width, height);
+            Event current = Event.current;
+            if (inputOnly)
+            {
+                if (current != null && popup.Contains(current.mousePosition))
+                {
+                    int hovered = Clamp((int)((current.mousePosition.y - y - 2f) / rowHeight), 0, completions.Count - 1);
+                    if (current.type == EventType.MouseMove) completionSelected = hovered;
+                    if (current.type == EventType.MouseDown && current.button == 0)
+                    {
+                        ApplyCompletion(hovered);
+                        current.Use();
+                    }
+                }
+                return;
+            }
+            Widgets.DrawBoxSolid(popup, CompletionPanelColor);
             for (int index = 0; index < completions.Count; index++)
             {
                 ArtiCompletionItem item = completions[index];
@@ -430,8 +453,6 @@ namespace AdvancedRimTalk.UI
                 {
                     Widgets.DrawBoxSolid(row, CompletionSelectedColor);
                 }
-
-                bool clicked = Widgets.ButtonInvisible(row, false);
 
                 GUI.color = Color.white;
                 GUI.Label(
@@ -443,11 +464,6 @@ namespace AdvancedRimTalk.UI
                     new Rect(row.x + row.width * 0.62f, row.y + 1f, row.width * 0.36f, row.height),
                     item.Detail,
                     lineNumberStyle);
-                if (clicked)
-                {
-                    ApplyCompletion(index);
-                    break;
-                }
             }
 
             GUI.color = Color.white;
@@ -715,12 +731,19 @@ namespace AdvancedRimTalk.UI
 
         private TextEditor GetEditor()
         {
-            if (GUIUtility.keyboardControl == 0)
+            int control = editorControlId != 0 ? editorControlId : GUIUtility.keyboardControl;
+            if (control == 0)
             {
                 return null;
             }
 
-            return GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl) as TextEditor;
+            return GUIUtility.GetStateObject(typeof(TextEditor), control) as TextEditor;
+        }
+
+        private bool HasEditorFocus()
+        {
+            return editorControlId != 0 && GUIUtility.keyboardControl == editorControlId
+                || string.Equals(GUI.GetNameOfFocusedControl(), EditorControlName, StringComparison.Ordinal);
         }
 
         private void ApplyPendingCaret(TextEditor editor)
@@ -912,7 +935,7 @@ namespace AdvancedRimTalk.UI
             Event current = Event.current;
             if (current == null
                 || current.type != EventType.KeyDown
-                || !string.Equals(GUI.GetNameOfFocusedControl(), EditorControlName, StringComparison.Ordinal))
+                || !HasEditorFocus())
             {
                 return;
             }
@@ -1164,7 +1187,7 @@ namespace AdvancedRimTalk.UI
         private void ValidateCompletion(TextEditor editor)
         {
             if (completions.Count == 0) return;
-            if (editor == null || GUI.GetNameOfFocusedControl() != EditorControlName
+            if (editor == null || !HasEditorFocus()
                 || !ArtiEditorText.IsCompletionCurrent(source, editor.cursorIndex, editor.selectIndex,
                     completionStart, completionPrefix)) ClearCompletion();
         }

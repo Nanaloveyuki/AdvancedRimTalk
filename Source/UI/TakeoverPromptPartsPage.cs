@@ -18,6 +18,9 @@ namespace AdvancedRimTalk.UI
         private const float LeftPanelWidth = 220f;
         private const float PanelGap = 8f;
         private const float ButtonSize = 20f;
+        private const float ActionButtonHeight = 24f;
+        private const float ActionButtonPitch = 28f;
+        private const float ActionAreaHeight = 120f;
         private static readonly Color LeftPanelBackground = new Color(0.05f, 0.05f, 0.05f, 0.55f);
         private static readonly Color AddGreen = new Color(0.3f, 0.9f, 0.3f);
         private static readonly Color DeleteRed = new Color(1f, 0.4f, 0.4f);
@@ -175,7 +178,8 @@ namespace AdvancedRimTalk.UI
                     UniqueName(parts, "AdvancedRimTalk.PromptParts.NewPart".Translate().ToString()),
                     PromptRole.User,
                     string.Empty);
-                parts.Add(part);
+                int insertAfterIndex = parts.FindIndex(existing => existing.Id == selectedPartId);
+                parts.Insert(insertAfterIndex >= 0 ? insertAfterIndex + 1 : parts.Count, part);
                 selectedPartId = part.Id;
                 contentScrollPosition = Vector2.zero;
             }
@@ -184,8 +188,8 @@ namespace AdvancedRimTalk.UI
             GUI.color = Color.white;
             y += 24f;
 
-            float listBottom = rect.yMax - 92f;
-            Rect listRect = new Rect(rect.x + 2f, y, rect.width - 4f, Mathf.Max(40f, listBottom - y));
+            float listBottom = rect.yMax - ActionAreaHeight;
+            Rect listRect = new Rect(rect.x + 2f, y, rect.width - 4f, Mathf.Max(1f, listBottom - y));
             Rect viewRect = new Rect(0f, 0f, listRect.width - 16f, Mathf.Max(listRect.height, parts.Count * 25f));
             Widgets.BeginScrollView(listRect, ref partListScrollPosition, viewRect);
             float rowY = 0f;
@@ -228,20 +232,25 @@ namespace AdvancedRimTalk.UI
             Widgets.EndScrollView();
 
             float buttonWidth = (rect.width - 15f) / 2f;
-            float buttonY = rect.yMax - 88f;
-            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY, buttonWidth, 24f), "AdvancedRimTalk.PromptParts.ImportLocal".Translate()))
+            float buttonY = listBottom + 4f;
+            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY, rect.width - 10f, ActionButtonHeight), "AdvancedRimTalk.PromptParts.Export".Translate()))
+            {
+                ExportPreset(SelectedPreset(settings));
+            }
+
+            buttonY += ActionButtonPitch;
+            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY, buttonWidth, ActionButtonHeight), "AdvancedRimTalk.PromptParts.ImportLocal".Translate()))
             {
                 ShowLocalImportMenu(settings);
             }
 
-            if (Widgets.ButtonText(new Rect(rect.x + 10f + buttonWidth, buttonY, buttonWidth, 24f), "AdvancedRimTalk.PromptParts.ImportShared".Translate()))
+            if (Widgets.ButtonText(new Rect(rect.x + 10f + buttonWidth, buttonY, buttonWidth, ActionButtonHeight), "AdvancedRimTalk.PromptParts.ImportShared".Translate()))
             {
                 ShowSharedImportMenu(settings);
             }
-            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY - 28f, rect.width - 10f, 24f), "AdvancedRimTalk.PromptParts.Export".Translate())) ExportPreset(settings.ActiveTakeoverPreset);
 
-            buttonY += 28f;
-            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY, rect.width - 10f, 24f), "AdvancedRimTalk.PromptParts.ResetDefaults".Translate()))
+            buttonY += ActionButtonPitch;
+            if (Widgets.ButtonText(new Rect(rect.x + 5f, buttonY, rect.width - 10f, ActionButtonHeight), "AdvancedRimTalk.PromptParts.ResetDefaults".Translate()))
             {
                 Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
                     "AdvancedRimTalk.PromptParts.ResetDefaultsConfirm".Translate(),
@@ -258,8 +267,8 @@ namespace AdvancedRimTalk.UI
             buttonY += 30f;
             ArtiPromptPart selected = parts.FirstOrDefault(part => part.Id == selectedPartId);
             int selectedIndex = selected == null ? -1 : parts.IndexOf(selected);
-            DrawMoveButton(new Rect(rect.x + 5f, buttonY, buttonWidth, 24f), "▲", parts, selectedIndex, -1);
-            DrawMoveButton(new Rect(rect.x + 10f + buttonWidth, buttonY, buttonWidth, 24f), "▼", parts, selectedIndex, 1);
+            DrawMoveButton(new Rect(rect.x + 5f, buttonY, buttonWidth, ActionButtonHeight), "▲", parts, selectedIndex, -1);
+            DrawMoveButton(new Rect(rect.x + 10f + buttonWidth, buttonY, buttonWidth, ActionButtonHeight), "▼", parts, selectedIndex, 1);
         }
 
         private void DrawMoveButton(Rect rect, string label, List<ArtiPromptPart> parts, int selectedIndex, int direction)
