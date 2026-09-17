@@ -18,8 +18,12 @@ namespace AdvancedRimTalk.PromptChecks
                 Require(runtime.Execute(definition, "other-library").HasErrors, value, "owner collision");
                 Require(!runtime.Execute("let temporary = 1", "local").HasErrors, value, "local declaration");
                 Require(runtime.Execute("core.emit(temporary)", "next").HasErrors, value, "local isolation");
-                Require(runtime.Execute("let a = 1\nfn capture() { return a }", "capture").HasErrors, value, "no capture");
-                Require(runtime.Execute("capture()", "next").HasErrors, value, "failed definition not published");
+                Require(!runtime.Execute("let a = 1\nfn capture() { return a }", "capture").HasErrors, value, "local capture");
+                result = runtime.Execute("core.emit(capture())", "next");
+                Require(!result.HasErrors && result.Output == "1", value, "cross-block closure");
+                Require(runtime.Execute("core.emit(a)", "next").HasErrors, value, "captured local stays private");
+                Require(runtime.Execute("fn broken() { return undeclared }", "broken").HasErrors, value, "invalid definition");
+                Require(runtime.Execute("broken()", "next").HasErrors, value, "failed definition not published");
                 var symbols = new ArtiSymbolCatalog(new[] { "dynamic_value" });
                 var declarationContext = new ArtiExecutionContext(new DynamicProvider(999), symbolCatalog: symbols);
                 Require(!runtime.Execute("fn current() { return dynamic_value }", "dynamic", declarationContext).HasErrors,

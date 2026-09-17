@@ -40,6 +40,8 @@ namespace AdvancedRimTalk.Arti
                 }
                 // Validate the whole batch before making any definition visible.
                 foreach (var item in pending) definitions.Add(item.Key, item.Value);
+                foreach (ArtiGlobalDefinition definition in batch)
+                    if (definition.HasRuntimeValue) definitions[definition.Name] = definition;
             }
         }
     }
@@ -61,5 +63,13 @@ namespace AdvancedRimTalk.Arti
         internal string Owner { get; }
         internal string Source { get; }
         internal ArtiStatement Declaration { get; }
+        internal object RuntimeValue { get; private set; }
+        internal bool HasRuntimeValue { get; private set; }
+
+        internal void Bind(object value)
+        {
+            RuntimeValue = value;
+            HasRuntimeValue = true;
+        }
     }
 }

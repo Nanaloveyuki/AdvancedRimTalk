@@ -266,14 +266,28 @@ namespace AdvancedRimTalk.Arti
             return ExecuteProgram(program, context);
         }
 
-        private ArtiExecutionResult ExecuteProgram(ArtiProgram program, ArtiExecutionContext context)
+        internal ArtiExecutionResult ExecuteWithGlobals(ArtiProgram program, ArtiExecutionContext context,
+            IEnumerable<ArtiGlobalDefinition> globals)
+        {
+            ClearDiagnostics();
+            return ExecuteProgram(program, context, globals);
+        }
+
+        internal object GetDeclaredValue(string name)
+        {
+            if (_rootScope != null && _rootScope.TryGet(name, out object value)) return value;
+            throw new InvalidOperationException("The global definition '" + name + "' was not initialized.");
+        }
+
+        private ArtiExecutionResult ExecuteProgram(ArtiProgram program, ArtiExecutionContext context,
+            IEnumerable<ArtiGlobalDefinition> globals = null)
         {
             _context = context ?? new ArtiExecutionContext();
             _output = new StringBuilder();
             bool reuseScope = _context.Options.PersistVariables
                 && ReferenceEquals(_persistentContext, _context)
                 && _rootScope != null;
-            if (!reuseScope || _core == null)
+            if ((!reuseScope && globals == null) || _core == null)
             {
                 _core = CreateCoreModule();
             }
@@ -300,6 +314,14 @@ namespace AdvancedRimTalk.Arti
 
             try
             {
+                if (globals != null)
+                {
+                    foreach (ArtiGlobalDefinition global in globals)
+                    {
+                        _rootScope.TryDeclare(global.Name, global.RuntimeValue, true);
+                        if (global.Declaration is ArtiVariableDeclarationStatement) _rootScope.MarkConstant(global.Name);
+                    }
+                }
                 PrepareDeclarations(program.Statements, _rootScope);
                 ExecuteStatements(program.Statements, _rootScope);
             }
@@ -1726,6 +1748,8 @@ namespace AdvancedRimTalk.Arti
 
         private static bool IsTruthy(object value)
         {
+            if (value is IArtiCallable)
+                throw new RuntimeFault("A function cannot be used as a condition; call it with (...) first.");
             if (value == null)
             {
                 return false;

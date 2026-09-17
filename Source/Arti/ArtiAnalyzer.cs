@@ -198,17 +198,23 @@ namespace AdvancedRimTalk.Arti
         private readonly IArtiSymbolCatalog _symbolCatalog;
         private readonly IEnumerable<string> _externalGlobals;
         private readonly bool _allowExternalGlobalRedeclare;
+        private readonly ISet<string> _externalConstants;
+        private readonly ISet<string> _externalFunctions;
 
         public ArtiAnalyzer(
             IArtiModuleCatalog moduleCatalog = null,
             IArtiSymbolCatalog symbolCatalog = null,
             IEnumerable<string> externalGlobals = null,
-            bool allowExternalGlobalRedeclare = false)
+            bool allowExternalGlobalRedeclare = false,
+            IEnumerable<string> externalConstants = null,
+            IEnumerable<string> externalFunctions = null)
         {
             _moduleCatalog = moduleCatalog;
             _symbolCatalog = symbolCatalog;
             _externalGlobals = externalGlobals;
             _allowExternalGlobalRedeclare = allowExternalGlobalRedeclare;
+            _externalConstants = new HashSet<string>(externalConstants ?? new string[0], StringComparer.Ordinal);
+            _externalFunctions = new HashSet<string>(externalFunctions ?? new string[0], StringComparer.Ordinal);
         }
 
         public ArtiAnalysisResult Analyze(ArtiProgram program)
@@ -225,7 +231,8 @@ namespace AdvancedRimTalk.Arti
             {
                 foreach (string name in _externalGlobals)
                 {
-                    root.TryDeclare(name, BindingKind.External);
+                    root.TryDeclare(name, _externalConstants.Contains(name) ? BindingKind.Constant
+                        : _externalFunctions.Contains(name) ? BindingKind.Function : BindingKind.External);
                 }
             }
 

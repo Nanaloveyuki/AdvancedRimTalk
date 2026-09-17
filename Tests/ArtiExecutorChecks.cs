@@ -15,6 +15,7 @@ namespace AdvancedRimTalk.PromptChecks
             DetectsExistence();
             ReturnsAndUnpacksValues();
             InterpolatesStrings();
+            CapturesPromptFunctionLocals();
             ExecutesModulesAndRandomValues();
             ExecutesRuntimeModuleValues();
             ExecutesStringFunctionsAndMethods();
@@ -23,6 +24,89 @@ namespace AdvancedRimTalk.PromptChecks
             PersistsVariablesBetweenExecutions();
             AllowsReplRedeclarationBetweenExecutions();
             RejectsRuntimeStepOverflow();
+        }
+
+        private static void CapturesPromptFunctionLocals()
+        {
+            string library = @"
+fn mod_status(mod_id) {
+    let mod_instance = core.mod(mod_id)
+    if mod_instance.active { return true, f""Mod: {mod_id} active."" }
+    else if mod_instance.installed { return false, f""Mod: {mod_id} inactive."" }
+    else { return false, f""Mod: {mod_id} not found."" }
+}
+let kiiro = ""Ancot.KiiroRace""
+let ratkin = ""Solaris.RatkinRaceMod""
+let wolfein = ""MelonDove.WolfeinRace""
+fn check_kiiro() { let check_kiiro, _ = mod_status(kiiro); return check_kiiro }
+fn check_ratkin() { let check_ratkin, _ = mod_status(ratkin); return check_ratkin }
+fn check_wolfein() { let check_wolfein, _ = mod_status(wolfein); return check_wolfein }
+";
+            foreach (string active in new[] { "", "Ancot.KiiroRace", "Solaris.RatkinRaceMod", "MelonDove.WolfeinRace" })
+            {
+                var runtime = new ArtiGlobalRuntime();
+                // Calls must use their own module catalog, not the declaration context.
+                var defined = runtime.Execute(library, "intro", new ArtiExecutionContext(moduleCatalog: new RaceModuleCatalog("")));
+                Assert(!defined.HasErrors, "user helper library registers: " + string.Join(";", defined.Diagnostics));
+                var caller = new ArtiExecutionContext(moduleCatalog: new RaceModuleCatalog(active));
+                var result = runtime.Execute("let enable = false; if check_kiiro() { enable = true } "
+                    + "else if check_ratkin() { enable = true } else if check_wolfein() { enable = true }; "
+                    + "if enable { core.emit(\"小爪子\") }", "rules", caller);
+                Assert(!result.HasErrors && result.Output == (active == "" ? "" : "小爪子"),
+                    "user cross-part rule executes: " + active + " / " + string.Join(";", result.Diagnostics));
+                Assert(runtime.Execute("core.emit(kiiro)", "private").HasErrors, "captured race IDs do not become globals");
+                result = runtime.Execute("if check_kiiro { core.emit(\"wrong\") }", "uncalled", caller);
+                Assert(result.HasErrors, "function value is not implicitly true or auto-called");
+            }
+
+            var state = new ArtiGlobalRuntime();
+            Assert(!state.Execute("let count = 0; let saved_emit = core.emit; "
+                + "fn next_count() { count += 1; return count }; fn get_count() { return count }; "
+                + "fn write_count() { saved_emit(count) }", "state").HasErrors, "register shared mutable closure");
+            var next = state.Execute("core.emit(next_count()); core.emit(get_count()); write_count()", "call-one");
+            Assert(!next.HasErrors && next.Output == "111", "sibling closures share bindings and current output");
+            next = state.Execute("core.emit(next_count()); write_count()", "call-two");
+            Assert(!next.HasErrors && next.Output == "22", "closure state survives later caller blocks");
+            Assert(!state.Execute("let saved_core = core; fn read_saved_core() { return saved_core.world.name }", "core-alias").HasErrors,
+                "capture core alias");
+            next = state.Execute("core.emit(read_saved_core())", "core-caller", new ArtiExecutionContext(valueProvider: new TestCoreProvider()));
+            Assert(!next.HasErrors && next.Output == "test-world", "captured core alias resolves current provider");
+            Assert(state.Execute("fn failed_capture() { return count }; let count = 0", "bad-order").HasErrors,
+                "declaration-order analysis remains explicit");
+            Assert(state.Execute("fn unpublished() { return 1 }; let x = 1 / 0", "failed").HasErrors,
+                "execution failure rejects publication");
+            Assert(state.Execute("unpublished()", "after-failure").HasErrors, "failed closure not published");
+            Assert(!state.Execute("const first = 2", "constant-one").HasErrors, "first constant");
+            Assert(!state.Execute("const second = first + 1", "constant-two").HasErrors, "cross-block constant expression");
+            next = state.Execute("core.emit(second)", "constant-call");
+            Assert(!next.HasErrors && next.Output == "3", "constant value imported without replay");
+            var hoisted = new ArtiGlobalRuntime();
+            next = hoisted.Execute("fn read_later() { return later_constant }; const later_constant = 4; core.emit(read_later())", "hoisted");
+            Assert(!next.HasErrors && next.Output == "4", "global constant hoisting remains supported");
+            Assert(hoisted.Execute("later_constant = 5", "immutable").HasErrors, "imported constants remain immutable");
+
+            var refresh = new ArtiGlobalRuntime();
+            string capture = "let captured = dynamic_value; fn read_capture() { return captured }";
+            var symbols = new ArtiSymbolCatalog(new[] { "dynamic_value" });
+            foreach (int number in new[] { 1, 2 })
+            {
+                var context = new ArtiExecutionContext(symbolCatalog: symbols);
+                context.Globals["dynamic_value"] = number;
+                Assert(!refresh.Execute(capture, "same-library", context).HasErrors, "idempotent library refresh");
+                next = refresh.Execute("core.emit(read_capture())", "read");
+                Assert(!next.HasErrors && next.Output == number.ToString(), "refresh binds successful new closure");
+            }
+        }
+
+        private sealed class RaceModuleCatalog : IArtiModuleCatalog
+        {
+            private readonly string active;
+            internal RaceModuleCatalog(string active) { this.active = active; }
+            public bool TryGetModule(string packageId, out ArtiModuleInfo module)
+            {
+                module = new ArtiModuleInfo(packageId, packageId == active, packageId == active);
+                return true;
+            }
         }
 
         private static void InterpolatesStrings()

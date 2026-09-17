@@ -7,6 +7,9 @@ namespace AdvancedRimTalk.Arti
     public sealed class ArtiGlobalRuntime
     {
         private readonly ArtiGlobalDefinitions definitions = new ArtiGlobalDefinitions();
+        // Reusing the executor keeps captured callables on the current call's context/output.
+        // Execution is serialized by the definitions lock below.
+        private readonly ArtiExecutor executor = new ArtiExecutor();
 
         public ArtiExecutionResult Execute(string source, string owner, ArtiExecutionContext context = null)
         {
@@ -21,7 +24,6 @@ namespace AdvancedRimTalk.Arti
                     if (context.Options.PersistVariables)
                         throw new InvalidOperationException("Global Arti blocks cannot persist temporary variables.");
                     var batch = new List<ArtiGlobalDefinition>();
-                    var local = new ArtiBlockStatement(parsed.Program.Span);
                     var program = new ArtiProgram(parsed.Program.Span);
                     var imports = parsed.Program.Statements.OfType<ArtiUseStatement>().ToArray();
                     string importSource = string.Join("\n", imports.Select(import =>
@@ -43,24 +45,36 @@ namespace AdvancedRimTalk.Arti
                             }
                             batch.Add(new ArtiGlobalDefinition(owner + ":" + statement.Span.StartOffset,
                                 importSource + "\n" + source.Substring(statement.Span.StartOffset, statement.Span.Length), definition));
+                            program.Statements.Add(definition);
                         }
-                        else if (statement is ArtiUseStatement import) local.Statements.Add(LocalImport(import));
-                        else local.Statements.Add(statement);
+                        else program.Statements.Add(statement);
                     }
                     var candidate = new ArtiGlobalDefinitions();
                     candidate.Register(definitions.Snapshot());
                     candidate.Register(batch);
-                    foreach (ArtiGlobalDefinition definition in candidate.Snapshot())
-                        program.Statements.Add(definition.Declaration);
-                    program.Statements.Add(local);
+                    var localNames = new HashSet<string>(batch.Select(definition => definition.Name), StringComparer.Ordinal);
+                    var imported = definitions.Snapshot().Where(definition => !localNames.Contains(definition.Name)).ToArray();
+                    // Keep global constants available to function bodies regardless of declaration order.
+                    var constants = program.Statements.OfType<ArtiVariableDeclarationStatement>()
+                        .Where(statement => statement.IsConst && statement.Name != "_").ToArray();
+                    foreach (var constant in constants) program.Statements.Remove(constant);
+                    for (int i = constants.Length - 1; i >= 0; i--) program.Statements.Insert(0, constants[i]);
                     var analysis = new ArtiAnalyzer(
                         context.ModuleCatalog,
                         context.SymbolCatalog,
-                        candidate.Snapshot().Select(definition => definition.Name),
-                        true).Analyze(program);
+                        imported.Select(definition => definition.Name),
+                        externalConstants: imported.Where(definition => definition.Declaration is ArtiVariableDeclarationStatement)
+                            .Select(definition => definition.Name),
+                        externalFunctions: imported.Where(definition => definition.Declaration is ArtiFunctionDeclarationStatement)
+                            .Select(definition => definition.Name)).Analyze(program);
                     if (analysis.HasErrors) return new ArtiExecutionResult(string.Empty, null, analysis.Diagnostics);
-                    var result = new ArtiExecutor().Execute(program, context);
-                    if (!result.HasErrors) definitions.Register(batch);
+                    var result = executor.ExecuteWithGlobals(program, context, imported);
+                    if (!result.HasErrors)
+                    {
+                        foreach (ArtiGlobalDefinition definition in batch)
+                            definition.Bind(executor.GetDeclaredValue(definition.Name));
+                        definitions.Register(batch);
+                    }
                     return result;
                 }
                 catch (Exception exception)
