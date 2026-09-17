@@ -7,6 +7,29 @@ namespace AdvancedRimTalk.PromptChecks
     {
         internal static void Run()
         {
+            var rebinding = new ArtiGlobalRuntime();
+            var context = new ArtiExecutionContext(symbolCatalog: new ArtiSymbolCatalog(new[] { "seed" }));
+            context.Globals["seed"] = 1;
+            const string capture = "let captured = seed; fn get() { return captured }";
+            Require(!rebinding.Execute(capture, "a", context).HasErrors, 0, "first capture");
+            Require(!rebinding.Execute("fn wrapper() { return get() }", "b").HasErrors, 0, "wrapper");
+            context.Globals["seed"] = 2;
+            Require(!rebinding.Execute(capture, "a", context).HasErrors, 0, "rebind capture");
+            var rebound = rebinding.Execute("core.emit(get()); core.emit(wrapper())", "c");
+            Require(!rebound.HasErrors && rebound.Output == "22", 0, "wrapper resolves current global binding");
+            var shadow = new ArtiGlobalRuntime().Execute(
+                "use optional sample.mod as lib; fn echo(lib) { return lib }; core.emit(echo(7))", "shadow");
+            Require(!shadow.HasErrors && shadow.Output == "7", 0, "parameter shadows imported module");
+            var retained = new ArtiGlobalRuntime();
+            var references = RebindCapturedObjects(retained);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            int alive = 0;
+            foreach (var reference in references) if (reference.IsAlive) alive++;
+            Require(alive <= 2, alive, "rebindings do not retain historical closure environments");
+            GC.KeepAlive(retained);
+
             for (int value = -20; value <= 20; value++)
             {
                 var runtime = new ArtiGlobalRuntime();
@@ -38,6 +61,21 @@ namespace AdvancedRimTalk.PromptChecks
         private static void Require(bool condition, int value, string property)
         {
             if (!condition) throw new Exception("Global runtime property failed: value=" + value + "; " + property);
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static WeakReference[] RebindCapturedObjects(ArtiGlobalRuntime runtime)
+        {
+            var references = new WeakReference[100];
+            var context = new ArtiExecutionContext(symbolCatalog: new ArtiSymbolCatalog(new[] { "seed" }));
+            for (int i = 0; i < references.Length; i++)
+            {
+                context.Globals["seed"] = new object();
+                references[i] = new WeakReference(context.Globals["seed"]);
+                Require(!runtime.Execute("let held = seed; fn first() { return held }", "first", context).HasErrors, i, "capture object");
+                Require(!runtime.Execute("fn second() { return first() }", "second", context).HasErrors, i, "capture wrapper");
+            }
+            return references;
         }
 
         private sealed class DynamicProvider : IArtiRuntimeValueProvider

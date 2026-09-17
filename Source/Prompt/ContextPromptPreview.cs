@@ -60,11 +60,12 @@ namespace AdvancedRimTalk.Prompt
                         });
                     attempt("History", () => context.ChatHistory = context.GetChatHistory(false));
                 }
+                var runtime = new AdvancedRimTalk.Arti.ArtiGlobalRuntime();
                 Func<string, string> render = source =>
                 {
                     try
                     {
-                        ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(source, context);
+                        ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(source, context, runtime);
                         foreach (var diagnostic in arti.Diagnostics) errors.Add(diagnostic.ToString());
                         string text = arti.Text;
                         PromptExpansionResult expansion = null;

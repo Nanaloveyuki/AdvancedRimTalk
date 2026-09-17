@@ -84,6 +84,12 @@ namespace AdvancedRimTalk.Arti
         private void ReadNextToken()
         {
             char current = Current;
+            if (current == '\\' && (Peek(1) == '\r' || Peek(1) == '\n'))
+            {
+                Advance();
+                Advance();
+                return;
+            }
             if (current == ' ' || current == '\t' || current == '\f' || current == '\v')
             {
                 Advance();
@@ -263,22 +269,23 @@ namespace AdvancedRimTalk.Arti
             int line = _line;
             int column = _column;
             StringBuilder value = new StringBuilder();
-            Advance();
+            int quoteLength = QuoteLength();
+            for (int i = 0; i < quoteLength; i++) Advance();
             bool closed = false;
 
             while (!End)
             {
                 char current = Current;
-                if (current == quote)
+                if (AtClosingQuote(quote, quoteLength))
                 {
-                    Advance();
+                    for (int i = 0; i < quoteLength; i++) Advance();
                     closed = true;
                     break;
                 }
 
                 if (current != '\\')
                 {
-                    value.Append(current);
+                    value.Append(current == '\r' ? '\n' : current);
                     Advance();
                     continue;
                 }
@@ -306,6 +313,7 @@ namespace AdvancedRimTalk.Arti
             Advance();
             switch (escaped)
             {
+                case '\r': case '\n': break;
                 case 'n': value.Append('\n'); break;
                 case 'r': value.Append('\r'); break;
                 case 't': value.Append('\t'); break;
@@ -319,11 +327,12 @@ namespace AdvancedRimTalk.Arti
             }
         }
 
-        internal static int SkipInterpolatedString(string source, int start)
+        internal static int SkipString(string source, int start)
         {
             var lexer = new ArtiLexer { _source = source, _position = start, _line = 1, _column = 1,
                 _result = new ArtiLexResult() };
-            lexer.ReadInterpolatedString();
+            if (lexer.Current == 'f') lexer.ReadInterpolatedString();
+            else lexer.ReadString(lexer.Current);
             return lexer._position;
         }
 
@@ -332,14 +341,15 @@ namespace AdvancedRimTalk.Arti
             int start = _position, line = _line, column = _column;
             Advance();
             char quote = Current;
-            Advance();
+            int quoteLength = QuoteLength();
+            for (int i = 0; i < quoteLength; i++) Advance();
             _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolatedStringStart,
-                _source.Substring(start, 2), null, CreateSpan(start, 2, line, column)));
-            while (!End && Current != quote)
+                _source.Substring(start, 1 + quoteLength), null, CreateSpan(start, 1 + quoteLength, line, column)));
+            while (!End && !AtClosingQuote(quote, quoteLength))
             {
                 int textStart = _position, textLine = _line, textColumn = _column;
                 var text = new StringBuilder();
-                while (!End && Current != quote)
+                while (!End && !AtClosingQuote(quote, quoteLength))
                 {
                     if ((Current == '{' || Current == '}') && Peek(1) == Current)
                     {
@@ -351,13 +361,13 @@ namespace AdvancedRimTalk.Arti
                         ReportError(1009, CurrentSpan(1)); text.Append(Current); Advance();
                     }
                     else if (Current == '\\') ReadEscape(text, textStart, textLine, textColumn);
-                    else { text.Append(Current); Advance(); }
+                    else { text.Append(Current == '\r' ? '\n' : Current); Advance(); }
                 }
                 if (_position > textStart)
                     _result.Tokens.Add(new ArtiToken(ArtiTokenKind.String,
                         _source.Substring(textStart, _position - textStart), text.ToString(),
                         CreateSpan(textStart, _position - textStart, textLine, textColumn)));
-                if (End || Current == quote) break;
+                if (End || AtClosingQuote(quote, quoteLength)) break;
 
                 _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolationStart, "{", null, CurrentSpan(1)));
                 Advance();
@@ -376,10 +386,15 @@ namespace AdvancedRimTalk.Arti
             if (End) ReportError(1006, CreateSpan(start, _position - start, line, column));
             else
             {
-                _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolatedStringEnd, quote.ToString(), null, CurrentSpan(1)));
-                Advance();
+                _result.Tokens.Add(new ArtiToken(ArtiTokenKind.InterpolatedStringEnd, new string(quote, quoteLength), null, CurrentSpan(quoteLength)));
+                for (int i = 0; i < quoteLength; i++) Advance();
             }
         }
+
+        private int QuoteLength() => Peek(1) == Current && Peek(2) == Current ? 3 : 1;
+
+        private bool AtClosingQuote(char quote, int length)
+            => Current == quote && (length == 1 || (Peek(1) == quote && Peek(2) == quote));
 
         private char ReadUnicodeEscape(int start, int line, int column)
         {

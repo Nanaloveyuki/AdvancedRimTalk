@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.CompilerServices;
+using AdvancedRimTalk.Arti;
 using AdvancedRimTalk.Prompt;
 using HarmonyLib;
 using RimTalk.Prompt;
@@ -9,6 +11,9 @@ namespace AdvancedRimTalk.Integration
     [HarmonyPatch(typeof(ScribanParser), nameof(ScribanParser.Render))]
     internal static class ScribanRenderPatch
     {
+        // RimTalk creates a new PromptContext for each BuildMessages call.
+        private static readonly ConditionalWeakTable<PromptContext, ArtiGlobalRuntime> Runtimes =
+            new ConditionalWeakTable<PromptContext, ArtiGlobalRuntime>();
         private sealed class ScribanRenderState
         {
             public ArtiPromptRenderResult Arti;
@@ -27,7 +32,9 @@ namespace AdvancedRimTalk.Integration
             {
                 try
                 {
-                    arti = ArtiPromptDocumentRenderer.Render(templateText, context);
+                    var runtime = context == null ? new ArtiGlobalRuntime()
+                        : Runtimes.GetValue(context, _ => new ArtiGlobalRuntime());
+                    arti = ArtiPromptDocumentRenderer.Render(templateText, context, runtime);
                     templateText = arti.Text;
                 }
                 catch (Exception exception)

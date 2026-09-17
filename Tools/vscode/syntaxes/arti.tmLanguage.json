@@ -110,8 +110,8 @@
       "patterns": [
         {
           "name": "string.interpolated.arti",
-          "begin": "\\bf([\"'])",
-          "end": "\\1|(?=\\r?$)",
+          "begin": "\\bf(\"\"\"|'''|[\"'])",
+          "end": "\\1",
           "patterns": [
             { "include": "#string-escape" },
             { "include": "#invalid-string-escape" },
@@ -128,6 +128,15 @@
           ]
         },
         {
+          "name": "string.quoted.triple.arti",
+          "begin": "(\"\"\"|''')",
+          "end": "\\1",
+          "patterns": [
+            { "include": "#string-escape" },
+            { "include": "#invalid-string-escape" }
+          ]
+        },
+        {
           "name": "string.quoted.double.arti",
           "begin": "\"",
           "beginCaptures": {
@@ -135,7 +144,7 @@
               "name": "punctuation.definition.string.begin.arti"
             }
           },
-          "end": "\"|(?=\\r?$)",
+          "end": "\"",
           "endCaptures": {
             "0": {
               "name": "punctuation.definition.string.end.arti"
@@ -158,7 +167,7 @@
               "name": "punctuation.definition.string.begin.arti"
             }
           },
-          "end": "'|(?=\\r?$)",
+          "end": "'",
           "endCaptures": {
             "0": {
               "name": "punctuation.definition.string.end.arti"

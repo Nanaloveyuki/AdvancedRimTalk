@@ -11,6 +11,22 @@ namespace AdvancedRimTalk.PromptChecks
         internal static void Run()
         {
             var preview = new PromptContext { IsPreview = true };
+            var triple = ArtiPromptDocumentRenderer.Render("before {{% core.emit('''one '\n%}}\nend''') %}} after", preview);
+            Check(!triple.HasErrors && triple.Text == "before one '\n%}}\nend after", "triple quoted document marker");
+            var mapped = ArtiPromptDocumentRenderer.Render("line1\nline2\nline3\n{{% core.emit(f\"{missing_probe}\") %}}", preview);
+            Check(mapped.HasErrors && mapped.Diagnostics[0].Span.Line == 4 && mapped.Diagnostics[0].Span.Column == 18,
+                "runtime diagnostics use document coordinates");
+            const string counter = "{{% let count = 0; fn next() { count += 1; return count } %}}";
+            var liveRuntime = new ArtiGlobalRuntime();
+            var previewRuntime = new ArtiGlobalRuntime();
+            Check(!ArtiPromptDocumentRenderer.Render(counter, preview, liveRuntime, "intro").HasErrors, "live declarations");
+            Check(!ArtiPromptDocumentRenderer.Render(counter, preview, previewRuntime, "intro").HasErrors, "preview declarations");
+            Check(ArtiPromptDocumentRenderer.Render("{{% core.emit(next()) %}}", preview, previewRuntime).Text == "1", "preview counter");
+            Check(ArtiPromptDocumentRenderer.Render("{{% core.emit(next()) %}}", preview, liveRuntime).Text == "1", "live counter isolated");
+            Check(ArtiPromptDocumentRenderer.Render("{{% core.emit(next()) %}}", preview, liveRuntime).Text == "2", "same generation shares closure");
+            Check(ArtiPromptDocumentRenderer.Render("{{% core.emit(next()) %}}", preview).HasErrors, "next generation drops disabled definitions");
+            Check(!ArtiPromptDocumentRenderer.Render("prefix\n" + counter, preview).HasErrors, "edited definition starts fresh");
+            Check(!ArtiPromptDocumentRenderer.Render("{{% const n = 2 %}}{{% core.emit(n) %}}", preview).HasErrors, "document blocks share constants");
             var valid = ArtiPromptDocumentRenderer.Render("before {{% core.emit(\"value\") %}} after", preview);
             Check(valid.Text == "before value after" && !valid.HasErrors, "valid block");
             var interpolated = ArtiPromptDocumentRenderer.Render(
@@ -28,8 +44,9 @@ namespace AdvancedRimTalk.PromptChecks
                 + "if exists(language) { core.emit(language, false) } %}}", preview);
             Check(!language.HasErrors && language.Text.EndsWith("4.禁止使用书面用语必须使用通俗白话"),
                 "user language prompt through global runtime: " + string.Join(";", language.Diagnostics));
-            var global = ArtiPromptDocumentRenderer.Render("{{% fn render_global() { return \"global\" } %}}", preview);
-            var globalCall = ArtiPromptDocumentRenderer.Render("{{% core.emit(render_global()) %}}", preview);
+            var generation = new ArtiGlobalRuntime();
+            var global = ArtiPromptDocumentRenderer.Render("{{% fn render_global() { return \"global\" } %}}", preview, generation);
+            var globalCall = ArtiPromptDocumentRenderer.Render("{{% core.emit(render_global()) %}}", preview, generation);
             Check(!global.HasErrors && !globalCall.HasErrors && globalCall.Text == "global",
                 "global function across blocks: " + global.Text + " / " + globalCall.Text + " / "
                 + string.Join(";", global.Diagnostics) + " / " + string.Join(";", globalCall.Diagnostics));

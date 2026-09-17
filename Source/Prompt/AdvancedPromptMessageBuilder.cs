@@ -166,6 +166,7 @@ namespace AdvancedRimTalk.Prompt
                 return rendered;
             }
 
+            var runtime = new ArtiGlobalRuntime();
             foreach (ArtiPromptPart part in parts)
             {
                 if (part == null || !part.Enabled || string.IsNullOrWhiteSpace(part.Content))
@@ -174,7 +175,7 @@ namespace AdvancedRimTalk.Prompt
                 }
 
                 part.Normalize();
-                ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(part.Content, promptContext);
+                ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(part.Content, promptContext, runtime, part.Id);
                 if (arti != null && !string.IsNullOrEmpty(arti.Text) && arti.Text.Contains("{{"))
                 {
                     try

@@ -27,6 +27,7 @@ namespace AdvancedRimTalk.Arti
     {
         private IList<ArtiToken> _tokens;
         private int _index;
+        private int _expressionDepth;
 
         public ArtiParseResult Parse(string source)
         {
@@ -39,6 +40,7 @@ namespace AdvancedRimTalk.Arti
             ArtiLexResult lexResult = new ArtiLexer().Lex(source, sourceOffset, startLine, startColumn);
             _tokens = lexResult.Tokens;
             _index = 0;
+            _expressionDepth = 0;
             ClearDiagnostics();
             foreach (ArtiDiagnostic diagnostic in lexResult.Diagnostics)
             {
@@ -159,6 +161,16 @@ namespace AdvancedRimTalk.Arti
             ArtiToken fnToken = Expect(ArtiTokenKind.Fn, 2010);
             ArtiToken name = ExpectIdentifier();
             Expect(ArtiTokenKind.LeftParen, 2011);
+            List<string> parameters = ParseGroup(ParseParameters);
+            SkipNewLines();
+            ArtiBlockStatement body = ParseBlock();
+            ArtiFunctionDeclarationStatement function = new ArtiFunctionDeclarationStatement(Combine(fnToken.Span, body.Span), name.Text, body);
+            foreach (string parameter in parameters) function.Parameters.Add(parameter);
+            return function;
+        }
+
+        private List<string> ParseParameters()
+        {
             List<string> parameters = new List<string>();
             SkipNewLines();
             if (!Check(ArtiTokenKind.RightParen))
@@ -177,15 +189,7 @@ namespace AdvancedRimTalk.Arti
             }
 
             Expect(ArtiTokenKind.RightParen, 2012);
-            SkipNewLines();
-            ArtiBlockStatement body = ParseBlock();
-            ArtiFunctionDeclarationStatement function = new ArtiFunctionDeclarationStatement(Combine(fnToken.Span, body.Span), name.Text, body);
-            foreach (string parameter in parameters)
-            {
-                function.Parameters.Add(parameter);
-            }
-
-            return function;
+            return parameters;
         }
 
         private ArtiIfStatement ParseIf()
@@ -304,7 +308,11 @@ namespace AdvancedRimTalk.Arti
             // Multiple values use the existing ordered array representation.
             var values = new ArtiArrayExpression(first.Span);
             values.Items.Add(first);
-            while (Match(ArtiTokenKind.Comma)) values.Items.Add(ParseExpression());
+            while (Match(ArtiTokenKind.Comma))
+            {
+                if (Check(ArtiTokenKind.RightParen) || IsStatementTerminator(Current.Kind)) break;
+                values.Items.Add(ParseExpression());
+            }
             values.Span = Combine(first.Span, values.Items[values.Items.Count - 1].Span);
             return values;
         }
@@ -326,6 +334,13 @@ namespace AdvancedRimTalk.Arti
             }
 
             return left;
+        }
+
+        private T ParseGroup<T>(Func<T> parse)
+        {
+            _expressionDepth++;
+            try { return parse(); }
+            finally { _expressionDepth--; }
         }
 
         private ArtiExpression ParseUnary()
@@ -353,16 +368,19 @@ namespace AdvancedRimTalk.Arti
 
                 if (Match(ArtiTokenKind.LeftBracket))
                 {
-                    ArtiExpression index = ParseExpression();
-                    ArtiToken rightBracket = Expect(ArtiTokenKind.RightBracket, 2014);
-                    expression = new ArtiIndexExpression(Combine(expression.Span, rightBracket.Span), expression, index);
+                    expression = ParseGroup(() =>
+                    {
+                        ArtiExpression index = ParseExpression();
+                        ArtiToken rightBracket = Expect(ArtiTokenKind.RightBracket, 2014);
+                        return new ArtiIndexExpression(Combine(expression.Span, rightBracket.Span), expression, index);
+                    });
                     continue;
                 }
 
                 if (Match(ArtiTokenKind.LeftParen))
                 {
                     ArtiCallExpression call = new ArtiCallExpression(Combine(expression.Span, Previous.Span), expression);
-                    ParseArguments(call);
+                    ParseGroup(() => { ParseArguments(call); return call; });
                     expression = call;
                     continue;
                 }
@@ -412,12 +430,12 @@ namespace AdvancedRimTalk.Arti
             switch (token.Kind)
             {
                 case ArtiTokenKind.String:
+                case ArtiTokenKind.InterpolatedStringStart:
+                    return ParseStringSequence();
                 case ArtiTokenKind.Integer:
                 case ArtiTokenKind.Float:
                     Advance();
                     return new ArtiLiteralExpression(token.Span, token.Value);
-                case ArtiTokenKind.InterpolatedStringStart:
-                    return ParseInterpolatedString();
                 case ArtiTokenKind.True:
                     Advance();
                     return new ArtiLiteralExpression(token.Span, true);
@@ -432,13 +450,17 @@ namespace AdvancedRimTalk.Arti
                     return new ArtiNameExpression(token.Span, token.Text);
                 case ArtiTokenKind.LeftParen:
                     Advance();
-                    ArtiExpression grouped = ParseExpressionList();
-                    Expect(ArtiTokenKind.RightParen, 2016);
-                    return grouped;
+                    return ParseGroup(() =>
+                    {
+                        ArtiExpression grouped = Check(ArtiTokenKind.RightParen)
+                            ? new ArtiArrayExpression(token.Span) : ParseExpressionList();
+                        Expect(ArtiTokenKind.RightParen, 2016);
+                        return grouped;
+                    });
                 case ArtiTokenKind.LeftBracket:
-                    return ParseArray();
+                    return ParseGroup(ParseArray);
                 case ArtiTokenKind.LeftBrace:
-                    return ParseObject();
+                    return ParseGroup(ParseObject);
                 default:
                     ReportError(2005, token.Span);
                     if (!Check(ArtiTokenKind.EndOfFile))
@@ -448,6 +470,22 @@ namespace AdvancedRimTalk.Arti
 
                     return new ArtiErrorExpression(token.Span);
             }
+        }
+
+        private ArtiExpression ParseStringSequence()
+        {
+            var joined = new ArtiInterpolatedStringExpression(Current.Span);
+            do
+            {
+                if (Check(ArtiTokenKind.String))
+                {
+                    ArtiToken token = Advance();
+                    joined.Parts.Add(new ArtiLiteralExpression(token.Span, token.Value));
+                }
+                else joined.Parts.Add(ParseInterpolatedString());
+            } while (Check(ArtiTokenKind.String) || Check(ArtiTokenKind.InterpolatedStringStart));
+            joined.Span = Combine(joined.Span, joined.Parts[joined.Parts.Count - 1].Span);
+            return joined.Parts.Count == 1 ? joined.Parts[0] : joined;
         }
 
         private ArtiInterpolatedStringExpression ParseInterpolatedString()
@@ -463,8 +501,12 @@ namespace AdvancedRimTalk.Arti
                 }
                 else if (Match(ArtiTokenKind.InterpolationStart))
                 {
-                    result.Parts.Add(ParseExpression());
-                    Expect(ArtiTokenKind.InterpolationEnd, 1009);
+                    result.Parts.Add(ParseGroup(() =>
+                    {
+                        ArtiExpression value = ParseExpression();
+                        Expect(ArtiTokenKind.InterpolationEnd, 1009);
+                        return value;
+                    }));
                 }
                 else
                 {
@@ -603,6 +645,8 @@ namespace AdvancedRimTalk.Arti
 
         private ArtiToken Advance()
         {
+            if (_expressionDepth > 0)
+                while (_tokens[_index].Kind == ArtiTokenKind.NewLine) _index++;
             ArtiToken token = Current;
             if (_index < _tokens.Count - 1)
             {
@@ -614,7 +658,12 @@ namespace AdvancedRimTalk.Arti
 
         private ArtiToken Peek(int distance)
         {
-            int index = _index + distance;
+            int index = _index;
+            for (int remaining = distance; index < _tokens.Count - 1; index++)
+            {
+                if (_expressionDepth > 0 && _tokens[index].Kind == ArtiTokenKind.NewLine) continue;
+                if (remaining-- == 0) break;
+            }
             return index >= 0 && index < _tokens.Count ? _tokens[index] : _tokens[_tokens.Count - 1];
         }
 
@@ -625,7 +674,7 @@ namespace AdvancedRimTalk.Arti
 
         private ArtiToken Current
         {
-            get { return _tokens[_index]; }
+            get { return Peek(0); }
         }
 
         private ArtiToken Previous

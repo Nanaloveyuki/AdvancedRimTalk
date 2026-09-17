@@ -220,8 +220,6 @@ namespace AdvancedRimTalk.Arti
 
         private static int FindClosingMarker(string source, int start)
         {
-            char quote = '\0';
-            bool escaped = false;
             bool lineComment = false;
             for (int index = start; index < source.Length; index++)
             {
@@ -236,28 +234,10 @@ namespace AdvancedRimTalk.Arti
                     continue;
                 }
 
-                if (quote != '\0')
-                {
-                    if (escaped)
-                    {
-                        escaped = false;
-                    }
-                    else if (current == '\\')
-                    {
-                        escaped = true;
-                    }
-                    else if (current == quote)
-                    {
-                        quote = '\0';
-                    }
-
-                    continue;
-                }
-
                 if (current == 'f' && index + 1 < source.Length
                     && (source[index + 1] == '"' || source[index + 1] == '\''))
                 {
-                    index = ArtiLexer.SkipInterpolatedString(source, index) - 1;
+                    index = ArtiLexer.SkipString(source, index) - 1;
                     continue;
                 }
 
@@ -270,7 +250,7 @@ namespace AdvancedRimTalk.Arti
 
                 if (current == '"' || current == '\'')
                 {
-                    quote = current;
+                    index = ArtiLexer.SkipString(source, index) - 1;
                     continue;
                 }
 

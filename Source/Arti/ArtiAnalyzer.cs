@@ -231,7 +231,7 @@ namespace AdvancedRimTalk.Arti
             {
                 foreach (string name in _externalGlobals)
                 {
-                    root.TryDeclare(name, _externalConstants.Contains(name) ? BindingKind.Constant
+                    root.DeclareExternal(name, _externalConstants.Contains(name) ? BindingKind.Constant
                         : _externalFunctions.Contains(name) ? BindingKind.Function : BindingKind.External);
                 }
             }
@@ -674,14 +674,16 @@ namespace AdvancedRimTalk.Arti
 
         private sealed class Binding
         {
-            public Binding(BindingKind kind, bool fromBlock = false)
+            public Binding(BindingKind kind, bool fromBlock = false, bool external = false)
             {
                 Kind = kind;
                 FromBlock = fromBlock;
+                External = external;
             }
 
             public BindingKind Kind { get; }
             public bool FromBlock { get; }
+            public bool External { get; }
         }
 
         private sealed class Scope
@@ -700,6 +702,11 @@ namespace AdvancedRimTalk.Arti
 
             public Scope Parent { get; }
 
+            public void DeclareExternal(string name, BindingKind kind)
+            {
+                _bindings[name] = new Binding(kind, external: true);
+            }
+
             public bool TryDeclare(string name, BindingKind kind)
             {
                 return TryDeclare(name, kind, false);
@@ -715,7 +722,7 @@ namespace AdvancedRimTalk.Arti
                 Binding existing;
                 if (_bindings.TryGetValue(name, out existing))
                 {
-                    if ((allowExternalRedeclare && existing.Kind == BindingKind.External)
+                    if ((allowExternalRedeclare && existing.External)
                         || (!_declared.Contains(name) && kind == BindingKind.Variable
                             && existing.Kind == BindingKind.Variable && (transparent || existing.FromBlock)))
                     {

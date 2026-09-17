@@ -279,13 +279,17 @@ namespace AdvancedRimTalk.UI
         public ArtiEditorAnalysis AnalyzeDocument(
             string source,
             IEnumerable<string> externalGlobals = null,
-            bool allowExternalGlobalRedeclare = false)
+            bool allowExternalGlobalRedeclare = false,
+            IEnumerable<string> externalConstants = null,
+            IEnumerable<string> externalFunctions = null)
         {
             source = ArtiEditorText.NormalizeLineEndings(source);
             EnsureCatalogs();
 
             ArtiDocumentParseResult parsed = new ArtiDocumentParser().Parse(source);
             var visibleGlobals = new HashSet<string>(externalGlobals ?? new string[0], StringComparer.Ordinal);
+            var constants = new HashSet<string>(externalConstants ?? new string[0], StringComparer.Ordinal);
+            var functions = new HashSet<string>(externalFunctions ?? new string[0], StringComparer.Ordinal);
             List<ArtiToken> tokens = new List<ArtiToken>();
             List<ArtiDiagnostic> diagnostics = new List<ArtiDiagnostic>();
             List<ArtiCodeRange> codeRanges = new List<ArtiCodeRange>();
@@ -314,10 +318,11 @@ namespace AdvancedRimTalk.UI
                             moduleCatalog,
                             symbolCatalog,
                             visibleGlobals,
-                            allowExternalGlobalRedeclare).Analyze(block.ParseResult.Program);
+                            allowExternalGlobalRedeclare, constants, functions)
+                            .Analyze(ArtiGlobalRuntime.PrepareProgram(block.ParseResult.Program));
                         AddDiagnostics(diagnostics, semantic.Diagnostics);
                         if (!block.HasErrors && !semantic.HasErrors)
-                            AdvancedRimTalk.Prompt.ArtiPromptAnalysisContext.AddDeclarations(block.ParseResult.Program, visibleGlobals);
+                            AdvancedRimTalk.Prompt.ArtiPromptAnalysisContext.AddDeclarations(block.ParseResult.Program, visibleGlobals, constants, functions);
                     }
                     catch (Exception exception)
                     {
@@ -334,7 +339,9 @@ namespace AdvancedRimTalk.UI
         public ArtiEditorAnalysis AnalyzeCode(
             string source,
             IEnumerable<string> externalGlobals = null,
-            bool allowExternalGlobalRedeclare = false)
+            bool allowExternalGlobalRedeclare = false,
+            IEnumerable<string> externalConstants = null,
+            IEnumerable<string> externalFunctions = null)
         {
             source = ArtiEditorText.NormalizeLineEndings(source);
             EnsureCatalogs();
@@ -359,7 +366,7 @@ namespace AdvancedRimTalk.UI
                             moduleCatalog,
                             symbolCatalog,
                             externalGlobals,
-                            allowExternalGlobalRedeclare).Analyze(parsed.Program);
+                            allowExternalGlobalRedeclare, externalConstants, externalFunctions).Analyze(parsed.Program);
                         AddDiagnostics(diagnostics, semantic.Diagnostics);
                     }
                     catch (Exception exception)
@@ -521,7 +528,7 @@ namespace AdvancedRimTalk.UI
 
             foreach (ArtiCodeRange range in codeRanges)
             {
-                AddCommentHighlights(source, range, highlights);
+                AddCommentHighlights(source, range, tokens, highlights);
             }
 
             foreach (ArtiToken token in tokens)
@@ -626,39 +633,23 @@ namespace AdvancedRimTalk.UI
         private static void AddCommentHighlights(
             string source,
             ArtiCodeRange range,
+            IList<ArtiToken> tokens,
             IList<ArtiHighlightSpan> highlights)
         {
             int start = Math.Max(0, Math.Min(range.StartOffset, source.Length));
             int end = Math.Max(start, Math.Min(range.EndOffset, source.Length));
             int index = start;
-            char quote = '\0';
-            bool escaped = false;
+            int tokenIndex = 0;
             while (index < end)
             {
                 char current = source[index];
-                if (quote != '\0')
+                while (tokenIndex < tokens.Count && tokens[tokenIndex].Span.EndOffset <= index) tokenIndex++;
+                if (tokenIndex < tokens.Count && tokens[tokenIndex].Span.StartOffset <= index
+                    && (tokens[tokenIndex].Kind == ArtiTokenKind.String
+                        || tokens[tokenIndex].Kind == ArtiTokenKind.InterpolatedStringStart
+                        || tokens[tokenIndex].Kind == ArtiTokenKind.InterpolatedStringEnd))
                 {
-                    if (escaped)
-                    {
-                        escaped = false;
-                    }
-                    else if (current == '\\')
-                    {
-                        escaped = true;
-                    }
-                    else if (current == quote)
-                    {
-                        quote = '\0';
-                    }
-
-                    index++;
-                    continue;
-                }
-
-                if (current == '"' || current == '\'')
-                {
-                    quote = current;
-                    index++;
+                    index = tokens[tokenIndex].Span.EndOffset;
                     continue;
                 }
 

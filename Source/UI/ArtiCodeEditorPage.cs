@@ -553,7 +553,8 @@ namespace AdvancedRimTalk.UI
                 return;
             }
 
-            analysis = intelligence.AnalyzeDocument(source, promptAnalysisContext.Names);
+            analysis = intelligence.AnalyzeDocument(source, promptAnalysisContext.Names,
+                externalConstants: promptAnalysisContext.Constants, externalFunctions: promptAnalysisContext.Functions);
             if (contextChanged) ClearCompletion();
             analyzedSource = source;
         }

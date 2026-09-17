@@ -220,7 +220,8 @@ namespace AdvancedRimTalk.Arti
                     context == null ? null : context.ModuleCatalog,
                     context == null ? null : context.SymbolCatalog,
                     context == null || !context.Options.PersistVariables ? null : context.Globals.Keys,
-                    context != null && context.Options.AllowGlobalRedeclare).Analyze(parsed.Program);
+                    context != null && context.Options.AllowGlobalRedeclare,
+                    GetConstantNames(context), GetFunctionNames(context)).Analyze(parsed.Program);
                 AddDiagnostics(analysis.Diagnostics);
             }
 
@@ -248,7 +249,8 @@ namespace AdvancedRimTalk.Arti
                     context == null ? null : context.ModuleCatalog,
                     context == null ? null : context.SymbolCatalog,
                     context == null || !context.Options.PersistVariables ? null : context.Globals.Keys,
-                    context != null && context.Options.AllowGlobalRedeclare).Analyze(parsed.Program);
+                    context != null && context.Options.AllowGlobalRedeclare,
+                    GetConstantNames(context), GetFunctionNames(context)).Analyze(parsed.Program);
                 AddDiagnostics(analysis.Diagnostics);
             }
 
@@ -267,7 +269,7 @@ namespace AdvancedRimTalk.Arti
         }
 
         internal ArtiExecutionResult ExecuteWithGlobals(ArtiProgram program, ArtiExecutionContext context,
-            IEnumerable<ArtiGlobalDefinition> globals)
+            ArtiGlobalDefinitions globals)
         {
             ClearDiagnostics();
             return ExecuteProgram(program, context, globals);
@@ -279,8 +281,16 @@ namespace AdvancedRimTalk.Arti
             throw new InvalidOperationException("The global definition '" + name + "' was not initialized.");
         }
 
+        internal IEnumerable<string> GetConstantNames(ArtiExecutionContext context)
+            => _rootScope != null && ReferenceEquals(context, _persistentContext)
+                ? _rootScope.GetDefinitionNames(false) : new string[0];
+
+        internal IEnumerable<string> GetFunctionNames(ArtiExecutionContext context)
+            => _rootScope != null && ReferenceEquals(context, _persistentContext)
+                ? _rootScope.GetDefinitionNames(true) : new string[0];
+
         private ArtiExecutionResult ExecuteProgram(ArtiProgram program, ArtiExecutionContext context,
-            IEnumerable<ArtiGlobalDefinition> globals = null)
+            ArtiGlobalDefinitions globals = null)
         {
             _context = context ?? new ArtiExecutionContext();
             _output = new StringBuilder();
@@ -294,7 +304,7 @@ namespace AdvancedRimTalk.Arti
 
             if (!reuseScope)
             {
-                _rootScope = new RuntimeScope(null);
+                _rootScope = new RuntimeScope(null, globals: globals);
                 if (_context.Options.PersistVariables)
                 {
                     _rootScope.ImportFrom(_context.Globals);
@@ -314,14 +324,6 @@ namespace AdvancedRimTalk.Arti
 
             try
             {
-                if (globals != null)
-                {
-                    foreach (ArtiGlobalDefinition global in globals)
-                    {
-                        _rootScope.TryDeclare(global.Name, global.RuntimeValue, true);
-                        if (global.Declaration is ArtiVariableDeclarationStatement) _rootScope.MarkConstant(global.Name);
-                    }
-                }
                 PrepareDeclarations(program.Statements, _rootScope);
                 ExecuteStatements(program.Statements, _rootScope);
             }
@@ -379,7 +381,7 @@ namespace AdvancedRimTalk.Arti
                         use.Alias,
                         module,
                         true,
-                        ShouldAllowRedeclare(scope));
+                        ShouldAllowRedeclare(scope), use);
                     continue;
                 }
 
@@ -394,7 +396,7 @@ namespace AdvancedRimTalk.Arti
                                 return InvokeUserFunction(function, arguments, scope);
                             }),
                         true,
-                        ShouldAllowRedeclare(scope));
+                        ShouldAllowRedeclare(scope), function);
                 }
             }
         }
@@ -2124,12 +2126,14 @@ namespace AdvancedRimTalk.Arti
                 new Dictionary<string, Binding>(StringComparer.Ordinal);
             private readonly HashSet<string> _declared = new HashSet<string>(StringComparer.Ordinal);
             private readonly bool transparent;
+            private readonly ArtiGlobalDefinitions globals;
 
-            public RuntimeScope(RuntimeScope parent, bool transparent = false)
+            public RuntimeScope(RuntimeScope parent, bool transparent = false, ArtiGlobalDefinitions globals = null)
             {
                 // Only function calls own a new binding table; braces share their owner's table.
                 this.transparent = transparent;
                 Parent = transparent ? parent.Parent : parent;
+                this.globals = transparent ? parent.globals : globals;
                 if (transparent)
                 {
                     _bindings = parent._bindings;
@@ -2141,12 +2145,21 @@ namespace AdvancedRimTalk.Arti
 
             public void MarkConstant(string name) { _constantNames.Add(name); }
 
+            public IEnumerable<string> GetDefinitionNames(bool functions)
+            {
+                foreach (var binding in _bindings)
+                    if (functions ? binding.Value.Declaration is ArtiFunctionDeclarationStatement
+                        : _constantNames.Contains(binding.Key)) yield return binding.Key;
+            }
+
             public bool IsConstant(string name)
             {
                 Binding binding;
                 if (_bindings.TryGetValue(name, out binding))
                     return _constantNames.Contains(name);
-                return Parent != null && Parent.IsConstant(name);
+                if (Parent != null) return Parent.IsConstant(name);
+                return globals != null && globals.TryGet(name, out ArtiGlobalDefinition global)
+                    && global.Declaration is ArtiVariableDeclarationStatement;
             }
 
             public void ImportFrom(IDictionary<string, object> values)
@@ -2184,6 +2197,7 @@ namespace AdvancedRimTalk.Arti
             {
                 if (!CanDeclare(name, isConst, allowReplace, declaration)) return false;
                 _bindings[name] = new Binding(value, isConst, declaration, transparent);
+                _constantNames.Remove(name);
                 _declared.Add(name);
                 return true;
             }
@@ -2222,7 +2236,10 @@ namespace AdvancedRimTalk.Arti
                 }
 
                 value = null;
-                return Parent != null && Parent.TryGet(name, out value);
+                if (Parent != null) return Parent.TryGet(name, out value);
+                if (globals == null || !globals.TryGet(name, out ArtiGlobalDefinition global)) return false;
+                value = global.RuntimeValue;
+                return true;
             }
 
             public bool CanAssign(string name, out string error)
@@ -2233,7 +2250,9 @@ namespace AdvancedRimTalk.Arti
                     return !binding.IsConst;
                 }
                 if (Parent != null) return Parent.CanAssign(name, out error);
-                error = "The name '" + name + "' is not declared.";
+                error = globals != null && globals.TryGet(name, out _)
+                    ? "The name '" + name + "' cannot be assigned."
+                    : "The name '" + name + "' is not declared.";
                 return false;
             }
 
@@ -2258,7 +2277,9 @@ namespace AdvancedRimTalk.Arti
                     return Parent.TryAssign(name, value, out error);
                 }
 
-                error = "The name '" + name + "' is not declared.";
+                error = globals != null && globals.TryGet(name, out _)
+                    ? "The name '" + name + "' cannot be assigned."
+                    : "The name '" + name + "' is not declared.";
                 return false;
             }
         }

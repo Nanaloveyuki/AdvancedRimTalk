@@ -10,6 +10,13 @@ namespace AdvancedRimTalk.PromptChecks
             FindsSingleEdits();
             AppliesIndentation();
             DetectsProtectedText();
+            foreach (string quote in new[] { "'''", "\"\"\"" })
+            {
+                string text = "let text = " + quote + "first\n" + quote[0] + " still inside";
+                Assert(ArtiEditorText.IsInsideStringOrComment(text, text.Length), "triple string protects lone quote");
+                text += quote + "\nlet other = ";
+                Assert(!ArtiEditorText.IsInsideStringOrComment(text, text.Length), "triple string closes correctly");
+            }
             InvalidatesCompletion();
         }
 

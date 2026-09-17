@@ -37,27 +37,17 @@ namespace AdvancedRimTalk.Integration
 
     internal static class ArtiPromptDocumentRenderer
     {
-        private static Game runtimeGame;
-        private static ArtiGlobalRuntime globalRuntime;
-
-        private static ArtiGlobalRuntime GetGlobalRuntime()
-        {
-            if (!ReferenceEquals(runtimeGame, Current.Game))
-            {
-                runtimeGame = Current.Game;
-                globalRuntime = new ArtiGlobalRuntime();
-            }
-            return globalRuntime ?? (globalRuntime = new ArtiGlobalRuntime());
-        }
         public static bool HasArtiBlocks(string source)
         {
             return !string.IsNullOrEmpty(source)
                 && source.IndexOf(ArtiDocumentParser.OpeningMarker, StringComparison.Ordinal) >= 0;
         }
 
-        public static ArtiPromptRenderResult Render(string source, PromptContext context)
+        public static ArtiPromptRenderResult Render(string source, PromptContext context,
+            ArtiGlobalRuntime runtime = null, string owner = "prompt-document")
         {
             source = source ?? string.Empty;
+            runtime = runtime ?? new ArtiGlobalRuntime();
             ArtiDocumentParseResult document = new ArtiDocumentParser().Parse(source);
             List<ArtiDiagnostic> diagnostics = new List<ArtiDiagnostic>(document.Diagnostics);
             bool preview = context != null && context.IsPreview;
@@ -87,10 +77,11 @@ namespace AdvancedRimTalk.Integration
                 else
                 {
                     string blockSource = block.Body ?? string.Empty;
-                    ArtiExecutionResult execution = GetGlobalRuntime().Execute(
+                    ArtiExecutionResult execution = runtime.Execute(
                         blockSource,
-                        "prompt-document",
-                        executionContext);
+                        owner,
+                        executionContext,
+                        block.BodySpan.StartOffset, block.BodySpan.Line, block.BodySpan.Column);
                     AddDiagnostics(diagnostics, execution.Diagnostics);
                     bool executionFailed = false;
                     foreach (ArtiDiagnostic diagnostic in execution.Diagnostics)

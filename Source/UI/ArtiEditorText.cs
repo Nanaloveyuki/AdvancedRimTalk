@@ -206,6 +206,7 @@ namespace AdvancedRimTalk.UI
             int end = Math.Max(0, Math.Min(position, source.Length));
             int start = Math.Max(0, Math.Min(scanStart, end));
             char quote = '\0';
+            int quoteLength = 1;
             bool escaped = false;
             bool lineComment = false;
             bool blockComment = false;
@@ -243,9 +244,11 @@ namespace AdvancedRimTalk.UI
                     {
                         escaped = true;
                     }
-                    else if (current == quote)
+                    else if (current == quote && (quoteLength == 1
+                        || (index + 2 < end && source[index + 1] == quote && source[index + 2] == quote)))
                     {
                         quote = '\0';
+                        index += quoteLength - 1;
                     }
 
                     continue;
@@ -264,6 +267,8 @@ namespace AdvancedRimTalk.UI
                 else if (current == '"' || current == '\'')
                 {
                     quote = current;
+                    quoteLength = index + 2 < end && source[index + 1] == current && source[index + 2] == current ? 3 : 1;
+                    index += quoteLength - 1;
                 }
             }
 

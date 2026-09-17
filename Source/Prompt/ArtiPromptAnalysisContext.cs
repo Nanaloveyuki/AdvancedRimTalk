@@ -9,7 +9,11 @@ namespace AdvancedRimTalk.Prompt
     {
         private List<string> documents = new List<string>();
         private readonly HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> constants = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> functions = new HashSet<string>(StringComparer.Ordinal);
         public IEnumerable<string> Names => names;
+        public IEnumerable<string> Constants => constants;
+        public IEnumerable<string> Functions => functions;
 
         public bool Refresh(IList<ArtiPromptPart> parts, ArtiPromptPart current)
         {
@@ -23,20 +27,31 @@ namespace AdvancedRimTalk.Prompt
             if (documents.SequenceEqual(previous, StringComparer.Ordinal)) return false;
             documents = previous;
             names.Clear();
+            constants.Clear();
+            functions.Clear();
             foreach (string document in documents)
                 foreach (ArtiCodeBlock block in new ArtiDocumentParser().Parse(document).CodeBlocks)
-                    if (!block.HasErrors) AddDeclarations(block.ParseResult?.Program, names);
+                    if (!block.HasErrors) AddDeclarations(block.ParseResult?.Program, names, constants, functions);
             return true;
         }
 
-        internal static void AddDeclarations(ArtiProgram program, ISet<string> names)
+        internal static void AddDeclarations(ArtiProgram program, ISet<string> names,
+            ISet<string> constants = null, ISet<string> functions = null)
         {
             if (program == null) return;
             foreach (ArtiStatement statement in program.Statements)
             {
-                if (statement is ArtiFunctionDeclarationStatement function) names.Add(function.Name);
+                if (statement is ArtiFunctionDeclarationStatement function)
+                {
+                    names.Add(function.Name);
+                    functions?.Add(function.Name);
+                }
                 else if (statement is ArtiVariableDeclarationStatement constant && constant.IsConst
-                    && constant.Name != "_") names.Add(constant.Name);
+                    && constant.Name != "_")
+                {
+                    names.Add(constant.Name);
+                    constants?.Add(constant.Name);
+                }
             }
         }
     }

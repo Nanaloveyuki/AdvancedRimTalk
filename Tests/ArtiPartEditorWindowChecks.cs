@@ -30,11 +30,22 @@ namespace AdvancedRimTalk.PromptChecks
             if (!context.Refresh(parts, current) || !new HashSet<string>(context.Names).SetEquals(new[] { "mod_status", "title" }))
                 throw new Exception("Part analysis must collect only earlier enabled top-level fn/const names.");
             var parsed = new ArtiDocumentParser().Parse(current.Content).CodeBlocks[0].ParseResult;
-            if (new ArtiAnalyzer(externalGlobals: context.Names).Analyze(parsed.Program).HasErrors)
+            if (new ArtiAnalyzer(externalGlobals: context.Names, externalConstants: context.Constants,
+                externalFunctions: context.Functions).Analyze(parsed.Program).HasErrors)
                 throw new Exception("Earlier function and constant remain unavailable to current part.");
+            if (!context.Constants.SequenceEqual(new[] { "title" }) || !context.Functions.SequenceEqual(new[] { "mod_status" }))
+                throw new Exception("Part analysis lost definition types.");
+            foreach (string code in new[] { "const next = title + '!'", "title = 'changed'", "mod_status = 1" })
+            {
+                var analysis = new ArtiAnalyzer(externalGlobals: context.Names, externalConstants: context.Constants,
+                    externalFunctions: context.Functions).Analyze(new ArtiParser().Parse(code).Program);
+                if (analysis.HasErrors == code.StartsWith("const"))
+                    throw new Exception("Cross-part constant/function metadata: " + code);
+            }
             if (context.Refresh(parts, current)) throw new Exception("Unchanged part context should stay cached.");
             intro.Enabled = false;
-            if (!context.Refresh(parts, current) || context.Names.Any()) throw new Exception("Disabled definitions remained cached.");
+            if (!context.Refresh(parts, current) || context.Names.Any() || context.Constants.Any() || context.Functions.Any())
+                throw new Exception("Disabled definitions remained cached.");
             intro.Enabled = true;
             intro.Content = "{{% fn renamed() { const hidden = 1 }; if true { fn nested() { return 1 } } %}}";
             if (!context.Refresh(parts, current) || !context.Names.SequenceEqual(new[] { "renamed" }))

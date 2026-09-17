@@ -15,6 +15,7 @@ namespace AdvancedRimTalk.PromptChecks
             DetectsExistence();
             ReturnsAndUnpacksValues();
             InterpolatesStrings();
+            ExecutesMultilineSyntax();
             CapturesPromptFunctionLocals();
             ExecutesModulesAndRandomValues();
             ExecutesRuntimeModuleValues();
@@ -24,6 +25,44 @@ namespace AdvancedRimTalk.PromptChecks
             PersistsVariablesBetweenExecutions();
             AllowsReplRedeclarationBetweenExecutions();
             RejectsRuntimeStepOverflow();
+        }
+
+        private static void ExecutesMultilineSyntax()
+        {
+            var cases = new[]
+            {
+                ("core.emit(\"\"\"first\n  single \" quote\nlast\"\"\")", "first\n  single \" quote\nlast"),
+                ("core.emit('''first\n  single ' quote\nlast''')", "first\n  single ' quote\nlast"),
+                ("core.emit('legacy\ntext')", "legacy\ntext"),
+                ("core.emit(\"legacy\ntext\")", "legacy\ntext"),
+                ("core.emit(f'''value: {1 +\n2}\nend''')", "value: 3\nend"),
+                ("core.emit(\"\"\"a\r\nb\rc\"\"\")", "a\nb\nc"),
+                ("core.emit('a\\\nb')", "ab"),
+                ("let n = 1 + \\\r\n2; core.emit(n)", "3"),
+                ("core.emit((\n1\n+\n2 // comment\n))", "3"),
+                ("core.emit(\n[\n1,\n2,\n][\n1\n],\nnewline\n:\nfalse,\n)", "2"),
+                ("core.emit({\nvalue:\n1\n+2,\n}.value)", "3"),
+                ("fn pair(\na,\nb,\n) {\nlet sum = a+b\nreturn (\ntrue,\nf'value {sum}',\n)\n}\nlet ok, text = pair(\n1,\n2,\n)\ncore.emit(f'{ok}:{text}')", "true:value 3"),
+                ("core.emit((\n'hello '\nf'{1 + 2}'\n'!'\n))", "hello 3!"),
+                ("if true {\nlet n = 1\nn += 2\ncore.emit(n)\n}", "3")
+            };
+            foreach (var test in cases)
+            {
+                var result = new ArtiExecutor().Execute(test.Item1);
+                Assert(!result.HasErrors && result.Output == test.Item2,
+                    "multiline: " + test.Item1 + " => " + result.Output + "; " + string.Join(";", result.Diagnostics));
+            }
+            foreach (string source in new[] { "core.emit('''missing)", "core.emit((1 +\n))", "fn bad(\nx,\n { return x }" })
+                Assert(new ArtiExecutor().Execute(source).HasErrors, "malformed multiline syntax rejected");
+
+            var repl = new ArtiExecutor();
+            var context = new ArtiExecutionContext(options: new ArtiExecutionOptions { PersistVariables = true, AllowGlobalRedeclare = true });
+            Assert(!repl.Execute("const base = 1", context).HasErrors, "REPL constant declaration");
+            Assert(!repl.Execute("const next = base + 1", context).HasErrors, "REPL imported constant expression");
+            Assert(repl.Execute("base = 2", context).HasErrors, "REPL imported constant assignment");
+            Assert(!repl.Execute("let base = 3", context).HasErrors, "REPL replaces constant with mutable variable");
+            Assert(!repl.Execute("base = 4", context).HasErrors, "REPL replacement is mutable");
+            Assert(repl.Execute("const invalid = base", context).HasErrors, "REPL replacement loses constant metadata");
         }
 
         private static void CapturesPromptFunctionLocals()

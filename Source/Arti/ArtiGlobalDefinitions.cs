@@ -20,6 +20,11 @@ namespace AdvancedRimTalk.Arti
             }
         }
 
+        internal bool TryGet(string name, out ArtiGlobalDefinition definition)
+        {
+            lock (sync) return definitions.TryGetValue(name, out definition);
+        }
+
         internal void Register(IList<ArtiGlobalDefinition> batch)
         {
             lock (sync)

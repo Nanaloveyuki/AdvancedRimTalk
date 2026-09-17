@@ -248,7 +248,7 @@ namespace AdvancedRimTalk.UI
             inputAnalysis = intelligence.AnalyzeCode(
                 input,
                 session.GetGlobalNames(),
-                true);
+                true, session.GetConstantNames(), session.GetFunctionNames());
             analyzedInput = input;
         }
 
@@ -566,7 +566,7 @@ namespace AdvancedRimTalk.UI
             ArtiEditorAnalysis sourceAnalysis = intelligence.AnalyzeCode(
                 source,
                 session.GetGlobalNames(),
-                true);
+                true, session.GetConstantNames(), session.GetFunctionNames());
             try
             {
                 resultText = FormatResult(session.Execute(source));
@@ -949,6 +949,18 @@ namespace AdvancedRimTalk.UI
         {
             EnsureInitialized();
             return context.Globals.Keys;
+        }
+
+        public IEnumerable<string> GetConstantNames()
+        {
+            EnsureInitialized();
+            return executor.GetConstantNames(context);
+        }
+
+        public IEnumerable<string> GetFunctionNames()
+        {
+            EnsureInitialized();
+            return executor.GetFunctionNames(context);
         }
 
         public void Reset()

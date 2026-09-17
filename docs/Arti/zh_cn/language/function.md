@@ -36,6 +36,28 @@ core.emit(first("kept", "ignored", "ignored"))
 
 `_` 不绑定可读取的变量，也不能用作命名实参。
 
+参数声明、调用参数、括号表达式、数组和对象字面量内部允许换行及 `//` 注释，列表允许末尾逗号：
+
+```arti
+fn describe(
+    name,
+    mood,
+) {
+    return (
+        name + " / "
+        + mood
+    )
+}
+core.emit(describe(
+    name: "Alice",
+    mood: "calm",
+))
+```
+
+这些表达式内部的换行不结束语句。函数体和控制流花括号中的换行仍分隔语句。
+括号之外也可以用反斜杠紧接换行来续行；反斜杠后不能附加空格或注释。
+Arti 仍使用 `fn`、花括号和 `//`，不引入 Python 的缩进语法、`#` 注释或默认参数。
+
 ## 返回值
 
 使用 [`return`](return.md) 返回一个值，或用逗号返回多个值：
