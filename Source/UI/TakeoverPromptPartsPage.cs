@@ -37,6 +37,8 @@ namespace AdvancedRimTalk.UI
         private GUIStyle contentSyntaxStyle;
         private float contentLineAdvance;
         private bool contentStylesInitialized;
+        private string measuredContent;
+        private float measuredContentWidth;
 
         public void Draw(Rect inRect)
         {
@@ -380,7 +382,16 @@ namespace AdvancedRimTalk.UI
                                 - contentInputStyle.padding.top
                                 - contentInputStyle.padding.bottom));
                     ArtiSyntaxRendering.DrawSyntax(
-                        syntaxRect, content, contentAnalysis, contentSyntaxStyle, contentLineAdvance);
+                        syntaxRect,
+                        content,
+                        contentAnalysis,
+                        contentSyntaxStyle,
+                        contentLineAdvance,
+                        new Rect(
+                            contentScrollPosition.x,
+                            contentScrollPosition.y,
+                            editorRect.width,
+                            editorRect.height));
                     GUI.SetNextControlName("AdvancedRimTalk.PromptParts.Content");
                     string edited = GUI.TextArea(
                         new Rect(0f, 0f, contentWidth, contentHeight),
@@ -432,6 +443,12 @@ namespace AdvancedRimTalk.UI
 
         private float GetMaxContentLineWidth(string content)
         {
+            if (measuredContent != null
+                && string.Equals(measuredContent, content, StringComparison.Ordinal))
+            {
+                return measuredContentWidth;
+            }
+
             float width = 0f;
             int lineStart = 0;
             while (lineStart <= content.Length)
@@ -453,6 +470,8 @@ namespace AdvancedRimTalk.UI
                 lineStart = lineEnd + 1;
             }
 
+            measuredContent = content;
+            measuredContentWidth = width;
             return width;
         }
 

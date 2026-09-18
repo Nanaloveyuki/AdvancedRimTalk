@@ -37,6 +37,43 @@ namespace AdvancedRimTalk.PromptChecks
                     }
                 }
             }
+
+            CheckVisibleRangeCulling(style);
+        }
+
+        private static void CheckVisibleRangeCulling(GUIStyle style)
+        {
+            const int lineAdvance = 20;
+            const int lineCount = 80;
+            var lines = new string[lineCount];
+            for (int i = 0; i < lineCount; i++)
+                lines[i] = "L" + i.ToString("00");
+            string source = string.Join("\n", lines);
+            var visible = new Rect(0, 40 * lineAdvance, 120, 2 * lineAdvance);
+            var analysis = new ArtiEditorAnalysis();
+            analysis.Highlights.Add(new ArtiHighlightSpan(0, source.Length, ArtiSyntaxRole.String));
+
+            GUI.Runs.Clear();
+            ArtiSyntaxRendering.DrawSyntax(new Rect(0, 0, 800, lineCount * lineAdvance), source, analysis, style, lineAdvance, visible);
+
+            ArtiSyntaxRendering.GetVisibleLineRange(0, lineAdvance, lineCount, visible, out int firstLine, out int lastExclusive);
+            if (firstLine <= 0 || lastExclusive >= lineCount)
+                throw new Exception("Visible syntax range must stay smaller than the whole prompt.");
+            var drawn = new HashSet<int>();
+            foreach (var run in GUI.Runs)
+            {
+                int line = (int)(run.Rect.y / lineAdvance);
+                drawn.Add(line);
+                if (line < firstLine || line >= lastExclusive)
+                    throw new Exception("Syntax drawing colored off-screen prompt lines.");
+                if (run.Text != lines[line])
+                    throw new Exception("Visible syntax drawing dropped a spanning highlight.");
+            }
+
+            if (!drawn.Contains(40) || !drawn.Contains(41))
+                throw new Exception("Syntax drawing skipped visible prompt lines.");
+            if (drawn.Contains(0) || drawn.Contains(lineCount - 1))
+                throw new Exception("Syntax drawing colored the whole prompt instead of the visible extension.");
         }
 
         private static void CheckRichText(string source, string rendered)

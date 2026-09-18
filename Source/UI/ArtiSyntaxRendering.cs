@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using AdvancedRimTalk.Arti;
 using UnityEngine;
@@ -8,6 +9,10 @@ namespace AdvancedRimTalk.UI
 {
     internal static class ArtiSyntaxRendering
     {
+        internal const int ExtraVisibleLines = 16;
+        private const float MinExtraHorizontalPixels = 64f;
+        private static readonly Rect UnboundedVisibleRect = new Rect(0f, 0f, 1e7f, 1e7f);
+
         private static readonly Color MarkerColor = new Color(0.95f, 0.68f, 0.3f);
         private static readonly Color CommentColor = new Color(0.42f, 0.55f, 0.47f);
         private static readonly Color KeywordColor = new Color(0.83f, 0.62f, 0.96f);
@@ -44,50 +49,218 @@ namespace AdvancedRimTalk.UI
         public static void DrawSyntax(Rect rect, string source, ArtiEditorAnalysis analysis,
             GUIStyle style, float lineAdvance)
         {
+            DrawSyntax(rect, source, analysis, style, lineAdvance, UnboundedVisibleRect);
+        }
+
+        public static void DrawSyntax(Rect rect, string source, ArtiEditorAnalysis analysis,
+            GUIStyle style, float lineAdvance, Rect visibleRect)
+        {
             source = ArtiEditorText.NormalizeLineEndings(source);
+            if (style == null || lineAdvance <= 0f || source.Length == 0)
+            {
+                return;
+            }
+
+            GetVisibleYRange(visibleRect, lineAdvance, out float yMin, out float yMax);
+            GetVisibleXRange(visibleRect, out float xMin, out float xMax);
+
+            IList<ArtiHighlightSpan> highlights = analysis == null ? null : analysis.Highlights;
+            int highlightCount = highlights == null ? 0 : highlights.Count;
+            int highlightIndex = 0;
             int lineStart = 0;
             float y = rect.y;
-            while (lineStart < source.Length)
+            while (lineStart < source.Length && y + lineAdvance <= yMin)
+            {
+                int skippedEnd = ArtiEditorText.GetLineEnd(source, lineStart);
+                highlightIndex = AdvanceHighlightIndex(
+                    highlights, highlightIndex, highlightCount, skippedEnd);
+                lineStart = skippedEnd + 1;
+                y += lineAdvance;
+            }
+
+            while (lineStart < source.Length && y < yMax)
             {
                 int lineEnd = ArtiEditorText.GetLineEnd(source, lineStart);
-                int position = lineStart;
-                if (analysis != null && analysis.Highlights != null)
+                highlightIndex = DrawSyntaxLine(
+                    rect.x,
+                    y,
+                    source,
+                    lineStart,
+                    lineEnd,
+                    highlights,
+                    highlightIndex,
+                    highlightCount,
+                    style,
+                    lineAdvance,
+                    xMin,
+                    xMax);
+                if (lineEnd >= source.Length)
                 {
-                    foreach (ArtiHighlightSpan highlight in analysis.Highlights)
-                    {
-                        if (highlight == null || highlight.EndOffset <= position) continue;
-                        if (highlight.StartOffset >= lineEnd) break;
-                        int start = Math.Max(position, highlight.StartOffset);
-                        int end = Math.Min(lineEnd, highlight.EndOffset);
-                        if (end <= start) continue;
-                        DrawRun(rect.x, y, source, lineStart, position, start, IdentifierColor, style, lineAdvance);
-                        DrawRun(rect.x, y, source, lineStart, start, end, GetSyntaxColor(highlight.Role), style, lineAdvance);
-                        position = end;
-                    }
+                    break;
                 }
-                DrawRun(rect.x, y, source, lineStart, position, lineEnd, IdentifierColor, style, lineAdvance);
+
                 lineStart = lineEnd + 1;
                 y += lineAdvance;
             }
         }
 
-        private static void DrawRun(float x, float y, string source, int lineStart, int start, int end,
-            Color color, GUIStyle style, float lineAdvance)
+        internal static void GetVisibleLineRange(
+            float originY,
+            float lineAdvance,
+            int lineCount,
+            Rect visibleRect,
+            out int firstLine,
+            out int lastExclusive)
         {
-            if (end <= start) return;
+            if (lineAdvance <= 0f || lineCount <= 0)
+            {
+                firstLine = 0;
+                lastExclusive = 0;
+                return;
+            }
+
+            GetVisibleYRange(visibleRect, lineAdvance, out float yMin, out float yMax);
+            int first = (int)Math.Floor((yMin - originY) / lineAdvance);
+            int last = (int)Math.Ceiling((yMax - originY) / lineAdvance);
+            if (first < 0)
+            {
+                first = 0;
+            }
+
+            if (last > lineCount)
+            {
+                last = lineCount;
+            }
+
+            if (first > last)
+            {
+                first = last;
+            }
+
+            firstLine = first;
+            lastExclusive = last;
+        }
+
+        private static int DrawSyntaxLine(
+            float x,
+            float y,
+            string source,
+            int lineStart,
+            int lineEnd,
+            IList<ArtiHighlightSpan> highlights,
+            int highlightIndex,
+            int highlightCount,
+            GUIStyle style,
+            float lineAdvance,
+            float xMin,
+            float xMax)
+        {
+            int position = lineStart;
+            int index = highlightIndex;
+            if (highlights != null)
+            {
+                for (; index < highlightCount; index++)
+                {
+                    ArtiHighlightSpan highlight = highlights[index];
+                    if (highlight == null || highlight.EndOffset <= position)
+                    {
+                        continue;
+                    }
+
+                    if (highlight.StartOffset >= lineEnd)
+                    {
+                        break;
+                    }
+
+                    int start = Math.Max(position, highlight.StartOffset);
+                    int end = Math.Min(lineEnd, highlight.EndOffset);
+                    if (end <= start)
+                    {
+                        continue;
+                    }
+
+                    x += DrawRun(x, y, source, position, start, IdentifierColor, style, lineAdvance, xMin, xMax);
+                    x += DrawRun(x, y, source, start, end, GetSyntaxColor(highlight.Role), style, lineAdvance, xMin, xMax);
+                    position = end;
+                }
+            }
+
+            DrawRun(x, y, source, position, lineEnd, IdentifierColor, style, lineAdvance, xMin, xMax);
+            return AdvanceHighlightIndex(highlights, highlightIndex, highlightCount, lineEnd);
+        }
+
+        private static float DrawRun(float x, float y, string source, int start, int end,
+            Color color, GUIStyle style, float lineAdvance, float xMin, float xMax)
+        {
+            if (end <= start)
+            {
+                return 0f;
+            }
+
             string value = source.Substring(start, end - start);
-            float offset = style.CalcSize(new GUIContent(source.Substring(lineStart, start - lineStart))).x;
             float width = style.CalcSize(new GUIContent(value)).x;
+            if (x + width < xMin || x > xMax)
+            {
+                return width;
+            }
+
             Color previous = GUI.color;
             try
             {
                 GUI.color = color;
-                GUI.Label(new Rect(x + offset, y, Mathf.Max(1f, width + 2f), lineAdvance), value, style);
+                GUI.Label(new Rect(x, y, Mathf.Max(1f, width + 2f), lineAdvance), value, style);
             }
             finally
             {
                 GUI.color = previous;
             }
+
+            return width;
+        }
+
+        private static void GetVisibleYRange(Rect visibleRect, float lineAdvance, out float yMin, out float yMax)
+        {
+            float extra = lineAdvance * ExtraVisibleLines;
+            if (visibleRect.height > extra)
+            {
+                extra = visibleRect.height;
+            }
+
+            yMin = visibleRect.y - extra;
+            yMax = visibleRect.y + visibleRect.height + extra;
+        }
+
+        private static void GetVisibleXRange(Rect visibleRect, out float xMin, out float xMax)
+        {
+            float extra = visibleRect.width;
+            if (extra < MinExtraHorizontalPixels)
+            {
+                extra = MinExtraHorizontalPixels;
+            }
+
+            xMin = visibleRect.x - extra;
+            xMax = visibleRect.x + visibleRect.width + extra;
+        }
+
+        private static int AdvanceHighlightIndex(
+            IList<ArtiHighlightSpan> highlights,
+            int highlightIndex,
+            int highlightCount,
+            int lineEnd)
+        {
+            int next = highlightIndex;
+            while (next < highlightCount)
+            {
+                ArtiHighlightSpan span = highlights[next];
+                if (span != null && span.EndOffset > lineEnd)
+                {
+                    break;
+                }
+
+                next++;
+            }
+
+            return next;
         }
 
         public static string ToRichText(string source, ArtiEditorAnalysis analysis)

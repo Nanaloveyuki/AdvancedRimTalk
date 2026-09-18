@@ -22,14 +22,7 @@ namespace AdvancedRimTalk.UI
 
         private static readonly Color MarkerColor = new Color(0.95f, 0.68f, 0.3f);
         private static readonly Color CommentColor = new Color(0.42f, 0.55f, 0.47f);
-        private static readonly Color KeywordColor = new Color(0.83f, 0.62f, 0.96f);
-        private static readonly Color StringColor = new Color(0.9f, 0.73f, 0.43f);
         private static readonly Color NumberColor = new Color(0.48f, 0.78f, 0.91f);
-        private static readonly Color BooleanColor = new Color(0.82f, 0.58f, 0.94f);
-        private static readonly Color BuiltinColor = new Color(0.38f, 0.77f, 0.84f);
-        private static readonly Color IdentifierColor = new Color(0.84f, 0.87f, 0.92f);
-        private static readonly Color OperatorColor = new Color(0.78f, 0.81f, 0.86f);
-        private static readonly Color PunctuationColor = new Color(0.62f, 0.69f, 0.76f);
         private static readonly Color InvalidColor = new Color(1f, 0.35f, 0.35f);
 
         private readonly ArtiEditorIntelligence intelligence = new ArtiEditorIntelligence();
@@ -60,6 +53,9 @@ namespace AdvancedRimTalk.UI
         private GUIStyle diagnosticStyle;
         private float lineAdvance;
         private bool stylesInitialized;
+        private Vector2 editorViewportSize;
+        private string measuredSource;
+        private float measuredMaxLineWidth;
         private readonly ArtiPromptPart boundPart;
 
         public ArtiCodeEditorPage(ArtiPromptPart part = null)
@@ -169,6 +165,7 @@ namespace AdvancedRimTalk.UI
                 panel.y + 2f,
                 Mathf.Max(1f, panel.width - 4f),
                 Mathf.Max(1f, panel.height - 4f));
+            editorViewportSize = new Vector2(viewport.width, viewport.height);
 
             int lineCount = ArtiEditorText.GetLineCount(source);
             float gutterWidth = Mathf.Max(
@@ -260,7 +257,14 @@ namespace AdvancedRimTalk.UI
         private void DrawLineNumbers(float gutterWidth)
         {
             int lineCount = ArtiEditorText.GetLineCount(source);
-            for (int line = 0; line < lineCount; line++)
+            ArtiSyntaxRendering.GetVisibleLineRange(
+                inputStyle.padding.top,
+                lineAdvance,
+                lineCount,
+                VisibleEditorRect(),
+                out int firstLine,
+                out int lastExclusive);
+            for (int line = firstLine; line < lastExclusive; line++)
             {
                 Rect lineRect = new Rect(
                     4f,
@@ -279,83 +283,17 @@ namespace AdvancedRimTalk.UI
 
         private void DrawSyntax(float gutterWidth)
         {
-            int lineCount = ArtiEditorText.GetLineCount(source);
-            int lineStart = 0;
-            for (int line = 0; line < lineCount; line++)
-            {
-                int lineEnd = ArtiEditorText.GetLineEnd(source, lineStart);
-                DrawSyntaxLine(
-                    lineStart,
-                    lineEnd,
-                    gutterWidth,
-                    line * lineAdvance + inputStyle.padding.top);
-                lineStart = lineEnd < source.Length ? lineEnd + 1 : source.Length;
-            }
-        }
-
-        private void DrawSyntaxLine(int lineStart, int lineEnd, float gutterWidth, float y)
-        {
-            float x = gutterWidth + inputStyle.padding.left;
-            int position = lineStart;
-            if (analysis != null)
-            {
-                foreach (ArtiHighlightSpan highlight in analysis.Highlights)
-                {
-                    if (highlight.EndOffset <= lineStart)
-                    {
-                        continue;
-                    }
-
-                    if (highlight.StartOffset >= lineEnd)
-                    {
-                        break;
-                    }
-
-                    int segmentStart = Math.Max(position, Math.Max(lineStart, highlight.StartOffset));
-                    int segmentEnd = Math.Min(lineEnd, highlight.EndOffset);
-                    if (segmentEnd <= segmentStart)
-                    {
-                        continue;
-                    }
-
-                    if (segmentStart > position)
-                    {
-                        string plain = source.Substring(position, segmentStart - position);
-                        x += DrawTextRun(plain, x, y, IdentifierColor);
-                    }
-
-                    string text = source.Substring(segmentStart, segmentEnd - segmentStart);
-                    x += DrawTextRun(text, x, y, GetSyntaxColor(highlight.Role));
-                    position = segmentEnd;
-                }
-            }
-
-            if (position < lineEnd)
-            {
-                DrawTextRun(
-                    source.Substring(position, lineEnd - position),
-                    x,
-                    y,
-                    IdentifierColor);
-            }
-        }
-
-        private float DrawTextRun(string text, float x, float y, Color color)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return 0f;
-            }
-
-            Vector2 size = syntaxStyle.CalcSize(new GUIContent(text));
-            Color previous = GUI.color;
-            GUI.color = color;
-            GUI.Label(
-                new Rect(x, y, Mathf.Max(1f, size.x + 2f), lineAdvance),
-                text,
-                syntaxStyle);
-            GUI.color = previous;
-            return size.x;
+            ArtiSyntaxRendering.DrawSyntax(
+                new Rect(
+                    gutterWidth + inputStyle.padding.left,
+                    inputStyle.padding.top,
+                    1f,
+                    1f),
+                source,
+                analysis,
+                syntaxStyle,
+                lineAdvance,
+                VisibleEditorRect());
         }
 
         private void DrawDiagnosticDecorations(float gutterWidth)
@@ -365,6 +303,13 @@ namespace AdvancedRimTalk.UI
                 return;
             }
 
+            ArtiSyntaxRendering.GetVisibleLineRange(
+                inputStyle.padding.top,
+                lineAdvance,
+                ArtiEditorText.GetLineCount(source),
+                VisibleEditorRect(),
+                out int firstLine,
+                out int lastExclusive);
             foreach (ArtiDiagnostic diagnostic in analysis.Diagnostics)
             {
                 if (diagnostic == null)
@@ -373,6 +318,11 @@ namespace AdvancedRimTalk.UI
                 }
 
                 int start = Math.Max(0, Math.Min(diagnostic.Span.StartOffset, source.Length));
+                int line = ArtiEditorText.GetLineIndex(source, start);
+                if (line < firstLine || line >= lastExclusive)
+                {
+                    continue;
+                }
                 int end = Math.Max(start, Math.Min(diagnostic.Span.EndOffset, source.Length));
                 int lineStart = ArtiEditorText.GetLineStart(source, start);
                 int lineEnd = ArtiEditorText.GetLineEnd(source, start);
@@ -609,6 +559,15 @@ namespace AdvancedRimTalk.UI
             return inputStyle.padding.top + Math.Max(0, line) * lineAdvance;
         }
 
+        private Rect VisibleEditorRect()
+        {
+            return new Rect(
+                editorScroll.x,
+                editorScroll.y,
+                Mathf.Max(1f, editorViewportSize.x),
+                Mathf.Max(1f, editorViewportSize.y));
+        }
+
         private static void RemoveBackgrounds(GUIStyle style)
         {
             style.normal.background = null;
@@ -635,6 +594,12 @@ namespace AdvancedRimTalk.UI
 
         private float GetMaxLineWidth()
         {
+            if (measuredSource != null
+                && string.Equals(measuredSource, source, StringComparison.Ordinal))
+            {
+                return measuredMaxLineWidth;
+            }
+
             float width = 0f;
             int lineStart = 0;
             while (lineStart <= source.Length)
@@ -651,6 +616,8 @@ namespace AdvancedRimTalk.UI
                 lineStart = lineEnd + 1;
             }
 
+            measuredSource = source;
+            measuredMaxLineWidth = width;
             return width;
         }
 
@@ -659,35 +626,6 @@ namespace AdvancedRimTalk.UI
             return string.IsNullOrEmpty(text)
                 ? 0f
                 : syntaxStyle.CalcSize(new GUIContent(text)).x;
-        }
-
-        private static Color GetSyntaxColor(ArtiSyntaxRole role)
-        {
-            switch (role)
-            {
-                case ArtiSyntaxRole.Marker:
-                    return MarkerColor;
-                case ArtiSyntaxRole.Comment:
-                    return CommentColor;
-                case ArtiSyntaxRole.Keyword:
-                    return KeywordColor;
-                case ArtiSyntaxRole.String:
-                    return StringColor;
-                case ArtiSyntaxRole.Number:
-                    return NumberColor;
-                case ArtiSyntaxRole.Boolean:
-                    return BooleanColor;
-                case ArtiSyntaxRole.Builtin:
-                    return BuiltinColor;
-                case ArtiSyntaxRole.Operator:
-                    return OperatorColor;
-                case ArtiSyntaxRole.Punctuation:
-                    return PunctuationColor;
-                case ArtiSyntaxRole.Invalid:
-                    return InvalidColor;
-                default:
-                    return IdentifierColor;
-            }
         }
 
         private static Color GetDiagnosticColor(ArtiDiagnosticSeverity severity)
