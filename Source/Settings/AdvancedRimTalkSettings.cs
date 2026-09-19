@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AdvancedRimTalk.Arti;
 using AdvancedRimTalk.Prompt;
 using RimTalk.Prompt;
 using Verse;
@@ -35,6 +36,7 @@ namespace AdvancedRimTalk.Settings
         public string ResponseWhitelistRegex = string.Empty;
         public string ResponseBlacklistRegex = string.Empty;
         public string ResponseModelIds = string.Empty;
+        public List<ArtiOnceRecord> OnceRecords = new List<ArtiOnceRecord>();
 
         public override void ExposeData()
         {
@@ -59,6 +61,9 @@ namespace AdvancedRimTalk.Settings
             Scribe_Values.Look(ref ResponseWhitelistRegex, "responseWhitelistRegex", string.Empty);
             Scribe_Values.Look(ref ResponseBlacklistRegex, "responseBlacklistRegex", string.Empty);
             Scribe_Values.Look(ref ResponseModelIds, "responseModelIds", string.Empty);
+            Scribe_Collections.Look(ref OnceRecords, "onceRecords", LookMode.Deep);
+            if (OnceRecords == null) OnceRecords = new List<ArtiOnceRecord>();
+            OnceRecords.RemoveAll(record => record == null || string.IsNullOrWhiteSpace(record.Id));
             if (float.IsNaN(IgnoreIntervalSeconds) || float.IsInfinity(IgnoreIntervalSeconds) || IgnoreIntervalSeconds < 0)
                 IgnoreIntervalSeconds = 0;
             EnsureTakeoverPromptParts();

@@ -100,4 +100,19 @@
   <AdvancedRimTalk.Response.IntervalSeconds>间隔秒数</AdvancedRimTalk.Response.IntervalSeconds>
   <AdvancedRimTalk.Response.ModelIgnore>按模型忽略</AdvancedRimTalk.Response.ModelIgnore>
   <AdvancedRimTalk.Response.ModelIds>模型 ID（每行一个）</AdvancedRimTalk.Response.ModelIds>
+  <AdvancedRimTalk.Once.Title>一次性执行记录</AdvancedRimTalk.Once.Title>
+  <AdvancedRimTalk.Once.Open>一次性执行记录</AdvancedRimTalk.Once.Open>
+  <AdvancedRimTalk.Once.Help>core.once 成功执行后会写入这条记录。删除记录后，相同 id 会在下次提示词生成或 REPL 中再次执行。预览不会写入记录，也不会执行一次性函数。</AdvancedRimTalk.Once.Help>
+  <AdvancedRimTalk.Once.Empty>没有一次性执行记录。</AdvancedRimTalk.Once.Empty>
+  <AdvancedRimTalk.Once.Delete>删除</AdvancedRimTalk.Once.Delete>
+  <AdvancedRimTalk.Once.DeleteConfirm>删除一次性记录“{0}”？下次将重新执行。</AdvancedRimTalk.Once.DeleteConfirm>
+  <AdvancedRimTalk.Once.Clear>全部清空</AdvancedRimTalk.Once.Clear>
+  <AdvancedRimTalk.Once.ClearConfirm>清空全部一次性执行记录？已记录的 id 都会再次执行。</AdvancedRimTalk.Once.ClearConfirm>
+  <AdvancedRimTalk.Once.CurrentWorldOnly>只看当前世界</AdvancedRimTalk.Once.CurrentWorldOnly>
+  <AdvancedRimTalk.Once.Global>全局</AdvancedRimTalk.Once.Global>
+  <AdvancedRimTalk.Once.OwnerRepl>Arti REPL</AdvancedRimTalk.Once.OwnerRepl>
+  <AdvancedRimTalk.Once.OwnerPrompt>提示词</AdvancedRimTalk.Once.OwnerPrompt>
+  <AdvancedRimTalk.Once.Entry>{0}  ·  {1}
+世界：{2}    动作：{3}
+说明：{4}    来源：{5}</AdvancedRimTalk.Once.Entry>
 </LanguageData>

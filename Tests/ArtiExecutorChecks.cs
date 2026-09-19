@@ -25,6 +25,7 @@ namespace AdvancedRimTalk.PromptChecks
             PersistsVariablesBetweenExecutions();
             AllowsReplRedeclarationBetweenExecutions();
             RejectsRuntimeStepOverflow();
+            RunsOncePerStoredId();
         }
 
         private static void ExecutesMultilineSyntax()
@@ -450,6 +451,40 @@ core.emit(replaced)
             Assert(result.HasErrors, "executor stops an unbounded loop");
             Assert(result.Diagnostics[0].Code == "ART4000", "runtime errors use the runtime diagnostic code");
             Assert(result.Output.Contains("Advanced RimTalk Arti error"), "runtime errors remain visible");
+        }
+
+        private static void RunsOncePerStoredId()
+        {
+            var store = new MemoryArtiOnceStore();
+            var context = new ArtiExecutionContext { OnceStore = store, OnceScope = "world:a", OnceOwner = "test" };
+            string source = "let n = 0\nfn bump() { n += 1 }\ncore.emit(core.once(\"seed\", bump))\ncore.emit(core.once(\"seed\", bump))\ncore.emit(n)\ncore.emit(core.once.done(\"seed\"))";
+            ArtiExecutionResult first = new ArtiExecutor().Execute(source, context);
+            Assert(!first.HasErrors && first.Output == "truefalse1true", "once runs the first time and skips later: " + first.Output);
+            Assert(store.Snapshot().Count == 1 && store.Snapshot()[0].Action == "bump", "once stores the function name");
+
+            var preview = new ArtiExecutionContext { OnceStore = store, OnceScope = "world:a", OncePreview = true };
+            ArtiExecutionResult previewResult = new ArtiExecutor().Execute(
+                "let n = 0\nfn bump() { n += 1 }\ncore.emit(core.once(\"other\", bump))\ncore.emit(n)", preview);
+            Assert(!previewResult.HasErrors && previewResult.Output == "false0", "preview skips once without running: " + previewResult.Output);
+            Assert(store.Snapshot().Count == 1, "preview does not record");
+
+            var otherWorld = new ArtiExecutionContext { OnceStore = store, OnceScope = "world:b" };
+            ArtiExecutionResult secondWorld = new ArtiExecutor().Execute(
+                "fn bump() { }\ncore.emit(core.once(\"seed\", bump))", otherWorld);
+            Assert(!secondWorld.HasErrors && secondWorld.Output == "true", "once is scoped per world");
+
+            store.Remove("world:a", "seed");
+            ArtiExecutionResult rerun = new ArtiExecutor().Execute(
+                "fn bump() { }\ncore.emit(core.once(\"seed\", bump))", context);
+            Assert(!rerun.HasErrors && rerun.Output == "true", "deleting a record re-enables once");
+
+            ArtiExecutionResult failed = new ArtiExecutor().Execute(
+                "fn boom() { return 1 / 0 }\ncore.once(\"broken\", boom)", new ArtiExecutionContext { OnceStore = store, OnceScope = "world:a" });
+            Assert(failed.HasErrors && !store.Contains("world:a", "broken"), "failed once calls are not recorded");
+
+            ArtiExecutionResult missingId = new ArtiExecutor().Execute(
+                "fn bump() { }\ncore.once(\"\", bump)", new ArtiExecutionContext { OnceStore = store });
+            Assert(missingId.HasErrors, "empty once id is rejected");
         }
 
         private static void PersistsVariablesBetweenExecutions()

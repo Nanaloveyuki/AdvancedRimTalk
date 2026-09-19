@@ -72,6 +72,7 @@
     <Compile Include="..\Source\Arti\ArtiParser.cs" Link="ArtiParser.cs" />
     <Compile Include="..\Source\Arti\ArtiAnalyzer.cs" Link="ArtiAnalyzer.cs" />
     <Compile Include="..\Source\Arti\ArtiExecutor.cs" Link="ArtiExecutor.cs" />
+    <Compile Include="..\Source\Arti\ArtiOnce.cs" Link="ArtiOnce.cs" />
     <Compile Include="..\Source\Arti\ArtiStringFunctions.cs" Link="ArtiStringFunctions.cs" />
     <Compile Include="..\Source\Arti\ArtiSymbols.cs" Link="ArtiSymbols.cs" />
     <Compile Include="..\Source\Arti\ArtiDocumentParser.cs" Link="ArtiDocumentParser.cs" />

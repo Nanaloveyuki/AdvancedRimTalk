@@ -12,6 +12,10 @@ Advanced RimTalk 的设置决定 Arti 如何接入 RimTalk。
 
 如果关闭它，`{{% ... %}}` 正式 Arti 仍然可以使用，但 `art.*` 不再由 Advanced RimTalk 展开。
 
+## 一次性执行记录
+
+`core.once` 的记录写在 Mod 设置中。IrisMenus 提供「一次性执行记录」子页面；没有 IrisMenus 时，主设置页有同名按钮。删除记录后，对应 id 会再次执行。记录按世界区分，新开档不会沿用上一个殖民地的一次性状态。
+
 ## 接管文档
 
 选择接管模式时，可以编辑接管 Arti 文档。它是实际的 system 内容来源：

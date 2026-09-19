@@ -87,6 +87,8 @@ Experimental context execution is off by default. When enabled in a running game
 
 Active previews use isolated Arti/Scriban session variables and reject the bridge's explicit memory mutation calls. This is not a sandbox for arbitrary native Scriban or third-party callbacks, which is why context execution remains experimental. No model request is sent by the preview action.
 
+`core.once(id, action)` runs a zero-argument function once per world and stores the record in mod settings. IrisMenus has a One-time runs subpage; the main settings page exposes the same list when IrisMenus is absent. Deleting a record lets that id run again. Prompt previews skip both the action and the write.
+
 ## Arti language design
 
 The formal language and Prompt document design is maintained in [`docs/Arti/zh_cn/index.md`](docs/Arti/zh_cn/index.md). `tmp/dsl.md` remains an experimental sketch. The RimWorld runtime provider exposes game data under `core.game`, `core.world`, `core.maps`, `core.pawns`, `core.factions`, `core.settlements`, `core.world_objects`, `core.mods`, `core.defs`, `core.query`, and `core.find`. When RimTalk - Expand Memory is installed and active, Arti can import the optional `memory` module for its reflected memory and common-knowledge API.

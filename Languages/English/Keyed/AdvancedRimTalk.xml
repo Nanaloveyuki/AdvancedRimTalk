@@ -100,4 +100,19 @@
   <AdvancedRimTalk.Response.IntervalSeconds>Interval seconds</AdvancedRimTalk.Response.IntervalSeconds>
   <AdvancedRimTalk.Response.ModelIgnore>Ignore by model</AdvancedRimTalk.Response.ModelIgnore>
   <AdvancedRimTalk.Response.ModelIds>Model IDs (one per line)</AdvancedRimTalk.Response.ModelIds>
+  <AdvancedRimTalk.Once.Title>One-time runs</AdvancedRimTalk.Once.Title>
+  <AdvancedRimTalk.Once.Open>One-time runs</AdvancedRimTalk.Once.Open>
+  <AdvancedRimTalk.Once.Help>core.once writes a record after a successful run. Delete a record to let the same id run again on the next prompt or REPL execution. Previews do not run the action or write a record.</AdvancedRimTalk.Once.Help>
+  <AdvancedRimTalk.Once.Empty>No one-time run records.</AdvancedRimTalk.Once.Empty>
+  <AdvancedRimTalk.Once.Delete>Delete</AdvancedRimTalk.Once.Delete>
+  <AdvancedRimTalk.Once.DeleteConfirm>Delete one-time record "{0}"? It will run again next time.</AdvancedRimTalk.Once.DeleteConfirm>
+  <AdvancedRimTalk.Once.Clear>Clear all</AdvancedRimTalk.Once.Clear>
+  <AdvancedRimTalk.Once.ClearConfirm>Clear every one-time run record? Recorded ids will run again.</AdvancedRimTalk.Once.ClearConfirm>
+  <AdvancedRimTalk.Once.CurrentWorldOnly>Current world only</AdvancedRimTalk.Once.CurrentWorldOnly>
+  <AdvancedRimTalk.Once.Global>Global</AdvancedRimTalk.Once.Global>
+  <AdvancedRimTalk.Once.OwnerRepl>Arti REPL</AdvancedRimTalk.Once.OwnerRepl>
+  <AdvancedRimTalk.Once.OwnerPrompt>Prompt</AdvancedRimTalk.Once.OwnerPrompt>
+  <AdvancedRimTalk.Once.Entry>{0}  ·  {1}
+World: {2}    Action: {3}
+Note: {4}    Source: {5}</AdvancedRimTalk.Once.Entry>
 </LanguageData>

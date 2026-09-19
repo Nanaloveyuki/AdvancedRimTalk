@@ -58,7 +58,7 @@ namespace AdvancedRimTalk.Integration
 
             ArtiSymbolCatalog symbols = RimTalkArtiCatalog.CreateSymbolCatalog();
             IArtiModuleCatalog modules = RimTalkArtiCatalog.CreateModuleCatalog();
-            ArtiExecutionContext executionContext = CreateExecutionContext(context, modules, symbols);
+            ArtiExecutionContext executionContext = CreateExecutionContext(context, modules, symbols, owner);
             StringBuilder output = new StringBuilder();
             int cursor = 0;
             foreach (ArtiCodeBlock block in document.CodeBlocks)
@@ -103,13 +103,19 @@ namespace AdvancedRimTalk.Integration
         private static ArtiExecutionContext CreateExecutionContext(
             PromptContext context,
             IArtiModuleCatalog modules,
-            IArtiSymbolCatalog symbols)
+            IArtiSymbolCatalog symbols,
+            string owner)
         {
             PromptContext promptContext = context ?? new PromptContext();
             ArtiExecutionContext executionContext = new ArtiExecutionContext(
                 new RimTalkArtiRuntimeValueProvider(promptContext),
                 modules,
                 symbols);
+            executionContext.OnceStore = ArtiOnceStores.Current;
+            executionContext.OncePreview = promptContext.IsPreview;
+            executionContext.OnceOwner = owner ?? string.Empty;
+            executionContext.OnceScope = ArtiOnceStores.CurrentScopeKey();
+            executionContext.OnceScopeLabel = ArtiOnceStores.CurrentScopeLabel();
             executionContext.WarningSink = delegate(string message)
             {
             };

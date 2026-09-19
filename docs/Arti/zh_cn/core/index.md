@@ -12,6 +12,7 @@
 | [`mod`](mod.md) | 查询 Mod 状态 |
 | [`packageid`](packageid.md) | `mod` 的兼容别名 |
 | [`log`](log.md) | 写入开发日志，不输出文本 |
+| [`once`](once.md) | 按 id 只执行一次，并写入可删除的配置记录 |
 | [`warn`](warn.md) | `core.diag.warn`，写入警告回调 |
 | [`int`](int.md) | 生成随机整数 |
 | [`float`](float.md) | 生成随机小数 |

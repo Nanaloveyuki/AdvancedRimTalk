@@ -59,6 +59,7 @@ namespace AdvancedRimTalk.Integration
                         replTitle,
                         owner.DrawArtiRepl);
                     RegisterSubItem(registerSubItem, owner, "arti-log", () => "AdvancedRimTalk.ArtiLog.Title".Translate().ToString(), owner.DrawArtiLog);
+                    RegisterSubItem(registerSubItem, owner, "arti-once", () => "AdvancedRimTalk.Once.Title".Translate().ToString(), owner.DrawArtiOnce);
 
                     Func<string> editorTitle = delegate
                     {

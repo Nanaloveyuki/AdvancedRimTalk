@@ -941,6 +941,7 @@ namespace AdvancedRimTalk.UI
 
             provider.Refresh(CreatePromptContext());
             warnings.Clear();
+            ArtiOnceBinding.Apply(context, false, "repl");
             ArtiExecutionResult result = executor.Execute(source, context);
             return new ArtiReplExecution(result, new List<string>(warnings));
         }

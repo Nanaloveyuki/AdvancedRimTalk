@@ -225,6 +225,8 @@ namespace AdvancedRimTalk.UI
             "core.emit_if",
             "core.log",
             "core.try_call",
+            "core.once",
+            "core.once.done",
             "core.time",
             "core.time.now",
             "core.time.utc_now",

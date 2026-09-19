@@ -122,6 +122,11 @@ namespace AdvancedRimTalk.Arti
         public Func<string, object> GetVariable { get; set; }
         public Action<string, string> SetVariable { get; set; }
         public Action<string> WarningSink { get; set; }
+        public IArtiOnceStore OnceStore { get; set; }
+        public bool OncePreview { get; set; }
+        public string OnceScope { get; set; }
+        public string OnceScopeLabel { get; set; }
+        public string OnceOwner { get; set; }
 
         public void SetGlobal(string name, object value)
         {
@@ -394,7 +399,8 @@ namespace AdvancedRimTalk.Arti
                             delegate(RuntimeArguments arguments)
                             {
                                 return InvokeUserFunction(function, arguments, scope);
-                            }),
+                            },
+                            function.Name),
                         true,
                         ShouldAllowRedeclare(scope), function);
                 }
@@ -1156,6 +1162,7 @@ namespace AdvancedRimTalk.Arti
             core.Set("time", time);
 
             core.Set("try_call", new RuntimeCallable(TryCall));
+            core.Set("once", new OnceHost(this));
 
             RuntimeObject stringModule = new RuntimeObject();
             foreach (string name in ArtiStringFunctions.Names)
@@ -1477,6 +1484,12 @@ namespace AdvancedRimTalk.Arti
                 value = member == "exists" ? ExistsCallable.Instance : null;
                 return value != null;
             }
+            OnceHost onceHost = target as OnceHost;
+            if (onceHost != null && onceHost.TryGet(member, out value))
+            {
+                return true;
+            }
+
             RuntimeObject runtimeObject = target as RuntimeObject;
             if (runtimeObject != null && runtimeObject.TryGet(member, out value))
             {
@@ -2385,14 +2398,115 @@ namespace AdvancedRimTalk.Arti
             }
         }
 
+        private object Once(RuntimeArguments arguments)
+        {
+            string id = ToText(arguments.Get(0, "id", true)).Trim();
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new RuntimeFault("core.once requires a non-empty id.");
+            }
+
+            object action = arguments.Get(1, "action", true);
+            string note = ToText(arguments.Get(2, "note", false));
+            string scopeKey = _context.OnceScope ?? string.Empty;
+            IArtiOnceStore store = _context.OnceStore;
+            if (_context.OncePreview)
+            {
+                return false;
+            }
+
+            if (store != null && store.Contains(scopeKey, id))
+            {
+                return false;
+            }
+
+            InvokeCallable(action, new RuntimeArguments());
+            if (store != null)
+            {
+                store.Add(new ArtiOnceRecord
+                {
+                    Id = id,
+                    ScopeKey = scopeKey,
+                    ScopeLabel = _context.OnceScopeLabel ?? string.Empty,
+                    ExecutedAtUtc = DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                    Action = DescribeOnceAction(action),
+                    Note = note ?? string.Empty,
+                    Owner = _context.OnceOwner ?? string.Empty
+                });
+            }
+
+            return true;
+        }
+
+        private object OnceDone(RuntimeArguments arguments)
+        {
+            string id = ToText(arguments.Get(0, "id", true)).Trim();
+            IArtiOnceStore store = _context.OnceStore;
+            return store != null && !string.IsNullOrEmpty(id)
+                && store.Contains(_context.OnceScope ?? string.Empty, id);
+        }
+
+        private static string DescribeOnceAction(object action)
+        {
+            RuntimeCallable callable = action as RuntimeCallable;
+            if (callable != null && !string.IsNullOrEmpty(callable.Name))
+            {
+                return callable.Name;
+            }
+
+            return action is IArtiCallable ? "callable" : ToText(action);
+        }
+
+        private sealed class OnceHost : IArtiCallable
+        {
+            private readonly ArtiExecutor executor;
+            private readonly RuntimeObject members = new RuntimeObject();
+
+            public OnceHost(ArtiExecutor executor)
+            {
+                this.executor = executor;
+                members.Set("done", new RuntimeCallable(executor.OnceDone));
+            }
+
+            public bool TryGet(string name, out object value)
+            {
+                return members.TryGet(name, out value);
+            }
+
+            public object Invoke(IList<object> positionalArguments, IDictionary<string, object> namedArguments)
+            {
+                RuntimeArguments arguments = new RuntimeArguments();
+                if (positionalArguments != null)
+                {
+                    foreach (object argument in positionalArguments)
+                    {
+                        arguments.Add(new RuntimeArgument(null, argument));
+                    }
+                }
+
+                if (namedArguments != null)
+                {
+                    foreach (KeyValuePair<string, object> argument in namedArguments)
+                    {
+                        arguments.Add(new RuntimeArgument(argument.Key, argument.Value));
+                    }
+                }
+
+                return executor.Once(arguments);
+            }
+        }
+
         private sealed class RuntimeCallable : IArtiCallable
         {
             private readonly Func<RuntimeArguments, object> _invoke;
 
-            public RuntimeCallable(Func<RuntimeArguments, object> invoke)
+            public RuntimeCallable(Func<RuntimeArguments, object> invoke, string name = null)
             {
                 _invoke = invoke;
+                Name = name;
             }
+
+            public string Name { get; }
 
             public object InvokeInternal(RuntimeArguments arguments)
             {

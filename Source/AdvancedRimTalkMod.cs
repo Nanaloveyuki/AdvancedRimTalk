@@ -13,7 +13,9 @@ namespace AdvancedRimTalk
     {
         private readonly ArtiReplPage _artiReplPage = new ArtiReplPage();
         private readonly ArtiLogPage _artiLogPage = new ArtiLogPage();
+        private readonly ArtiOncePage _artiOncePage = new ArtiOncePage();
         internal void DrawArtiLog(Rect rect) { _artiLogPage.Draw(rect); }
+        internal void DrawArtiOnce(Rect rect) { _artiOncePage.Draw(rect); }
         private readonly PromptPreviewPage _promptPreviewPage = new PromptPreviewPage();
         private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
         private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();
@@ -63,6 +65,7 @@ namespace AdvancedRimTalk
                 return;
             }
             RimTalkExpandMemoryArtiBridge.Detect();
+            ArtiOnceBinding.Initialize();
             RimTalkArtiPromptRegistration.Register();
             IrisMenusSettingsIntegration.TryRegister(this);
             Log.Message("Advanced RimTalk Prompt initialized.");
@@ -147,6 +150,11 @@ namespace AdvancedRimTalk
             DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.HistoryLimit".Translate(), ref Settings.TakeoverConversationHistoryCount, ref _takeoverHistoryLimitBuffer, 0, 500);
             DrawIntegerSetting(listing, "AdvancedRimTalk.Settings.CharacterBudget".Translate(), ref Settings.TakeoverPromptCharacterBudget, ref _takeoverBudgetBuffer, 4000, 200000);
 
+            listing.Gap();
+            if (listing.ButtonText("AdvancedRimTalk.Once.Open".Translate()))
+            {
+                Find.WindowStack.Add(new ArtiOnceWindow());
+            }
         }
 
         private static void DrawIntegerSetting(

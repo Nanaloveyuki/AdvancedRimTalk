@@ -108,6 +108,27 @@ namespace AdvancedRimTalk.PromptChecks
             if (migrated.TakeoverPresets.Count != 1 || migrated.TakeoverPromptParts[0].Content != original.Parts[0].Content)
                 throw new Exception("Legacy settings migration lost prompt content.");
 
+            settings.OnceRecords.Add(new AdvancedRimTalk.Arti.ArtiOnceRecord
+            {
+                Id = "seed",
+                ScopeKey = "world:a",
+                ScopeLabel = "Colony",
+                ExecutedAtUtc = "2026-09-19T00:00:00.0000000+00:00",
+                Action = "bump",
+                Note = "lore",
+                Owner = "repl"
+            });
+            Verse.TestScribe.BeginSave();
+            settings.ExposeData();
+            var oncePersisted = Verse.TestScribe.Data;
+            Verse.TestScribe.BeginLoad(oncePersisted);
+            var onceRestored = new AdvancedRimTalkSettings();
+            onceRestored.ExposeData();
+            if (onceRestored.OnceRecords == null || onceRestored.OnceRecords.Count != 1
+                || onceRestored.OnceRecords[0].Id != "seed" || onceRestored.OnceRecords[0].Action != "bump"
+                || onceRestored.OnceRecords[0].Note != "lore")
+                throw new Exception("Once records were not persisted in mod settings.");
+
             var blocks = AdvancedRimTalk.Documentation.DocumentationBlocks.Parse(
                 "| Name | Meaning |\n| --- | :---: |\n| [array](array.md) | `a|b` |\n\n```arti\n| not | a table |\n| --- | --- |\n```\n");
             if (blocks.Count != 5 || !blocks[0].Header || blocks[1].Cells[1] != "`a|b`" || !blocks[3].Code)
