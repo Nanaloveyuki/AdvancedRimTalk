@@ -28,6 +28,13 @@
   <AdvancedRimTalk.ArtiEditor.Reset>Reset</AdvancedRimTalk.ArtiEditor.Reset>
   <AdvancedRimTalk.ArtiEditor.NoDiagnostics>No errors</AdvancedRimTalk.ArtiEditor.NoDiagnostics>
   <AdvancedRimTalk.ArtiEditor.DiagnosticSummary>{0} errors, {1} warnings</AdvancedRimTalk.ArtiEditor.DiagnosticSummary>
+  <AdvancedRimTalk.ArtiEditor.Open>Open prompt…</AdvancedRimTalk.ArtiEditor.Open>
+  <AdvancedRimTalk.ArtiEditor.Detach>Detach to window</AdvancedRimTalk.ArtiEditor.Detach>
+  <AdvancedRimTalk.ArtiEditor.Move>Move tab…</AdvancedRimTalk.ArtiEditor.Move>
+  <AdvancedRimTalk.ArtiEditor.Dock>Dock in editor page</AdvancedRimTalk.ArtiEditor.Dock>
+  <AdvancedRimTalk.ArtiEditor.Windows>Switch window…</AdvancedRimTalk.ArtiEditor.Windows>
+  <AdvancedRimTalk.ArtiEditor.CloseTab>Close tab (Ctrl+W); edits are already written to the prompt.</AdvancedRimTalk.ArtiEditor.CloseTab>
+  <AdvancedRimTalk.ArtiEditor.Empty>Use Open prompt to select parts from different presets. Detach tabs into windows for side-by-side reference or move them back to the editor page. Ctrl+Tab / Ctrl+Shift+Tab switches tabs; Ctrl+W closes a tab. Edits immediately update the corresponding part without activating a preset or executing a prompt.</AdvancedRimTalk.ArtiEditor.Empty>
   <AdvancedRimTalk.PromptParts.Title>Takeover Prompt Parts</AdvancedRimTalk.PromptParts.Title>
   <AdvancedRimTalk.PromptParts.Parts>Prompt parts</AdvancedRimTalk.PromptParts.Parts>
   <AdvancedRimTalk.PromptParts.NewPart>New Prompt Part</AdvancedRimTalk.PromptParts.NewPart>

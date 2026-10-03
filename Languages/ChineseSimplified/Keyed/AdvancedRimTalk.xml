@@ -28,6 +28,13 @@
   <AdvancedRimTalk.ArtiEditor.Reset>重置</AdvancedRimTalk.ArtiEditor.Reset>
   <AdvancedRimTalk.ArtiEditor.NoDiagnostics>无错误</AdvancedRimTalk.ArtiEditor.NoDiagnostics>
   <AdvancedRimTalk.ArtiEditor.DiagnosticSummary>错误 {0}，警告 {1}</AdvancedRimTalk.ArtiEditor.DiagnosticSummary>
+  <AdvancedRimTalk.ArtiEditor.Open>打开提示词…</AdvancedRimTalk.ArtiEditor.Open>
+  <AdvancedRimTalk.ArtiEditor.Detach>脱离为窗口</AdvancedRimTalk.ArtiEditor.Detach>
+  <AdvancedRimTalk.ArtiEditor.Move>移动标签…</AdvancedRimTalk.ArtiEditor.Move>
+  <AdvancedRimTalk.ArtiEditor.Dock>归并到编辑器页</AdvancedRimTalk.ArtiEditor.Dock>
+  <AdvancedRimTalk.ArtiEditor.Windows>切换窗口…</AdvancedRimTalk.ArtiEditor.Windows>
+  <AdvancedRimTalk.ArtiEditor.CloseTab>关闭标签（Ctrl+W）；修改已写入提示词。</AdvancedRimTalk.ArtiEditor.CloseTab>
+  <AdvancedRimTalk.ArtiEditor.Empty>通过“打开提示词”选择不同预设的片段；标签可脱离为窗口并排参照，也可移动回编辑器页。Ctrl+Tab / Ctrl+Shift+Tab 切换标签，Ctrl+W 关闭标签。修改即时写入对应片段，不会激活预设或执行提示词。</AdvancedRimTalk.ArtiEditor.Empty>
   <AdvancedRimTalk.PromptParts.Title>接管 Prompt 片段</AdvancedRimTalk.PromptParts.Title>
   <AdvancedRimTalk.PromptParts.Parts>Prompt 片段</AdvancedRimTalk.PromptParts.Parts>
   <AdvancedRimTalk.PromptParts.NewPart>新 Prompt 片段</AdvancedRimTalk.PromptParts.NewPart>

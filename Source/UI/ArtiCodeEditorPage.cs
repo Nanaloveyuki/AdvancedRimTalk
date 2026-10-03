@@ -10,7 +10,7 @@ namespace AdvancedRimTalk.UI
 {
     internal sealed class ArtiCodeEditorPage
     {
-        private const string EditorControlName = "AdvancedRimTalk.ArtiEditor.Editor";
+        private readonly string editorControlName = "AdvancedRimTalk.ArtiEditor.Editor." + Guid.NewGuid().ToString("N");
         private const float ToolbarHeight = 30f;
         private const float PanelGap = 6f;
 
@@ -41,8 +41,9 @@ namespace AdvancedRimTalk.UI
         private bool focusEditor = true;
         private bool pendingCaret;
         private int editorControlId;
-        private int pendingCursor;
-        private int pendingSelect;
+        private bool canFocus;
+        private int savedCursor;
+        private int savedSelect;
         private int completionStart = -1;
         private int completionSelected;
         private string completionPrefix = string.Empty;
@@ -57,21 +58,40 @@ namespace AdvancedRimTalk.UI
         private string measuredSource;
         private float measuredMaxLineWidth;
         private readonly ArtiPromptPart boundPart;
+        private readonly ArtiPromptPreset boundPreset;
 
-        public ArtiCodeEditorPage(ArtiPromptPart part = null)
+        public ArtiCodeEditorPage(ArtiPromptPart part, ArtiPromptPreset preset)
         {
-            boundPart = part;
+            boundPart = part ?? throw new ArgumentNullException(nameof(part));
+            boundPreset = preset ?? throw new ArgumentNullException(nameof(preset));
         }
 
-        public void Draw(Rect inRect)
+        public void Activate()
         {
-            if (inRect.width <= 1f || inRect.height <= 1f)
-            {
-                return;
-            }
+            editorControlId = 0;
+            RequestCaret(null, savedCursor, savedSelect);
+            focusEditor = true;
+        }
 
-            AdvancedRimTalkSettings settings = AdvancedRimTalk.AdvancedRimTalkMod.Settings;
-            if (settings == null)
+        public void Suspend()
+        {
+            SaveCaret(GetEditor());
+            RequestCaret(null, savedCursor, savedSelect);
+            editorControlId = 0;
+            canFocus = false;
+            ClearCompletion();
+        }
+
+        public void Draw(Rect inRect, bool canFocus = true)
+        {
+            if (this.canFocus && (!canFocus || !GUI.enabled))
+            {
+                SaveCaret(GetEditor());
+                RequestCaret(null, savedCursor, savedSelect);
+                editorControlId = 0;
+            }
+            this.canFocus = canFocus && GUI.enabled;
+            if (inRect.width <= 1f || inRect.height <= 1f)
             {
                 return;
             }
@@ -79,11 +99,13 @@ namespace AdvancedRimTalk.UI
             GameFont previousFont = Text.Font;
             bool previousWordWrap = Text.WordWrap;
             Color previousColor = GUI.color;
+            bool previousEnabled = GUI.enabled;
             try
             {
                 Text.Font = GameFont.Small;
                 Text.WordWrap = false;
-                SyncFromSettings(settings);
+                GUI.enabled = previousEnabled && canFocus;
+                SyncFromPart();
                 EnsureStyles();
                 RefreshAnalysis();
 
@@ -120,6 +142,7 @@ namespace AdvancedRimTalk.UI
                 Text.Font = previousFont;
                 Text.WordWrap = previousWordWrap;
                 GUI.color = previousColor;
+                GUI.enabled = previousEnabled;
             }
         }
 
@@ -192,11 +215,18 @@ namespace AdvancedRimTalk.UI
                 Widgets.EndScrollView();
             }
 
-            if (focusEditor && Event.current != null && Event.current.type == EventType.Repaint)
+            if (canFocus && focusEditor && Event.current != null && Event.current.type == EventType.Repaint)
             {
-                GUI.FocusControl(EditorControlName);
-                editorControlId = GUIUtility.keyboardControl;
-                focusEditor = false;
+                GUI.FocusControl(editorControlName);
+                BindEditorControl();
+                TextEditor editor = GetEditor();
+                if (editor != null)
+                {
+                    editor.text = source;
+                    ApplyPendingCaret(editor);
+                    SaveCaret(editor);
+                    focusEditor = false;
+                }
             }
         }
 
@@ -204,7 +234,7 @@ namespace AdvancedRimTalk.UI
         {
             ProcessEditorShortcuts();
             // The overlay must consume pointer events before TextArea moves the caret.
-            if (pointerInViewport) DrawCompletionPopup(gutterWidth, viewRect.width, true);
+            if (canFocus && pointerInViewport) DrawCompletionPopup(gutterWidth, viewRect.width, true);
             TextEditor editor = GetEditor();
             if (editor != null
                 && HasEditorFocus())
@@ -213,7 +243,7 @@ namespace AdvancedRimTalk.UI
                 ApplyPendingCaret(editor);
             }
 
-            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int cursor = editor == null ? savedCursor : Clamp(editor.cursorIndex, 0, source.Length);
             int cursorLine = ArtiEditorText.GetLineIndex(source, cursor);
             Widgets.DrawBoxSolid(
                 new Rect(
@@ -234,21 +264,38 @@ namespace AdvancedRimTalk.UI
             string before = source;
             TextEditor beforeEditor = GetEditor();
             int beforeCursor = beforeEditor == null
-                ? source.Length
+                ? savedCursor
                 : Clamp(beforeEditor.cursorIndex, 0, source.Length);
             int beforeSelect = beforeEditor == null
-                ? beforeCursor
+                ? savedSelect
                 : Clamp(beforeEditor.selectIndex, 0, source.Length);
 
-            GUI.SetNextControlName(EditorControlName);
+            Event current = Event.current;
+            bool clickedEditor = canFocus && current != null && current.type == EventType.MouseDown
+                && current.button == 0 && codeRect.Contains(current.mousePosition);
+            if (clickedEditor)
+            {
+                // An explicit click chooses a new caret instead of restoring the saved selection.
+                pendingCaret = false;
+                focusEditor = false;
+            }
+            GUI.SetNextControlName(editorControlName);
             string edited = GUI.TextArea(codeRect, source, inputStyle);
-            if (string.Equals(GUI.GetNameOfFocusedControl(), EditorControlName, StringComparison.Ordinal))
-                editorControlId = GUIUtility.keyboardControl;
-            HandleTextAreaResult(
-                before,
-                ArtiEditorText.NormalizeLineEndings(edited),
-                beforeCursor,
-                beforeSelect);
+            BindEditorControl(clickedEditor);
+            if (canFocus)
+            {
+                HandleTextAreaResult(
+                    before,
+                    ArtiEditorText.NormalizeLineEndings(edited),
+                    beforeCursor,
+                    beforeSelect);
+                TextEditor currentEditor = GetEditor();
+                if (currentEditor != null)
+                {
+                    ApplyPendingCaret(currentEditor);
+                    SaveCaret(currentEditor);
+                }
+            }
 
             DrawDiagnosticDecorations(gutterWidth);
             DrawCompletionPopup(gutterWidth, viewRect.width, false);
@@ -367,7 +414,7 @@ namespace AdvancedRimTalk.UI
             }
 
             TextEditor editor = GetEditor();
-            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int cursor = editor == null ? savedCursor : Clamp(editor.cursorIndex, 0, source.Length);
             int lineStart = ArtiEditorText.GetLineStart(source, cursor);
             int line = ArtiEditorText.GetLineIndex(source, cursor);
             float x = gutterWidth
@@ -382,7 +429,7 @@ namespace AdvancedRimTalk.UI
             Event current = Event.current;
             if (inputOnly)
             {
-                if (current != null && popup.Contains(current.mousePosition))
+                if (canFocus && current != null && popup.Contains(current.mousePosition))
                 {
                     int hovered = Clamp((int)((current.mousePosition.y - y - 2f) / rowHeight), 0, completions.Count - 1);
                     if (current.type == EventType.MouseMove) completionSelected = hovered;
@@ -476,15 +523,15 @@ namespace AdvancedRimTalk.UI
             }
         }
 
-        private void SyncFromSettings(AdvancedRimTalkSettings settings)
+        private void SyncFromPart()
         {
-            string configured = ArtiEditorText.NormalizeLineEndings(
-                boundPart == null ? settings.GetPrimaryTakeoverSystemDocument() : boundPart.Content);
+            string configured = ArtiEditorText.NormalizeLineEndings(boundPart.Content);
             if (!initialized)
             {
                 source = configured;
                 lastBoundSource = configured;
                 initialized = true;
+                RequestCaret(null, configured.Length, configured.Length);
                 return;
             }
 
@@ -499,6 +546,7 @@ namespace AdvancedRimTalk.UI
                 completionStart = -1;
                 undoStack.Clear();
                 redoStack.Clear();
+                RequestCaret(GetEditor(), savedCursor, savedSelect);
                 focusEditor = true;
             }
             else if (string.Equals(configured, source, StringComparison.Ordinal))
@@ -509,10 +557,7 @@ namespace AdvancedRimTalk.UI
 
         private void RefreshAnalysis()
         {
-            var settings = AdvancedRimTalkMod.Settings;
-            var parts = settings == null ? null : settings.TakeoverPromptParts;
-            var current = boundPart ?? parts?.Find(part => part != null && part.Role == RimTalk.Prompt.PromptRole.System);
-            bool contextChanged = promptAnalysisContext.Refresh(parts, current);
+            bool contextChanged = promptAnalysisContext.Refresh(boundPreset.Parts, boundPart);
             if (!contextChanged && analysis != null
                 && string.Equals(analyzedSource, source, StringComparison.Ordinal))
             {
@@ -667,21 +712,49 @@ namespace AdvancedRimTalk.UI
             return Math.Max(minimum, Math.Min(value, maximum));
         }
 
+        private void BindEditorControl(bool clickedEditor = false)
+        {
+            if (canFocus
+                && string.Equals(GUI.GetNameOfFocusedControl(), editorControlName, StringComparison.Ordinal))
+            {
+                // Only bind after this host has drawn the named control; old host IDs may be reused.
+                if (editorControlId != GUIUtility.keyboardControl)
+                {
+                    if (!clickedEditor)
+                    {
+                        pendingCaret = true;
+                    }
+                }
+                editorControlId = GUIUtility.keyboardControl;
+            }
+        }
+
         private TextEditor GetEditor()
         {
-            int control = editorControlId != 0 ? editorControlId : GUIUtility.keyboardControl;
-            if (control == 0)
+            if (!HasEditorFocus())
             {
                 return null;
             }
 
-            return GUIUtility.GetStateObject(typeof(TextEditor), control) as TextEditor;
+            return GUIUtility.GetStateObject(typeof(TextEditor), editorControlId) as TextEditor;
         }
 
         private bool HasEditorFocus()
         {
-            return editorControlId != 0 && GUIUtility.keyboardControl == editorControlId
-                || string.Equals(GUI.GetNameOfFocusedControl(), EditorControlName, StringComparison.Ordinal);
+            return canFocus && Event.current != null && editorControlId != 0
+                && GUIUtility.keyboardControl == editorControlId
+                && string.Equals(GUI.GetNameOfFocusedControl(), editorControlName, StringComparison.Ordinal);
+        }
+
+        private void SaveCaret(TextEditor editor)
+        {
+            if (editor == null || pendingCaret)
+            {
+                return;
+            }
+
+            savedCursor = Clamp(editor.cursorIndex, 0, source.Length);
+            savedSelect = Clamp(editor.selectIndex, 0, source.Length);
         }
 
         private void ApplyPendingCaret(TextEditor editor)
@@ -691,8 +764,8 @@ namespace AdvancedRimTalk.UI
                 return;
             }
 
-            editor.cursorIndex = Clamp(pendingCursor, 0, source.Length);
-            editor.selectIndex = Clamp(pendingSelect, 0, source.Length);
+            editor.cursorIndex = Clamp(savedCursor, 0, source.Length);
+            editor.selectIndex = Clamp(savedSelect, 0, source.Length);
             pendingCaret = false;
         }
 
@@ -700,6 +773,8 @@ namespace AdvancedRimTalk.UI
         {
             cursor = Clamp(cursor, 0, source.Length);
             select = Clamp(select, 0, source.Length);
+            savedCursor = cursor;
+            savedSelect = select;
             if (editor != null)
             {
                 editor.text = source;
@@ -709,8 +784,6 @@ namespace AdvancedRimTalk.UI
             }
             else
             {
-                pendingCursor = cursor;
-                pendingSelect = select;
                 pendingCaret = true;
             }
         }
@@ -725,10 +798,7 @@ namespace AdvancedRimTalk.UI
             }
 
             source = value;
-            if (boundPart == null)
-                AdvancedRimTalk.AdvancedRimTalkMod.Settings.SetPrimaryTakeoverSystemDocument(source);
-            else
-                boundPart.Content = source;
+            boundPart.Content = source;
             lastBoundSource = source;
             analyzedSource = null;
             analysis = null;
@@ -746,8 +816,8 @@ namespace AdvancedRimTalk.UI
             }
 
             TextEditor editor = GetEditor();
-            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
-            int select = editor == null ? cursor : Clamp(editor.selectIndex, 0, source.Length);
+            int cursor = editor == null ? savedCursor : Clamp(editor.cursorIndex, 0, source.Length);
+            int select = editor == null ? savedSelect : Clamp(editor.selectIndex, 0, source.Length);
             undoStack.Add(new EditorSnapshot(source, cursor, select));
             while (undoStack.Count > limit)
             {
@@ -784,8 +854,8 @@ namespace AdvancedRimTalk.UI
         private void PushRedoSnapshot()
         {
             TextEditor editor = GetEditor();
-            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
-            int select = editor == null ? cursor : Clamp(editor.selectIndex, 0, source.Length);
+            int cursor = editor == null ? savedCursor : Clamp(editor.cursorIndex, 0, source.Length);
+            int select = editor == null ? savedSelect : Clamp(editor.selectIndex, 0, source.Length);
             redoStack.Add(new EditorSnapshot(source, cursor, select));
             int limit = GetUndoLimit();
             while (redoStack.Count > limit && redoStack.Count > 0)
@@ -824,7 +894,7 @@ namespace AdvancedRimTalk.UI
 
         private string GetCurrentLineText(TextEditor editor)
         {
-            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int cursor = editor == null ? savedCursor : Clamp(editor.cursorIndex, 0, source.Length);
             int lineStart = ArtiEditorText.GetLineStart(source, cursor);
             int lineEnd = ArtiEditorText.GetLineEnd(source, cursor);
             return source.Substring(lineStart, lineEnd - lineStart);
@@ -1139,7 +1209,7 @@ namespace AdvancedRimTalk.UI
             }
 
             TextEditor editor = GetEditor();
-            int cursor = editor == null ? source.Length : Clamp(editor.cursorIndex, 0, source.Length);
+            int cursor = editor == null ? savedCursor : Clamp(editor.cursorIndex, 0, source.Length);
             if (completionStart < 0
                 || completionStart > cursor
                 || !string.Equals(

@@ -65,7 +65,7 @@ namespace AdvancedRimTalk.UI
             DrawPartList(new Rect(leftRect.x, leftRect.y + 202f, leftRect.width,
                 Mathf.Max(1f, leftRect.height - 202f)), settings, parts);
             DrawInitSummary(new Rect(rightRect.x, rightRect.y, rightRect.width, 112f), preset);
-            DrawPartEditor(new Rect(rightRect.x, rightRect.y + 118f, rightRect.width, Mathf.Max(1f, rightRect.height - 118f)), parts.FirstOrDefault(part => part.Id == selectedPartId));
+            DrawPartEditor(new Rect(rightRect.x, rightRect.y + 118f, rightRect.width, Mathf.Max(1f, rightRect.height - 118f)), preset, parts.FirstOrDefault(part => part.Id == selectedPartId));
         }
 
         private static void DrawInitSummary(Rect rect, ArtiPromptPreset preset)
@@ -289,7 +289,7 @@ namespace AdvancedRimTalk.UI
             GUI.enabled = true;
         }
 
-        private void DrawPartEditor(Rect rect, ArtiPromptPart part)
+        private void DrawPartEditor(Rect rect, ArtiPromptPreset preset, ArtiPromptPart part)
         {
             if (part == null)
             {
@@ -328,7 +328,7 @@ namespace AdvancedRimTalk.UI
             if (Widgets.ButtonText(new Rect(labelX, y, Mathf.Min(240f, rect.width - 20f), 28f),
                 "AdvancedRimTalk.ArtiEditor.Title".Translate()))
             {
-                Find.WindowStack.Add(new ArtiPartEditorWindow(part));
+                ArtiEditorWindowManager.Shared.Open(preset, part);
             }
             y += 34f;
 

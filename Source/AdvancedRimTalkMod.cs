@@ -17,7 +17,6 @@ namespace AdvancedRimTalk
         internal void DrawArtiLog(Rect rect) { _artiLogPage.Draw(rect); }
         internal void DrawArtiOnce(Rect rect) { _artiOncePage.Draw(rect); }
         private readonly PromptPreviewPage _promptPreviewPage = new PromptPreviewPage();
-        private readonly ArtiCodeEditorPage _artiCodeEditorPage = new ArtiCodeEditorPage();
         private readonly TakeoverPromptPartsPage _takeoverPromptPartsPage = new TakeoverPromptPartsPage();
         private readonly DocumentationPage _documentationPage;
         private readonly ResponseSettingsPage _responseSettingsPage = new ResponseSettingsPage();
@@ -197,7 +196,7 @@ namespace AdvancedRimTalk
 
         internal void DrawArtiEditor(Rect inRect)
         {
-            _artiCodeEditorPage.Draw(inRect);
+            ArtiEditorWindowManager.Shared.DrawEmbedded(inRect);
         }
 
         internal void DrawTakeoverPromptParts(Rect inRect)

@@ -37,7 +37,7 @@
     <Compile Include="PromptSettingsChecks.cs" />
     <Compile Include="ArtiPartEditorWindowChecks.cs" />
     <Compile Include="..\Source\Prompt\ArtiPromptAnalysisContext.cs" Link="ArtiPromptAnalysisContext.cs" />
-    <Compile Include="..\Source\UI\ArtiPartEditorWindow.cs" Link="ArtiPartEditorWindow.cs" />
+    <Compile Include="..\Source\UI\ArtiEditorWorkspace.cs" Link="ArtiEditorWorkspace.cs" />
     <Compile Include="..\Source\Documentation\DocumentationBlocks.cs" Link="DocumentationBlocks.cs" />
     <Compile Include="..\Source\Documentation\AdvancedRimTalkDocumentationCatalog.cs" Link="AdvancedRimTalkDocumentationCatalog.cs" />
     <Compile Include="..\Source\Prompt\ArtiPromptPreset.cs" Link="ArtiPromptPreset.cs" />
