@@ -103,7 +103,7 @@ For detailed Pawn data, use the read-only `pawn.info` object (or `core.pawn.info
 
 ## Build
 
-`Directory.Build.props` shares the current RimTalk/Harmony reference paths between the mod and checks, with Windows and WSL defaults. RimTalk/Harmony come from `D:\References\Rimworld\Mods`; game assemblies come from `E:\Apps\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed`. Override `RimWorldReferencesDir`, `RimWorldManagedDir`, `RimTalkAssemblyDir`, or `HarmonyAssemblyPath` on another machine.
+`Directory.Build.props` shares the current RimTalk/Harmony reference paths between the mod and checks, with Windows and WSL defaults. RimTalk/Harmony come from `D:\References\Rimworld\Mods`; game assemblies come from `E:\Apps\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed`. Override `RimWorldDir` to select the game installation, or `RimWorldReferencesDir`, `RimWorldManagedDir`, `RimTalkAssemblyDir`, or `HarmonyAssemblyPath` to select individual reference locations.
 
 ```powershell
 dotnet build AdvancedRimTalk.csproj -c Release
@@ -111,3 +111,25 @@ dotnet run --project Tests/PromptChecks.csproj -c Release
 ```
 
 With only a newer .NET runtime installed, run the net9 checks using `dotnet run --project Tests/PromptChecks.csproj -c Release --roll-forward Major`. Compatibility smoke runs installed all production Harmony patches against RimTalk 1.3.2 and exercised actual Scriban/takeover builds, preview preset assembly, session isolation, and preset JSON round-tripping. These are headless managed-assembly checks with game-only environment reads isolated, not a loaded-save, Unity UI, or live model/streaming verification.
+
+### Build and deploy
+
+The scripts build Release and copy `AdvancedRimTalk.dll`, its optional PDB, `About`, `Languages`, `docs`, `README.md`, and `LICENSE` into `Mods/AdvancedRimTalk`. They refuse deployment while RimWorld is running or when the destination belongs to another mod, and verify every copied file with SHA-256. RimTalk, Scriban, Harmony, and game assemblies are not bundled. Files outside the copy manifest, including an existing `About/PublishedFileId.txt`, are preserved.
+
+WSL/Linux (default game directory: `/mnt/e/Apps/Steam/steamapps/common/RimWorld`):
+
+```bash
+./scripts/deploy.sh
+./scripts/deploy.sh --build-only
+RIMWORLD_DIR=/path/to/RimWorld CONFIGURATION=Debug ./scripts/deploy.sh
+```
+
+Windows PowerShell (default game directory: `E:\Apps\Steam\steamapps\common\RimWorld`):
+
+```powershell
+.\scripts\build-and-deploy.ps1
+.\scripts\build-and-deploy.ps1 -BuildOnly
+.\scripts\build-and-deploy.ps1 -RimWorldDir 'E:\Apps\Steam\steamapps\common\RimWorld' -Configuration Debug
+```
+
+PowerShell also accepts `-GameModPath` for a custom destination and `-SkipBuild` to deploy existing `tmp/build` output. Repository paths reached through WSL UNC shares are normalized before deriving package-relative paths. Building in Windows PowerShell requires a Windows .NET SDK; a WSL-only SDK works with `deploy.sh`, not Windows `dotnet.exe`.

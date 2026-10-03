@@ -3,7 +3,11 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
 
-    [string]$GameModPath = "E:\Apps\Steam\steamapps\common\RimWorld\Mods\AdvancedRimTalk",
+    [string]$RimWorldDir = "E:\Apps\Steam\steamapps\common\RimWorld",
+
+    [string]$GameModPath,
+
+    [switch]$BuildOnly,
 
     [switch]$SkipBuild
 )
@@ -11,7 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $expectedPackageId = "advancedrimtalk.prompt"
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$repoRoot = [System.IO.Path]::GetFullPath((Resolve-Path (Join-Path $PSScriptRoot "..")).ProviderPath).TrimEnd([char[]]"\/")
 $projectPath = Join-Path $repoRoot "AdvancedRimTalk.csproj"
 $sourceAbout = Join-Path $repoRoot "About\About.xml"
 $sourceLanguages = Join-Path $repoRoot "Languages"
@@ -19,13 +23,20 @@ $sourceAssembly = Join-Path $repoRoot "tmp\build\AdvancedRimTalk.dll"
 $sourcePdb = Join-Path $repoRoot "tmp\build\AdvancedRimTalk.pdb"
 $sourceDocs = Join-Path $repoRoot "docs"
 
+if ([string]::IsNullOrWhiteSpace($GameModPath)) {
+    $GameModPath = Join-Path $RimWorldDir "Mods\AdvancedRimTalk"
+}
+if (-not (Test-Path -LiteralPath (Join-Path $RimWorldDir "RimWorldWin64_Data\Managed\Assembly-CSharp.dll") -PathType Leaf)) {
+    throw "RimWorld managed assemblies not found: $RimWorldDir"
+}
+
 $targetFull = [System.IO.Path]::GetFullPath($GameModPath).TrimEnd([char[]]"\/")
 $modsRoot = Split-Path -Parent $targetFull
 if (-not (Test-Path -LiteralPath $modsRoot -PathType Container)) {
     throw "RimWorld Mods directory not found: $modsRoot"
 }
 
-$resolvedModsRoot = (Resolve-Path -LiteralPath $modsRoot).Path.TrimEnd([char[]]"\/")
+$resolvedModsRoot = (Resolve-Path -LiteralPath $modsRoot).ProviderPath.TrimEnd([char[]]"\/")
 $targetParent = [System.IO.DirectoryInfo]::new($targetFull).Parent.FullName.TrimEnd([char[]]"\/")
 if (-not [string]::Equals($resolvedModsRoot, $targetParent, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "GameModPath must be a direct child of the RimWorld Mods directory: $resolvedModsRoot"
@@ -35,7 +46,7 @@ if ([string]::Equals($targetFull, $repoRoot.TrimEnd([char[]]"\/"), [System.Strin
     throw "Deployment target must not be the source repository."
 }
 
-if (Get-Process -Name @("RimWorldWin64", "RimWorldWin64Steam", "RimWorldWin", "RimWorld") -ErrorAction SilentlyContinue) {
+if (-not $BuildOnly -and (Get-Process -Name @("RimWorldWin64", "RimWorldWin64Steam", "RimWorldWin", "RimWorld") -ErrorAction SilentlyContinue)) {
     throw "RimWorld is running. Exit the game before deploying."
 }
 
@@ -93,7 +104,7 @@ if (Test-Path -LiteralPath $targetFull) {
 
 if (-not $SkipBuild) {
     Write-Host "Building $Configuration..."
-    & dotnet build $projectPath --configuration $Configuration --nologo
+    & dotnet build $projectPath --configuration $Configuration "-p:RimWorldDir=$RimWorldDir" --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "Build failed with exit code $LASTEXITCODE."
     }
@@ -102,6 +113,8 @@ if (-not $SkipBuild) {
 if (-not (Test-Path -LiteralPath $sourceAssembly -PathType Leaf)) {
     throw "Build output not found: $sourceAssembly"
 }
+
+if ($BuildOnly) { return }
 
 $languageFiles = @(Get-ChildItem -LiteralPath $sourceLanguages -File -Recurse)
 if ($languageFiles.Count -eq 0) {
