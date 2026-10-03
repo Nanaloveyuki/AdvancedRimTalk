@@ -847,15 +847,7 @@ namespace AdvancedRimTalk.Integration
                     value = pawn.genes;
                     return true;
                 case "race":
-                    if (ModsConfig.BiotechActive && pawn.genes != null && pawn.genes.Xenotype != null)
-                    {
-                        value = pawn.genes.XenotypeLabel ?? string.Empty;
-                    }
-                    else
-                    {
-                        value = pawn.def == null ? string.Empty : pawn.def.LabelCap.RawText;
-                    }
-
+                    value = RimTalkRaceCompatibility.GetLabel(pawn);
                     return true;
                 case "gender":
                     value = pawn.gender.ToString();

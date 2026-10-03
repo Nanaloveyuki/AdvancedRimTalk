@@ -67,6 +67,13 @@ Takeover settings bound pawn context count (default 32), history count (40), and
 
 RimTalk 1.3.2+ is required. Embed retains the native simple/advanced preset and compact/legacy history paths; its context preview uses the same preset helpers. Takeover records RimTalk's causal request summary for subsequent dialogue history. Arti `json.format` and `json.anchor` use the current social-effects, player-request, and memory switches; `is_user` and `is_from_user` identify player requests. Arti-emitted template-looking text remains literal in embed, takeover, and preview.
 
+## Optional HAR integration
+
+Humanoid Alien Races (HAR) is detected without a hard dependency or a bundled `AlienRace.dll`. HAR humanlike races use their localized race Def label instead of the gene tracker's xenotype label, which otherwise reports baseliner for many alien races. This applies to RimTalk pawn context, decorated names, threat labels, native Scriban `pawn.race`, and Arti `pawn.race` / `pawn.info.race` in embed, takeover, and preview paths.
+
+HAR race context works without Biotech and still respects RimTalk's `IncludeRace` setting. Vanilla `Human` and `CreepJoiner` remain xenotype-based even though HAR converts their Def class. Non-HAR behavior is unchanged. A HAR pawn's species label takes precedence even when it has a custom xenotype; its gene tracker and gene context remain available separately and are not modified.
+
+
 ## Optional memory integration
 
 ExpandMemory write helpers are experimental, compatibility-sensitive APIs. They change the provider's memory or common-knowledge data. Callers must check returned results; success is not guaranteed across versions or memory types, and multi-field updates are not transactions. Exceptions routed through the bridge's operation logger are visible outside DevMode. Pinning uses the provider's maintainer; moving out of Active privatizes entries before layer migration. These paths still require focused integration tests and game/save validation.

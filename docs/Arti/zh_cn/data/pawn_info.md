@@ -28,7 +28,8 @@ if pawn != null {
 | `faction` / `faction_object` | 当前派系名称和派系对象 |
 | `faction_def_name` / `faction_def_label` | 派系 Def 信息 |
 | `host_faction` / `slave_faction` / `home_faction` | Host、Slave 和 Home 派系对象 |
-| `race` / `race_def_name` / `race_def_label` | 种族或异种型显示信息 |
+| `race` | 种族显示名称；HAR 人形种族优先使用种族 Def 标签，规则同 `pawn.race` |
+| `race_def_name` / `race_def_label` | 种族 Def 标识和标签，不受异种型影响 |
 | `gender` / `title` | 性别和称谓 |
 | `humanlike` / `animal` / `mechanoid` | 常见种族分类 |
 | `colony_mech` / `mutant` / `subhuman` / `entity` | DLC 或特殊 Pawn 分类 |
@@ -148,6 +149,8 @@ if pawn != null {
 `info.prompt` 保留 RimTalk 的上下文构建结果：`context`、`race`、`genes`、`all_genes`、`ideology`、`backstory`、`traits`、`skills`、`health`、`mood`、`thoughts`、`relations`、`social`、`full_social`、`full_relation`、`full_interaction`、`equipment`、`captive_status`、`activity`、`location`、`terrain`、`beauty`、`cleanliness`、`surroundings`。
 
 `info.prompt.full` 使用 RimTalk 的 Full 信息级别，字段名称与 `info.prompt` 相同。
+
+HAR 人形种族的 `info.prompt.race` 使用实际种族标签，遵守 RimTalk 的 `IncludeRace` 设置；未启用 Biotech 时也可生成。原版人类和 CreepJoiner 保留异种型识别。该兼容同时作用于原生 RimTalk 上下文、名称装饰和威胁摘要，不修改 Pawn 的基因数据。
 
 ## Tracker 和生命周期
 

@@ -40,7 +40,7 @@ namespace AdvancedRimTalk.Integration
             info.Set("host_faction", () => pawn.HostFaction);
             info.Set("slave_faction", () => pawn.SlaveFaction);
             info.Set("home_faction", () => pawn.HomeFaction);
-            info.Set("race", () => GetRaceLabel(pawn));
+            info.Set("race", () => RimTalkRaceCompatibility.GetLabel(pawn));
             info.Set("race_def", () => pawn.def);
             info.Set("race_def_name", () => GetDefName(pawn.def));
             info.Set("race_def_label", () => GetDefLabel(pawn.def));
@@ -697,20 +697,6 @@ namespace AdvancedRimTalk.Integration
             return faction == null ? string.Empty : faction.Name ?? string.Empty;
         }
 
-        private static string GetRaceLabel(Pawn pawn)
-        {
-            if (pawn == null)
-            {
-                return string.Empty;
-            }
-
-            if (ModsConfig.BiotechActive && pawn.genes != null && pawn.genes.Xenotype != null)
-            {
-                return pawn.genes.XenotypeLabel ?? string.Empty;
-            }
-
-            return GetDefLabel(pawn.def);
-        }
 
         private static string GetMentalStateText(Pawn pawn)
         {

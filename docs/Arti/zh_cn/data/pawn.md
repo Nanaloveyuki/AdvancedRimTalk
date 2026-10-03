@@ -58,7 +58,7 @@ core.emit(name)
 | `nearby_animals` | 周边动物列表 |
 | `nearby_filth` | 周边污物列表 |
 
-`race` 在 Biotech 可用并且存在异种型时优先返回异种型标签，否则返回种族 Def 标签。
+`race` 对 HAR 人形种族优先返回种族 Def 的本地化标签，不再被基因 Tracker 的“智人”或其他异种型标签覆盖；不需要 Biotech。原版 `Human` 和 `CreepJoiner` 即使被 HAR 转换了 Def 类，仍沿用异种型识别。非 HAR 角色在 Biotech 可用并且存在异种型时优先返回异种型标签，否则返回种族 Def 标签。基因 Tracker 和基因上下文保持不变。
 
 ## 结构化 Pawn 信息
 
