@@ -65,49 +65,16 @@ namespace AdvancedRimTalk.Prompt
                     });
                 }
                 var runtime = new AdvancedRimTalk.Arti.ArtiGlobalRuntime();
-                Func<string, string> render = source =>
-                {
-                    try
-                    {
-                        ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(source, context, runtime);
-                        foreach (var diagnostic in arti.Diagnostics) errors.Add(diagnostic.ToString());
-                        string text = arti.TemplateText;
-                        PromptExpansionResult expansion = null;
-                        if (AdvancedRimTalkMod.IsPlaceholderLayerEnabled)
-                        {
-                            expansion = PromptTemplateExpander.Expand(text, PromptContextSnapshotFactory.From(context));
-                            text = expansion.Template;
-                            foreach (string error in expansion.Errors) errors.Add(error);
-                            if (expansion.Errors.Count > 0) return string.Empty;
-                        }
-                        var parsed = Scriban.Template.Parse(text);
-                        if (parsed.HasErrors)
-                        {
-                            errors.Add(string.Join("\n", parsed.Messages));
-                            return string.Empty;
-                        }
-                        string result = ScribanParser.Render(text, context, false);
-                        if (result == text && text.Contains("{{"))
-                        {
-                            errors.Add("Unresolved Scriban entry skipped.");
-                            return string.Empty;
-                        }
-                        return arti.Restore(expansion == null ? result : expansion.Restore(result));
-                    }
-                    catch (Exception exception)
-                    {
-                        errors.Add(exception.GetBaseException().Message);
-                        return string.Empty;
-                    }
-                };
                 if (takeover)
                 {
                     List<PromptMessageSegment> segments = new List<PromptMessageSegment>();
                     AdvancedRimTalkMod.Settings.EnsureTakeoverPromptParts();
-                    foreach (ArtiPromptPart part in (takeoverPreset ?? AdvancedRimTalkMod.Settings.ActiveTakeoverPreset).Copy("Preview").Parts)
+                    ArtiPromptPreset preset = takeoverPreset ?? AdvancedRimTalkMod.Settings.ActiveTakeoverPreset;
+                    for (int index = 0; index < preset.Parts.Count; index++)
                     {
+                        ArtiPromptPart part = preset.Parts[index];
                         if (!part.Enabled) continue;
-                        string text = render(part.Content);
+                        string text = RenderEntry(part.Content, SourceName(preset.Name, part.Name, index), context, runtime, errors);
                         if (!string.IsNullOrWhiteSpace(text))
                         {
                             text = part.ApplyCustomRolePrefix(text).Trim();
@@ -121,7 +88,8 @@ namespace AdvancedRimTalk.Prompt
                 {
                     PromptPreset preset = rimTalkPreset ?? PromptManager.Instance.GetActivePreset();
                     if (preset == null) throw new InvalidOperationException("No active RimTalk preset.");
-                    var assembled = AssembleEmbedMessages(preset, context, render,
+                    var assembled = AssembleEmbedMessages(preset, context,
+                        (source, sourceName) => RenderEntry(source, sourceName, context, runtime, errors),
                         preset.Id == PromptManager.Instance.GetActivePreset()?.Id);
                     foreach (var message in assembled) messages.Add(((Role)message.Item1, message.Item2));
                 }
@@ -130,8 +98,46 @@ namespace AdvancedRimTalk.Prompt
             return PromptPreview.FromMessages(messages);
         }
 
+        private static string RenderEntry(string source, string sourceName, PromptContext context,
+            AdvancedRimTalk.Arti.ArtiGlobalRuntime runtime, List<string> errors)
+        {
+            string sourcePrefix = "[" + sourceName + "] ";
+            try
+            {
+                ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(source, context, runtime);
+                foreach (var diagnostic in arti.Diagnostics) errors.Add(sourcePrefix + diagnostic);
+                string text = arti.TemplateText;
+                PromptExpansionResult expansion = null;
+                if (AdvancedRimTalkMod.IsPlaceholderLayerEnabled)
+                {
+                    expansion = PromptTemplateExpander.Expand(text, PromptContextSnapshotFactory.From(context));
+                    text = expansion.Template;
+                    foreach (string error in expansion.Errors) errors.Add(sourcePrefix + error);
+                    if (expansion.Errors.Count > 0) return string.Empty;
+                }
+                var parsed = Scriban.Template.Parse(text);
+                if (parsed.HasErrors)
+                {
+                    foreach (var message in parsed.Messages) errors.Add(sourcePrefix + message);
+                    return string.Empty;
+                }
+                string result = ScribanParser.Render(text, context, false);
+                if (result == text && text.Contains("{{"))
+                {
+                    errors.Add(sourcePrefix + "Unresolved Scriban entry skipped.");
+                    return string.Empty;
+                }
+                return arti.Restore(expansion == null ? result : expansion.Restore(result));
+            }
+            catch (Exception exception)
+            {
+                errors.Add(sourcePrefix + exception.GetBaseException().Message);
+                return string.Empty;
+            }
+        }
+
         internal static List<ValueTuple<PromptRole, string>> AssembleEmbedMessages(
-            PromptPreset preset, PromptContext context, Func<string, string> render, bool activePreset)
+            PromptPreset preset, PromptContext context, Func<string, string, string> render, bool activePreset)
         {
             var settings = RimTalk.Settings.Get();
             Type compactAssembler = typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.PromptPresetAssembler", true);
@@ -153,8 +159,45 @@ namespace AdvancedRimTalk.Prompt
             Type assembler = compact ? compactAssembler
                 : typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.LegacyMultiTurnPromptBuilder", true);
             MethodInfo assemble = assembler.GetMethod("AssembleMessages", BindingFlags.Static | BindingFlags.NonPublic);
+            // RimTalk passes only Content to its renderer. Replace content on the clone
+            // with unique handles so identical templates still retain their entry identity.
+            var sources = new Dictionary<string, ValueTuple<string, string>>(StringComparer.Ordinal);
+            const string handlePrefix = "\uE000PreviewSource:";
+            PromptEntry formatEntry = compact ? preset.Entries.FirstOrDefault(entry => entry.Enabled && entry.IsJsonFormat) : null;
+            for (int index = 0; index < preset.Entries.Count; index++)
+            {
+                PromptEntry entry = preset.Entries[index];
+                if (!entry.Enabled) continue;
+                string source = entry.Content;
+                string sourceName = SourceName(preset.Name, entry.Name, index);
+                // Keep RimTalk's special json.format -> json.anchor reminder conversion.
+                if (entry == formatEntry && source != null && string.Equals(
+                    source.Trim().Replace(" ", ""), "{{json.format}}", StringComparison.OrdinalIgnoreCase))
+                {
+                    sources.Add(source, (source, sourceName));
+                    sources.Add("{{ json.anchor }}", ("{{ json.anchor }}", sourceName));
+                }
+                else if (!entry.IsMainChatHistory || entry.Position != PromptPosition.Relative || entry == formatEntry)
+                {
+                    string handle = handlePrefix + index + "\uE001";
+                    sources.Add(handle, (source, sourceName));
+                    entry.Content = handle;
+                }
+            }
+            Func<string, string> renderEntry = handle =>
+            {
+                var source = sources[handle];
+                return render(source.Item1, source.Item2);
+            };
             return (List<ValueTuple<PromptRole, string>>)assemble.Invoke(null,
-                new object[] { preset, render, history, null });
+                new object[] { preset, renderEntry, history, null });
+        }
+
+        private static string SourceName(string presetName, string entryName, int index)
+        {
+            return (string.IsNullOrWhiteSpace(presetName) ? "Prompt Preset" : presetName)
+                + " / " + (string.IsNullOrWhiteSpace(entryName) ? "Prompt Entry" : entryName)
+                + " (#" + (index + 1) + ")";
         }
     }
 }
