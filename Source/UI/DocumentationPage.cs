@@ -29,12 +29,18 @@ namespace AdvancedRimTalk.UI
         private bool focusNavigation;
         private readonly Stack<DocumentationEntry> back = new Stack<DocumentationEntry>();
         public IEnumerable<DocumentationEntry> Entries => catalog.Entries;
+        internal AdvancedRimTalkDocumentationCatalog Catalog => catalog;
 
         public void Focus(string path) { pendingPath = path; }
 
         public DocumentationPage(string contentRoot)
+            : this(AdvancedRimTalkDocumentationCatalog.Create(contentRoot))
         {
-            catalog = AdvancedRimTalkDocumentationCatalog.Create(contentRoot);
+        }
+
+        internal DocumentationPage(AdvancedRimTalkDocumentationCatalog catalog)
+        {
+            this.catalog = catalog;
             markdown = IrisMenusMarkdownRenderer.TryCreate(
                 delegate
                 {

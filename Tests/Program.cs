@@ -16,6 +16,7 @@ namespace AdvancedRimTalk.PromptChecks
             MixedTemplateChecks.Run();
             ArtiDocumentRenderChecks.Run();
             PromptSettingsChecks.Run();
+            ArtiDocumentationIndexChecks.Run();
             MemoryLayerTransferChecks.Run();
             MemoryPreviewPolicyChecks.Run();
             PromptPreviewSessionChecks.Run();

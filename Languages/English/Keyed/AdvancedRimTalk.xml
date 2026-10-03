@@ -33,6 +33,9 @@
   <AdvancedRimTalk.ArtiEditor.Move>Move tab…</AdvancedRimTalk.ArtiEditor.Move>
   <AdvancedRimTalk.ArtiEditor.Dock>Dock in editor page</AdvancedRimTalk.ArtiEditor.Dock>
   <AdvancedRimTalk.ArtiEditor.Windows>Switch window…</AdvancedRimTalk.ArtiEditor.Windows>
+  <AdvancedRimTalk.ArtiEditor.Documentation>Docs</AdvancedRimTalk.ArtiEditor.Documentation>
+  <AdvancedRimTalk.ArtiEditor.DocumentationHint>Hold Control and left-click a keyword to view documentation for built-in keywords or keywords registered outside player code.</AdvancedRimTalk.ArtiEditor.DocumentationHint>
+  <AdvancedRimTalk.ArtiEditor.OpenDocumentation>Control + left-click: view documentation for {0}</AdvancedRimTalk.ArtiEditor.OpenDocumentation>
   <AdvancedRimTalk.ArtiEditor.CloseTab>Close tab (Ctrl+W); edits are already written to the prompt.</AdvancedRimTalk.ArtiEditor.CloseTab>
   <AdvancedRimTalk.ArtiEditor.Empty>Use Open prompt to select parts from different presets. Detach tabs into windows for side-by-side reference or move them back to the editor page. Ctrl+Tab / Ctrl+Shift+Tab switches tabs; Ctrl+W closes a tab. Edits immediately update the corresponding part without activating a preset or executing a prompt.</AdvancedRimTalk.ArtiEditor.Empty>
   <AdvancedRimTalk.PromptParts.Title>Takeover Prompt Parts</AdvancedRimTalk.PromptParts.Title>

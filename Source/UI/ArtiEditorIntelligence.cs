@@ -278,6 +278,15 @@ namespace AdvancedRimTalk.UI
         private bool catalogsInitialized;
         private bool catalogWarningLogged;
 
+        internal IArtiSymbolCatalog RegisteredSymbols
+        {
+            get
+            {
+                EnsureCatalogs();
+                return symbolCatalog;
+            }
+        }
+
         public ArtiEditorAnalysis AnalyzeDocument(
             string source,
             IEnumerable<string> externalGlobals = null,

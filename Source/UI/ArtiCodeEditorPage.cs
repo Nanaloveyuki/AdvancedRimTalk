@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AdvancedRimTalk.Arti;
+using AdvancedRimTalk.Documentation;
 using AdvancedRimTalk.Settings;
 using AdvancedRimTalk.Prompt;
 using UnityEngine;
@@ -31,6 +32,8 @@ namespace AdvancedRimTalk.UI
         private readonly List<EditorSnapshot> undoStack = new List<EditorSnapshot>();
         private readonly List<EditorSnapshot> redoStack = new List<EditorSnapshot>();
 
+        private ArtiDocumentationIndex documentationIndex;
+        private readonly GUIContent pointerContent = new GUIContent();
         private Vector2 editorScroll;
         private Vector2 diagnosticsScroll;
         private string source = string.Empty;
@@ -167,10 +170,19 @@ namespace AdvancedRimTalk.UI
                     ? MarkerColor
                     : CommentColor;
             GUI.Label(
-                new Rect(rect.x + 8f, rect.y + 4f, Mathf.Max(1f, rect.width - 96f), 22f),
+                new Rect(rect.x + 8f, rect.y + 4f, Mathf.Max(1f, rect.width - 180f), 22f),
                 status,
                 diagnosticStyle);
             GUI.color = Color.white;
+
+            Rect documentationButton = new Rect(rect.xMax - 166f, rect.y + 2f, 78f, 26f);
+            TooltipHandler.TipRegion(documentationButton,
+                "AdvancedRimTalk.ArtiEditor.DocumentationHint".Translate());
+            if (Widgets.ButtonText(documentationButton,
+                "AdvancedRimTalk.ArtiEditor.Documentation".Translate().ToString()))
+            {
+                OpenDocumentation(null);
+            }
 
             if (Widgets.ButtonText(
                 new Rect(rect.xMax - 82f, rect.y + 2f, 78f, 26f),
@@ -261,6 +273,9 @@ namespace AdvancedRimTalk.UI
                 0f,
                 Mathf.Max(minimumCodeWidth, viewRect.width - gutterWidth),
                 viewRect.height);
+            Rect documentationRect;
+            DocumentationEntry documentation = HandleDocumentationPointer(
+                codeRect, pointerInViewport, out documentationRect);
             string before = source;
             TextEditor beforeEditor = GetEditor();
             int beforeCursor = beforeEditor == null
@@ -297,8 +312,71 @@ namespace AdvancedRimTalk.UI
                 }
             }
 
+            if (documentation != null && Event.current.type == EventType.Repaint)
+            {
+                Widgets.DrawBoxSolid(new Rect(documentationRect.x, documentationRect.yMax - 1f,
+                    documentationRect.width, 1f), NumberColor);
+            }
             DrawDiagnosticDecorations(gutterWidth);
             DrawCompletionPopup(gutterWidth, viewRect.width, false);
+        }
+
+        private DocumentationEntry HandleDocumentationPointer(Rect codeRect, bool pointerInViewport, out Rect tokenRect)
+        {
+            tokenRect = default;
+            Event current = Event.current;
+            if (!canFocus || !pointerInViewport || current == null || !current.control
+                || (current.type != EventType.Repaint && current.type != EventType.MouseDown)
+                || !codeRect.Contains(current.mousePosition) || analysis == null)
+                return null;
+
+            pointerContent.text = source;
+            int offset = inputStyle.GetCursorStringIndex(codeRect, pointerContent, current.mousePosition);
+            Vector2 caret = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, offset);
+            if (current.mousePosition.x < caret.x) offset--;
+            if (offset < 0 || offset >= source.Length || source[offset] == '\n') return null;
+            Vector2 start = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, offset);
+            Vector2 end = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, offset + 1);
+            if (!new Rect(start.x, start.y, end.x - start.x, lineAdvance).Contains(current.mousePosition))
+                return null;
+
+            DocumentationEntry entry = ResolveDocumentationAt(offset);
+            if (entry == null) return null;
+            foreach (ArtiToken token in analysis.Tokens)
+            {
+                if (token == null || offset < token.Span.StartOffset || offset >= token.Span.EndOffset) continue;
+                start = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, token.Span.StartOffset);
+                end = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, token.Span.EndOffset);
+                tokenRect = new Rect(start.x, start.y, end.x - start.x, lineAdvance);
+                break;
+            }
+            TooltipHandler.TipRegion(tokenRect,
+                "AdvancedRimTalk.ArtiEditor.OpenDocumentation".Translate(entry.Title));
+            if (current.type == EventType.MouseDown && current.button == 0)
+            {
+                current.Use();
+                OpenDocumentation(entry);
+            }
+            return entry;
+        }
+
+        private DocumentationEntry ResolveDocumentationAt(int offset)
+        {
+            if (documentationIndex == null)
+            {
+                var mod = LoadedModManager.GetMod<AdvancedRimTalkMod>();
+                if (mod == null) return null;
+                documentationIndex = new ArtiDocumentationIndex(mod.Documentation.Catalog);
+            }
+            return documentationIndex.Find(source, offset, promptAnalysisContext.Names, intelligence.RegisteredSymbols);
+        }
+
+        private void OpenDocumentation(DocumentationEntry entry)
+        {
+            Suspend();
+            focusEditor = true;
+            GUI.FocusControl(null);
+            ArtiDocumentationWindow.Open(entry);
         }
 
         private void DrawLineNumbers(float gutterWidth)

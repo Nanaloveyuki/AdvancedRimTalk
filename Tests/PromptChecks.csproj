@@ -40,6 +40,8 @@
     <Compile Include="..\Source\UI\ArtiEditorWorkspace.cs" Link="ArtiEditorWorkspace.cs" />
     <Compile Include="..\Source\Documentation\DocumentationBlocks.cs" Link="DocumentationBlocks.cs" />
     <Compile Include="..\Source\Documentation\AdvancedRimTalkDocumentationCatalog.cs" Link="AdvancedRimTalkDocumentationCatalog.cs" />
+    <Compile Include="..\Source\Documentation\ArtiDocumentationIndex.cs" Link="ArtiDocumentationIndex.cs" />
+    <Compile Include="ArtiDocumentationIndexChecks.cs" />
     <Compile Include="..\Source\Prompt\ArtiPromptPreset.cs" Link="ArtiPromptPreset.cs" />
     <Compile Include="..\Source\Settings\AdvancedRimTalkSettings.cs" Link="AdvancedRimTalkSettings.cs" />
     <Compile Include="..\Source\Prompt\ArtiPromptPart.cs" Link="ArtiPromptPart.cs" />
