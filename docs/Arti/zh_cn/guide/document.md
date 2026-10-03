@@ -111,4 +111,4 @@ core.emit("example")
 {{ pawn.name }}           // RimTalk Scriban
 ```
 
-Arti 先处理正式代码块，然后由嵌入模式继续处理旧占位符和 RimTalk 的 Scriban。接管模式只执行你配置的接管文档中的 Arti 代码，详情见 [mode](mode.md)。
+Arti 先处理正式代码块，再展开旧占位符，最后交给 RimTalk Scriban。接管模式也保留 Scriban，只替换提示词消息的组装。Arti 输出中的 `{{ ... }}` 和 `{{% ... %}}` 都按普通文本保留，不会再次执行。详情见 [mode](mode.md)。

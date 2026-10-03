@@ -611,13 +611,24 @@ namespace AdvancedRimTalk.UI
             try
             {
                 Type type = typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.PresetSerializer", true);
-                Type entryType = typeof(PromptEntry);
                 object native = Activator.CreateInstance(typeof(PromptPreset), preset.Name, "Advanced RimTalk export");
                 var entries = ((PromptPreset)native).Entries;
                 ArtiPromptInit init = preset.Init ?? new ArtiPromptInit();
                 if (!string.IsNullOrWhiteSpace(init.Title) || init.Sources.Count > 0 || init.Anchors.Count > 0)
                     entries.Add(new PromptEntry("[ArtiInit]", init.Title + "\n" + init.Description + "\nSources: " + string.Join(",", init.Sources) + "\nAnchors: " + string.Join(",", init.Anchors)));
-                foreach (ArtiPromptPart part in preset.Parts) entries.Add(new PromptEntry(part.Name, part.Content, part.Role) { Enabled = part.Enabled, CustomRole = part.CustomRole });
+                foreach (ArtiPromptPart part in preset.Parts)
+                {
+                    PromptPosition position;
+                    if (!Enum.TryParse(part.Position, true, out position)) position = PromptPosition.Relative;
+                    entries.Add(new PromptEntry(part.Name, part.Content, part.Role)
+                    {
+                        Enabled = part.Enabled,
+                        CustomRole = part.CustomRole,
+                        Position = position,
+                        InChatDepth = part.InChatDepth,
+                        IsMainChatHistory = part.IsMainChatHistory
+                    });
+                }
                 MethodInfo export = type.GetMethod("ExportToFile", BindingFlags.Public | BindingFlags.Static);
                 bool ok = export != null && (bool)export.Invoke(null, new object[] { native, null });
                 Messages.Message((ok ? "AdvancedRimTalk.PromptParts.Exported" : "AdvancedRimTalk.PromptParts.ExportFailed").Translate(), ok ? MessageTypeDefOf.PositiveEvent : MessageTypeDefOf.RejectInput);

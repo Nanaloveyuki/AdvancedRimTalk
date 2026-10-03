@@ -20,7 +20,7 @@
   <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>Editor undo entries</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
   <AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>Maximum completion suggestions</AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>Replace RimTalk prompt builder</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
-  <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>Build request messages with Advanced RimTalk instead of RimTalk presets and Scriban rendering. RimTalk still handles triggers and the model client.</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
+  <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>Build request messages from Advanced RimTalk Prompt Parts instead of RimTalk preset assembly, while retaining Scriban rendering. RimTalk still handles triggers and the model client.</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
   <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
   <AdvancedRimTalk.ArtiRepl.Run>Run</AdvancedRimTalk.ArtiRepl.Run>
   <AdvancedRimTalk.ArtiRepl.Clear>Reset</AdvancedRimTalk.ArtiRepl.Clear>

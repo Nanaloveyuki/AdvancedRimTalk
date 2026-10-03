@@ -58,7 +58,11 @@ namespace AdvancedRimTalk.Prompt
                             PromptService.DecoratePrompt(context.TalkRequest, context.AllPawns, string.Empty);
                             context.DialoguePrompt = context.TalkRequest.Prompt;
                         });
-                    attempt("History", () => context.ChatHistory = context.GetChatHistory(false));
+                    attempt("History", () =>
+                    {
+                        context.GetChatHistory(false);
+                        context.GetChatHistory(true);
+                    });
                 }
                 var runtime = new AdvancedRimTalk.Arti.ArtiGlobalRuntime();
                 Func<string, string> render = source =>
@@ -67,7 +71,7 @@ namespace AdvancedRimTalk.Prompt
                     {
                         ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(source, context, runtime);
                         foreach (var diagnostic in arti.Diagnostics) errors.Add(diagnostic.ToString());
-                        string text = arti.Text;
+                        string text = arti.TemplateText;
                         PromptExpansionResult expansion = null;
                         if (AdvancedRimTalkMod.IsPlaceholderLayerEnabled)
                         {
@@ -88,7 +92,7 @@ namespace AdvancedRimTalk.Prompt
                             errors.Add("Unresolved Scriban entry skipped.");
                             return string.Empty;
                         }
-                        return expansion == null ? result : expansion.Restore(result);
+                        return arti.Restore(expansion == null ? result : expansion.Restore(result));
                     }
                     catch (Exception exception)
                     {
@@ -117,30 +121,40 @@ namespace AdvancedRimTalk.Prompt
                 {
                     PromptPreset preset = rimTalkPreset ?? PromptManager.Instance.GetActivePreset();
                     if (preset == null) throw new InvalidOperationException("No active RimTalk preset.");
-                    bool useSimpleInstruction = preset.Id == PromptManager.Instance.GetActivePreset()?.Id;
-                    preset = preset.Clone();
-                    var settings = RimTalk.Settings.Get();
-                    if (useSimpleInstruction && !settings.UseAdvancedPromptMode)
-                    {
-                        PromptEntry baseEntry = preset.Entries.FirstOrDefault(entry =>
-                            string.Equals(entry.Name, "Base Instruction", StringComparison.OrdinalIgnoreCase));
-                        if (baseEntry != null) baseEntry.Content = string.IsNullOrWhiteSpace(settings.SimpleModeInstruction)
-                            ? RimTalk.Data.Constant.DefaultInstruction : settings.SimpleModeInstruction;
-                    }
-                    PromptEntry historyEntry = preset.Entries.FirstOrDefault(entry => entry.Enabled
-                        && entry.Position == PromptPosition.Relative && entry.IsMainChatHistory);
-                    var history = historyEntry != null
-                        && (historyEntry.Content ?? string.Empty).IndexOf("history_simplified", StringComparison.OrdinalIgnoreCase) >= 0
-                        ? context.GetChatHistory(true) : context.ChatHistory;
-                    Type assembler = typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.PromptPresetAssembler", true);
-                    MethodInfo assemble = assembler.GetMethod("AssembleMessages", BindingFlags.Static | BindingFlags.NonPublic);
-                    var assembled = (List<ValueTuple<PromptRole, string>>)assemble.Invoke(null,
-                        new object[] { preset, render, history, null });
+                    var assembled = AssembleEmbedMessages(preset, context, render,
+                        preset.Id == PromptManager.Instance.GetActivePreset()?.Id);
                     foreach (var message in assembled) messages.Add(((Role)message.Item1, message.Item2));
                 }
             }
             diagnostics = string.Join("\n", errors);
             return PromptPreview.FromMessages(messages);
+        }
+
+        internal static List<ValueTuple<PromptRole, string>> AssembleEmbedMessages(
+            PromptPreset preset, PromptContext context, Func<string, string> render, bool activePreset)
+        {
+            var settings = RimTalk.Settings.Get();
+            Type compactAssembler = typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.PromptPresetAssembler", true);
+            preset = preset.Clone();
+            if (activePreset && !settings.UseAdvancedPromptMode)
+            {
+                MethodInfo simplePreset = compactAssembler.GetMethod("BuildSimpleModePreset", BindingFlags.Static | BindingFlags.NonPublic);
+                preset = (PromptPreset)simplePreset.Invoke(null, new object[]
+                {
+                    preset, settings.SimpleModeInstruction, Constant.DefaultInstruction, "{{ json.format }}"
+                });
+            }
+            bool compact = settings.Context?.UseCompactHistory ?? true;
+            PromptEntry historyEntry = preset.Entries.FirstOrDefault(entry => entry.Enabled
+                && entry.Position == PromptPosition.Relative && entry.IsMainChatHistory);
+            List<ValueTuple<Role, string>> history = historyEntry == null ? null
+                : context.GetChatHistory(compact || (historyEntry.Content ?? string.Empty)
+                    .IndexOf("history_simplified", StringComparison.OrdinalIgnoreCase) >= 0);
+            Type assembler = compact ? compactAssembler
+                : typeof(PromptManager).Assembly.GetType("RimTalk.Prompt.LegacyMultiTurnPromptBuilder", true);
+            MethodInfo assemble = assembler.GetMethod("AssembleMessages", BindingFlags.Static | BindingFlags.NonPublic);
+            return (List<ValueTuple<PromptRole, string>>)assemble.Invoke(null,
+                new object[] { preset, render, history, null });
         }
     }
 }

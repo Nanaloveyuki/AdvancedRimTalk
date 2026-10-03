@@ -3,7 +3,7 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
 
-    [string]$GameModPath = "D:\Appdata\Steam\steamapps\common\RimWorld\Mods\AdvancedRimTalk",
+    [string]$GameModPath = "E:\Apps\Steam\steamapps\common\RimWorld\Mods\AdvancedRimTalk",
 
     [switch]$SkipBuild
 )

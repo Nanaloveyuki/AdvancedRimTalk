@@ -9,7 +9,7 @@ namespace AdvancedRimTalk.Integration
         private static bool Prefix(string key, object value)
         {
             if (PromptPreviewSession.Variables == null) return true;
-            PromptPreviewSession.Variables[key] = value;
+            PromptPreviewSession.SetVariable(PromptPreviewSession.Variables, key, value);
             return false;
         }
     }
@@ -20,7 +20,7 @@ namespace AdvancedRimTalk.Integration
         private static bool Prefix(string key, ref object __result)
         {
             if (PromptPreviewSession.Variables == null) return true;
-            PromptPreviewSession.Variables.TryGetValue(key, out __result);
+            __result = PromptPreviewSession.GetVariable(PromptPreviewSession.Variables, key);
             return false;
         }
     }

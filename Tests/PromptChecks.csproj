@@ -10,7 +10,6 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <OutputPath>..\tmp\prompt-checks\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <RimTalkAssemblyDir Condition="'$(RimTalkAssemblyDir)' == ''">F:\tmp\rimworld\Rimtalk\1.6\Assemblies</RimTalkAssemblyDir>
   </PropertyGroup>
 
   <ItemGroup>

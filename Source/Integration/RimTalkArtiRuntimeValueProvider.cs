@@ -11,6 +11,7 @@ using RimTalk.API;
 using RimTalk.Data;
 using RimTalk.Prompt;
 using RimTalk.Service;
+using RimTalk.Source.Data;
 using RimTalk.Util;
 using RimWorld;
 using UnityEngine;
@@ -104,13 +105,19 @@ namespace AdvancedRimTalk.Integration
                     value = new RimTalkArtiChatValue(_context);
                     return true;
                 case "json":
+                    RimTalkSettings settings = GetRimTalkSettings();
+                    bool socialEffects = settings != null && settings.ApplyMoodAndSocialEffects;
+                    bool fromUser = _context.TalkType.IsFromUser();
+                    bool directives = settings != null && settings.Context != null && settings.Context.EnableMemory;
                     value = new Dictionary<string, object>(StringComparer.Ordinal)
                     {
-                        {
-                            "format",
-                            Constant.GetJsonInstruction(GetRimTalkSettings() != null && GetRimTalkSettings().ApplyMoodAndSocialEffects)
-                        }
+                        { "format", Constant.GetJsonInstruction(socialEffects, fromUser, directives) },
+                        { "anchor", Constant.GetJsonAnchor(socialEffects, fromUser, directives) }
                     };
+                    return true;
+                case "is_user":
+                case "is_from_user":
+                    value = _context.TalkType.IsFromUser();
                     return true;
                 case "lang":
                     value = Constant.Lang;

@@ -20,7 +20,7 @@
   <AdvancedRimTalk.Settings.ArtiEditorUndoLimit>编辑器撤销步数</AdvancedRimTalk.Settings.ArtiEditorUndoLimit>
   <AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>最大补全联想数量</AdvancedRimTalk.Settings.ArtiEditorCompletionLimit>
   <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>接管 RimTalk Prompt 构建</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanism>
-  <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>改由 Advanced RimTalk 构建请求消息，不走 RimTalk 预设和 Scriban 渲染。RimTalk 仍负责触发和模型客户端。</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
+  <AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>改由 Advanced RimTalk 的 Prompt Parts 构建请求消息，跳过 RimTalk 预设组装，但保留 Scriban 渲染。RimTalk 仍负责触发和模型客户端。</AdvancedRimTalk.Settings.ReplaceRimTalkPromptMechanismTooltip>
   <AdvancedRimTalk.ArtiRepl.Title>Arti REPL</AdvancedRimTalk.ArtiRepl.Title>
   <AdvancedRimTalk.ArtiRepl.Run>运行</AdvancedRimTalk.ArtiRepl.Run>
   <AdvancedRimTalk.ArtiRepl.Clear>重置</AdvancedRimTalk.ArtiRepl.Clear>

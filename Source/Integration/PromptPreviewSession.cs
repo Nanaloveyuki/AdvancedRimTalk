@@ -18,6 +18,18 @@ namespace AdvancedRimTalk.Integration
             variables = new Dictionary<string, object>(StringComparer.Ordinal);
         }
 
+        internal static object GetVariable(Dictionary<string, object> values, string key)
+        {
+            object value;
+            return !string.IsNullOrEmpty(key) && values.TryGetValue(key.ToLowerInvariant(), out value)
+                ? value : string.Empty;
+        }
+
+        internal static void SetVariable(Dictionary<string, object> values, string key, object value)
+        {
+            if (!string.IsNullOrEmpty(key)) values[key.ToLowerInvariant()] = value;
+        }
+
         public void Dispose()
         {
             if (disposed) return;

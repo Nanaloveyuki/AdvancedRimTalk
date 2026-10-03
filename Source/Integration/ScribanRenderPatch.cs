@@ -35,7 +35,7 @@ namespace AdvancedRimTalk.Integration
                     var runtime = context == null ? new ArtiGlobalRuntime()
                         : Runtimes.GetValue(context, _ => new ArtiGlobalRuntime());
                     arti = ArtiPromptDocumentRenderer.Render(templateText, context, runtime);
-                    templateText = arti.Text;
+                    templateText = arti.TemplateText;
                 }
                 catch (Exception exception)
                 {
@@ -93,6 +93,7 @@ namespace AdvancedRimTalk.Integration
             {
                 __result = __state.Placeholders.Restore(__result);
             }
+            if (__state.Arti != null) __result = __state.Arti.Restore(__result);
 
             if (Prefs.DevMode)
             {

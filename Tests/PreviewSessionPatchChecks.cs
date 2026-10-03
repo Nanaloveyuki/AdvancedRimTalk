@@ -22,6 +22,15 @@ namespace AdvancedRimTalk.PromptChecks
                 string output = Template.Parse("{{ setvar 'key' 'local' }}{{ getvar 'key' }}").Render(context);
                 if (output != "local" || !Equals(ScribanParser.GetSessionVar("key"), "real"))
                     throw new Exception("Native preview modified the real session.");
+                Set("MixedKey", "one");
+                Set("MIXEDKEY", "two");
+                if (!Equals(Get("mixedkey"), "two")) throw new Exception("Preview keys were not normalized.");
+                Set(null, "ignored");
+                Set(string.Empty, "ignored");
+                if (!Equals(Get(null), string.Empty) || !Equals(Get(string.Empty), string.Empty)
+                    || !Equals(Get("missing"), string.Empty)) throw new Exception("Preview missing/empty keys differ from RimTalk.");
+                Set("nullable", null);
+                if (Get("NULLABLE") != null) throw new Exception("Preview discarded an explicitly stored null.");
                 bool runOriginal = Invoke(typeof(PreviewResetSessionVariablesPatch), new object[0]);
                 if (runOriginal || PromptPreviewSession.Variables.Count != 0)
                     throw new Exception("Preview reset did not target local variables.");

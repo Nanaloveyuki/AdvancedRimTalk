@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <RimWorldReferencesDir Condition="'$(RimWorldReferencesDir)' == '' and '$(OS)' == 'Windows_NT'">D:\References\Rimworld</RimWorldReferencesDir>
+    <RimWorldReferencesDir Condition="'$(RimWorldReferencesDir)' == ''">/mnt/d/References/Rimworld</RimWorldReferencesDir>
+    <RimWorldManagedDir Condition="'$(RimWorldManagedDir)' == '' and '$(OS)' == 'Windows_NT'">E:\Apps\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed</RimWorldManagedDir>
+    <RimWorldManagedDir Condition="'$(RimWorldManagedDir)' == ''">/mnt/e/Apps/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed</RimWorldManagedDir>
+    <RimTalkAssemblyDir Condition="'$(RimTalkAssemblyDir)' == ''">$(RimWorldReferencesDir)/Mods/Rimtalk/1.6/Assemblies</RimTalkAssemblyDir>
+    <HarmonyAssemblyPath Condition="'$(HarmonyAssemblyPath)' == ''">$(RimWorldReferencesDir)/Mods/RimIris/Assemblies/0Harmony.dll</HarmonyAssemblyPath>
+  </PropertyGroup>
+</Project>

@@ -10,9 +10,6 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <OutputPath>tmp\build\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <RimWorldManagedDir Condition="'$(RimWorldManagedDir)' == ''">D:\Appdata\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed</RimWorldManagedDir>
-    <RimTalkAssemblyDir Condition="'$(RimTalkAssemblyDir)' == ''">F:\tmp\rimworld\Rimtalk\1.6\Assemblies</RimTalkAssemblyDir>
-    <HarmonyAssemblyPath Condition="'$(HarmonyAssemblyPath)' == ''">F:\tmp\rimworld\RimIris\Assemblies\0Harmony.dll</HarmonyAssemblyPath>
   </PropertyGroup>
 
   <ItemGroup>

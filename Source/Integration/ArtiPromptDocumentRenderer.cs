@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using AdvancedRimTalk.Arti;
+using AdvancedRimTalk.Prompt;
 using AdvancedRimTalk.Diagnostics;
 using RimTalk.Prompt;
 using Verse;
@@ -10,13 +11,19 @@ namespace AdvancedRimTalk.Integration
 {
     internal sealed class ArtiPromptRenderResult
     {
-        public ArtiPromptRenderResult(string text, IList<ArtiDiagnostic> diagnostics)
+        private readonly PromptExpansionResult _literalOutput;
+
+        public ArtiPromptRenderResult(string text, IList<ArtiDiagnostic> diagnostics, PromptExpansionResult literalOutput = null)
         {
-            Text = text ?? string.Empty;
+            _literalOutput = literalOutput;
+            TemplateText = text ?? string.Empty;
+            Text = Restore(TemplateText);
             Diagnostics = diagnostics ?? new List<ArtiDiagnostic>();
         }
 
         public string Text { get; }
+        public string TemplateText { get; }
+        public string Restore(string renderedText) => _literalOutput == null ? renderedText : _literalOutput.Restore(renderedText);
         public IList<ArtiDiagnostic> Diagnostics { get; }
         public bool HasErrors
         {
@@ -60,6 +67,7 @@ namespace AdvancedRimTalk.Integration
             IArtiModuleCatalog modules = RimTalkArtiCatalog.CreateModuleCatalog();
             ArtiExecutionContext executionContext = CreateExecutionContext(context, modules, symbols, owner);
             StringBuilder output = new StringBuilder();
+            PromptExpansionResult literalOutput = null;
             int cursor = 0;
             foreach (ArtiCodeBlock block in document.CodeBlocks)
             {
@@ -86,7 +94,18 @@ namespace AdvancedRimTalk.Integration
                     bool executionFailed = false;
                     foreach (ArtiDiagnostic diagnostic in execution.Diagnostics)
                         executionFailed |= diagnostic.Severity == ArtiDiagnosticSeverity.Error;
-                    if (!preview || !executionFailed) output.Append(execution.Output);
+                    if (!preview || !executionFailed)
+                    {
+                        string emitted = execution.Output;
+                        if (!string.IsNullOrEmpty(emitted) && emitted.IndexOf("{{", StringComparison.Ordinal) >= 0)
+                        {
+                            if (literalOutput == null) literalOutput = new PromptExpansionResult(string.Empty);
+                            string slot = "\uE000ArtiOutput" + Guid.NewGuid().ToString("N") + "\uE001";
+                            literalOutput.Slots.Add(slot, emitted);
+                            output.Append(slot);
+                        }
+                        else output.Append(emitted);
+                    }
                 }
 
                 cursor = end;
@@ -97,7 +116,7 @@ namespace AdvancedRimTalk.Integration
                 output.Append(source.Substring(cursor));
             }
 
-            return new ArtiPromptRenderResult(output.ToString(), diagnostics);
+            return new ArtiPromptRenderResult(output.ToString(), diagnostics, literalOutput);
         }
 
         private static ArtiExecutionContext CreateExecutionContext(
@@ -125,14 +144,13 @@ namespace AdvancedRimTalk.Integration
             {
                 if (previewVariables != null)
                 {
-                    object value;
-                    return previewVariables.TryGetValue(key, out value) ? value : string.Empty;
+                    return PromptPreviewSession.GetVariable(previewVariables, key);
                 }
                 return ScribanParser.GetSessionVar(key);
             };
             executionContext.SetVariable = delegate(string key, string value)
             {
-                if (previewVariables != null) previewVariables[key] = value;
+                if (previewVariables != null) PromptPreviewSession.SetVariable(previewVariables, key, value);
                 else ScribanParser.SetSessionVar(key, value);
             };
             return executionContext;

@@ -52,12 +52,15 @@ namespace AdvancedRimTalk.PromptChecks
             AdvancedRimTalkMod.Settings.TakeoverConversationHistoryCount = 0;
             context.IncludeEvents = true;
             context.MaxEventsCount = 7;
+            context.EnableMemory = true;
+            context.UseCompactHistory = true;
             using (RimTalkTakeoverContextScope.Enter())
             {
                 var configured = RimTalk.Settings.Get().Context;
                 Check(configured.MaxPawnContextCount == 17 && configured.ConversationHistoryCount == 0,
                     "nondefault configuration and zero history retained");
                 Check(configured.IncludeEvents && configured.MaxEventsCount == 7, "event settings preserved");
+                Check(configured.EnableMemory && configured.UseCompactHistory, "memory and compact history retained");
             }
             original.Context = null;
             try
@@ -127,6 +130,7 @@ namespace RimTalk.Data
             IncludeBackstory, IncludeTraits, IncludeSkills, IncludeHealth, IncludeMood, IncludeThoughts,
             IncludeRelations, IncludeEquipment, IncludePrisonerSlaveStatus, IncludeTime, IncludeDate,
             IncludeSeason, IncludeWeather, IncludeLocationAndTemperature, IncludeTerrain, IncludeBeauty,
-            IncludeCleanliness, IncludeSurroundings, IncludeWealth, IncludeEvents, IncludeTopicKeywords;
+            IncludeCleanliness, IncludeSurroundings, IncludeWealth, IncludeEvents, IncludeTopicKeywords,
+            EnableMemory, UseCompactHistory;
     }
 }

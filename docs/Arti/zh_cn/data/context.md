@@ -61,7 +61,7 @@ game
 
 `prompt` 是当前对话提示，`user_prompt` 是用户请求，`raw_prompt` 是装饰前的原始请求；`context` 和 `pawn_context` 是当前 Pawn 的上下文文本。
 
-`json.format` 提供 RimTalk 当前使用的 JSON 回复约束文本，`lang` 是当前语言文本。它们都是生成时读取的只读值。
+`json.format` 提供 RimTalk 当前的 JSONL 回复约束，`json.anchor` 是简短的输出提醒。两者都按社交效果、玩家请求和记忆开关生成；玩家请求且启用记忆时包含 `directives` 约束。`is_user` 和 `is_from_user` 表示请求是否来自玩家，`lang` 是当前语言文本。
 
 如果需要读取 RimTalk 设置对象，可以检查 `settings` 是否存在，再读取 `apply_mood_and_social_effects`、`use_advanced_prompt_mode`、`player_name`、`player_persona`、`simple_mode_instruction`、`player_dialogue_mode` 和 `context`。
 

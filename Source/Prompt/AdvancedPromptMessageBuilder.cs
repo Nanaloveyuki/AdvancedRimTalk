@@ -21,6 +21,7 @@ namespace AdvancedRimTalk.Prompt
 
         public static List<ValueTuple<Role, string>> Build(TalkRequest talkRequest, List<Pawn> pawns, string status, out List<PromptMessageSegment> segments)
         {
+            using var contextScope = RimTalkTakeoverContextScope.Enter(true);
             List<Pawn> participants = NormalizeParticipants(talkRequest, pawns);
             if (talkRequest != null && talkRequest.Participants == null && participants.Count > 0)
             {
@@ -111,39 +112,37 @@ namespace AdvancedRimTalk.Prompt
 
         private static PromptContext CreateRimTalkContext(TalkRequest talkRequest, List<Pawn> participants, string status)
         {
-            using (RimTalkTakeoverContextScope.Enter())
+            participants = participants ?? new List<Pawn>();
+            string originalPrompt = talkRequest == null ? string.Empty : talkRequest.Prompt ?? string.Empty;
+            string rawPrompt = talkRequest == null ? string.Empty : talkRequest.RawPrompt ?? originalPrompt;
+            ValueTuple<string, string, string> dialogueTypeData = talkRequest == null
+                ? new ValueTuple<string, string, string>(string.Empty, string.Empty, string.Empty)
+                : PromptContextProvider.GetDialogueTypeData(talkRequest, participants);
+            if (talkRequest != null)
             {
-                participants = participants ?? new List<Pawn>();
-                string originalPrompt = talkRequest == null ? string.Empty : talkRequest.Prompt ?? string.Empty;
-                string rawPrompt = talkRequest == null ? string.Empty : talkRequest.RawPrompt ?? originalPrompt;
-                ValueTuple<string, string, string> dialogueTypeData = talkRequest == null
-                    ? new ValueTuple<string, string, string>(string.Empty, string.Empty, string.Empty)
-                    : PromptContextProvider.GetDialogueTypeData(talkRequest, participants);
-                if (talkRequest != null)
-                {
-                    talkRequest.Prompt = originalPrompt;
-                }
-
-                string context = PromptService.BuildContext(
-                    participants,
-                    talkRequest != null && talkRequest.IsAnnouncement);
-
-                if (talkRequest != null)
-                {
-                    talkRequest.Context = context;
-                }
-
-                PromptContext promptContext = talkRequest == null
-                    ? new PromptContext(participants)
-                    : PromptContext.FromTalkRequest(talkRequest, participants);
-                promptContext.PawnContext = context ?? string.Empty;
-                promptContext.DialogueType = dialogueTypeData.Item1 ?? string.Empty;
-                promptContext.Intent = dialogueTypeData.Item2 ?? string.Empty;
-                promptContext.ConversationTopic = dialogueTypeData.Item3 ?? string.Empty;
-                promptContext.DialogueStatus = status ?? string.Empty;
-                promptContext.DialoguePrompt = rawPrompt ?? string.Empty;
-                return promptContext;
+                talkRequest.Prompt = originalPrompt;
             }
+
+            string context = PromptService.BuildContext(
+                participants,
+                talkRequest != null && talkRequest.IsAnnouncement);
+
+            if (talkRequest != null)
+            {
+                talkRequest.Context = context;
+                talkRequest.CausalPrompt = TalkHistory.BuildCausalSummary(talkRequest, dialogueTypeData.Item2, dialogueTypeData.Item3);
+            }
+
+            PromptContext promptContext = talkRequest == null
+                ? new PromptContext(participants)
+                : PromptContext.FromTalkRequest(talkRequest, participants);
+            promptContext.PawnContext = context ?? string.Empty;
+            promptContext.DialogueType = dialogueTypeData.Item1 ?? string.Empty;
+            promptContext.Intent = dialogueTypeData.Item2 ?? string.Empty;
+            promptContext.ConversationTopic = dialogueTypeData.Item3 ?? string.Empty;
+            promptContext.DialogueStatus = status ?? string.Empty;
+            promptContext.DialoguePrompt = rawPrompt ?? string.Empty;
+            return promptContext;
         }
 
         private static List<RenderedPromptPart> RenderTakeoverPromptParts(PromptContext promptContext)
@@ -176,11 +175,11 @@ namespace AdvancedRimTalk.Prompt
 
                 part.Normalize();
                 ArtiPromptRenderResult arti = ArtiPromptDocumentRenderer.Render(part.Content, promptContext, runtime, part.Id);
-                if (arti != null && !string.IsNullOrEmpty(arti.Text) && arti.Text.Contains("{{"))
+                if (arti != null && !string.IsNullOrEmpty(arti.TemplateText) && arti.TemplateText.Contains("{{"))
                 {
                     try
                     {
-                        arti = new ArtiPromptRenderResult(ScribanParser.Render(arti.Text, promptContext, true), arti.Diagnostics);
+                        arti = new ArtiPromptRenderResult(arti.Restore(ScribanParser.Render(arti.TemplateText, promptContext, true)), arti.Diagnostics);
                     }
                     catch (Exception exception)
                     {

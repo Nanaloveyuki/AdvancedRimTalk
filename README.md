@@ -59,11 +59,13 @@ This syntax is intentionally separate from native Scriban and from RimTalk's tri
 
 Takeover is a fully custom message path. It does not promise RimTalk's original decoration semantics. Each enabled Prompt Part executes `{{% ... %}}` Arti first, followed by RimTalk's native `{{ ... }}` Scriban renderer. RimTalk still owns talk triggering, participant selection, AI client calls, and response handling. Its active preset assembly is bypassed, but Scriban is not replaced.
 
-Prompt Parts are the only persisted takeover content source. Their order, enabled state, roles, and content control the messages. Legacy document-only Advanced RimTalk settings are not migrated. The preset importer preserves template source, including native Scriban, without automatically translating expressions. It does not currently preserve all positional and main-history metadata, so importing a preset is not a guarantee of equivalent behavior.
+Prompt Parts are the only persisted takeover content source. Their order, enabled state, roles, and content control the messages. Legacy document-only Advanced RimTalk settings are not migrated. Preset import/export preserves template source, custom roles, position, in-chat depth, and main-history metadata without translating expressions. Takeover still uses its own history/order semantics, so importing a preset is not a guarantee of equivalent behavior.
 
 Defaults include base instructions, JSONL output instructions, context, dialogue state, history, and the raw dialogue request. These are editable parts, not mandatory RimTalk decorations. Language instructions, mood/social effects, and the original history message sequence are not automatically preserved. Templates remain responsible for producing output compatible with RimTalk's response parser.
 
-Takeover settings bound pawn context count (default 32), history count (40), and final prompt characters (24,000). Character budgeting shares space between parts, preserves short parts where possible, and logs truncation. It is not a tokenizer or a guarantee that a model's context window will fit. Context construction uses a thread-local settings copy with a separate Context object, rather than replacing the shared settings field. This is a synchronous context-building scope, not an asynchronous settings override. Host-double checks cover nesting, exception cleanup, duplicate disposal, and thread isolation; they do not verify Harmony installation in the game.
+Takeover settings bound pawn context count (default 32), history count (40), and final prompt characters (24,000). Character budgeting shares space between parts, preserves short parts where possible, and logs truncation. It is not a tokenizer or a guarantee that a model's context window will fit. The synchronous build and render use a thread-local settings copy with a separate Context object, preserving RimTalk's memory and compact-history switches without replacing shared settings. Participant selection and previously stored history remain owned by RimTalk; this scope cannot recover participants or history already discarded upstream.
+
+RimTalk 1.3.2+ is required. Embed retains the native simple/advanced preset and compact/legacy history paths; its context preview uses the same preset helpers. Takeover records RimTalk's causal request summary for subsequent dialogue history. Arti `json.format` and `json.anchor` use the current social-effects, player-request, and memory switches; `is_user` and `is_from_user` identify player requests. Arti-emitted template-looking text remains literal in embed, takeover, and preview.
 
 ## Optional memory integration
 
@@ -101,9 +103,11 @@ For detailed Pawn data, use the read-only `pawn.info` object (or `core.pawn.info
 
 ## Build
 
-The default build properties point at the local RimWorld 1.6, RimTalk, and Harmony assemblies. Override `RimWorldManagedDir`, `RimTalkAssemblyDir`, and `HarmonyAssemblyPath` when building on another machine.
+`Directory.Build.props` shares the current RimTalk/Harmony reference paths between the mod and checks, with Windows and WSL defaults. RimTalk/Harmony come from `D:\References\Rimworld\Mods`; game assemblies come from `E:\Apps\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed`. Override `RimWorldReferencesDir`, `RimWorldManagedDir`, `RimTalkAssemblyDir`, or `HarmonyAssemblyPath` on another machine.
 
 ```powershell
 dotnet build AdvancedRimTalk.csproj -c Release
 dotnet run --project Tests/PromptChecks.csproj -c Release
 ```
+
+With only a newer .NET runtime installed, run the net9 checks using `dotnet run --project Tests/PromptChecks.csproj -c Release --roll-forward Major`. Compatibility smoke runs installed all production Harmony patches against RimTalk 1.3.2 and exercised actual Scriban/takeover builds, preview preset assembly, session isolation, and preset JSON round-tripping. These are headless managed-assembly checks with game-only environment reads isolated, not a loaded-save, Unity UI, or live model/streaming verification.

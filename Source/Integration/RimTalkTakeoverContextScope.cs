@@ -77,6 +77,8 @@ namespace AdvancedRimTalk.Integration
                 EnableContextOptimization = false,
                 MaxPawnContextCount = AdvancedRimTalkMod.Settings == null ? 32 : AdvancedRimTalkMod.Settings.TakeoverMaxPawnContextCount,
                 ConversationHistoryCount = AdvancedRimTalkMod.Settings == null ? 40 : AdvancedRimTalkMod.Settings.TakeoverConversationHistoryCount,
+                UseCompactHistory = fallback.UseCompactHistory,
+                EnableMemory = fallback.EnableMemory,
                 IncludeRace = true,
                 IncludeNotableGenes = true,
                 IncludeIdeology = true,
