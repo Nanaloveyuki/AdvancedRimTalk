@@ -5,7 +5,7 @@
   <packageId>advancedrimtalk.prompt</packageId>
   <url>https://steamcommunity.com/sharedfiles/filedetails/?id=3798502474</url>
   <supportedVersions>
-    <li>1.6</li>
+    <li>1.7</li>
   </supportedVersions>
   <description>A prompt-focused RimTalk extension. It provides a compatible dynamic placeholder layer and an optional prompt-builder replacement mode.</description>
   <modDependencies>

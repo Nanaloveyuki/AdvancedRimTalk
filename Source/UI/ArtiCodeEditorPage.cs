@@ -5,6 +5,7 @@ using AdvancedRimTalk.Documentation;
 using AdvancedRimTalk.Settings;
 using AdvancedRimTalk.Prompt;
 using UnityEngine;
+using UnityStubs.Gui;
 using Verse;
 
 namespace AdvancedRimTalk.UI
@@ -33,7 +34,6 @@ namespace AdvancedRimTalk.UI
         private readonly List<EditorSnapshot> redoStack = new List<EditorSnapshot>();
 
         private ArtiDocumentationIndex documentationIndex;
-        private readonly GUIContent pointerContent = new GUIContent();
         private Vector2 editorScroll;
         private Vector2 diagnosticsScroll;
         private string source = string.Empty;
@@ -330,14 +330,20 @@ namespace AdvancedRimTalk.UI
                 || !codeRect.Contains(current.mousePosition) || analysis == null)
                 return null;
 
-            pointerContent.text = source;
-            int offset = inputStyle.GetCursorStringIndex(codeRect, pointerContent, current.mousePosition);
-            Vector2 caret = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, offset);
+            IGuiBackend backend = GuiBackend.Current;
+            if (backend == null) return null;
+            TextEditor editor = GetEditor();
+            Vector2 origin = new Vector2(codeRect.x + inputStyle.padding.left,
+                codeRect.y + inputStyle.padding.top) - (editor == null ? Vector2.zero : editor.scrollOffset);
+            // Match the native TextArea's font, no-wrap layout and padded text origin.
+            int offset = backend.TextIndexAt(inputStyle.FontIndex, 0f, FontStyle.Normal,
+                source, -1f, current.mousePosition - origin);
+            Vector2 caret = GetDocumentationCursorPosition(backend, origin, offset, out _);
             if (current.mousePosition.x < caret.x) offset--;
             if (offset < 0 || offset >= source.Length || source[offset] == '\n') return null;
-            Vector2 start = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, offset);
-            Vector2 end = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, offset + 1);
-            if (!new Rect(start.x, start.y, end.x - start.x, lineAdvance).Contains(current.mousePosition))
+            Vector2 start = GetDocumentationCursorPosition(backend, origin, offset, out float height);
+            Vector2 end = GetDocumentationCursorPosition(backend, origin, offset + 1, out _);
+            if (!new Rect(start.x, start.y, end.x - start.x, height).Contains(current.mousePosition))
                 return null;
 
             DocumentationEntry entry = ResolveDocumentationAt(offset);
@@ -345,9 +351,9 @@ namespace AdvancedRimTalk.UI
             foreach (ArtiToken token in analysis.Tokens)
             {
                 if (token == null || offset < token.Span.StartOffset || offset >= token.Span.EndOffset) continue;
-                start = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, token.Span.StartOffset);
-                end = inputStyle.GetCursorPixelPosition(codeRect, pointerContent, token.Span.EndOffset);
-                tokenRect = new Rect(start.x, start.y, end.x - start.x, lineAdvance);
+                start = GetDocumentationCursorPosition(backend, origin, token.Span.StartOffset, out height);
+                end = GetDocumentationCursorPosition(backend, origin, token.Span.EndOffset, out _);
+                tokenRect = new Rect(start.x, start.y, end.x - start.x, height);
                 break;
             }
             TooltipHandler.TipRegion(tokenRect,
@@ -358,6 +364,12 @@ namespace AdvancedRimTalk.UI
                 OpenDocumentation(entry);
             }
             return entry;
+        }
+
+        private Vector2 GetDocumentationCursorPosition(IGuiBackend backend, Vector2 origin, int offset, out float height)
+        {
+            return origin + backend.TextCursorPos(inputStyle.FontIndex, 0f, FontStyle.Normal,
+                source, -1f, offset, out height);
         }
 
         private DocumentationEntry ResolveDocumentationAt(int offset)
@@ -1316,8 +1328,13 @@ namespace AdvancedRimTalk.UI
                 return;
             }
 
-            editor.ReplaceSelection(ArtiEditorText.IndentUnit);
-            CommitSource(editor.text, editor.cursorIndex, editor.selectIndex);
+            int start = Math.Min(editor.cursorIndex, editor.selectIndex);
+            int end = Math.Max(editor.cursorIndex, editor.selectIndex);
+            string value = string.Concat(editor.text.AsSpan(0, start),
+                ArtiEditorText.IndentUnit.AsSpan(), editor.text.AsSpan(end));
+            int cursor = start + ArtiEditorText.IndentUnit.Length;
+            CommitSource(value, cursor, cursor);
+            RequestCaret(editor, cursor, cursor);
             ClearCompletion();
         }
 

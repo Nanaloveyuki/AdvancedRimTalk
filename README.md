@@ -2,6 +2,8 @@
 
 This is the prompt-focused first slice of Advanced RimTalk. It does not replace RimTalk's trigger system, request pipeline, or model client. The settings page provides two prompt integration modes: embed Arti into the existing RimTalk prompt, or let Advanced RimTalk take over prompt message construction.
 
+This branch targets **RimWorld 1.7** (Waylith / .NET 10). Its assembly is not compatible with RimWorld 1.6; use a previous build for 1.6. Harmony for 1.7 and RimTalk 1.3.2+ are required. Optional HAR, IrisMenus, and ExpandMemory integrations also depend on those mods working on 1.7.
+
 ## Current behavior
 
 In embed mode RimTalk still owns prompt entry order, `system`/`user`/`assistant` roles, chat history placement, and third-party prompt entries. When RimTalk renders an entry, Advanced RimTalk executes formal `{{% ... %}}` Arti blocks first, then preserves the existing Scriban pipeline. The older `art.*` expressions remain available as a compatibility layer.
@@ -90,9 +92,9 @@ Floating editors use RimWorld's normal dialog layer and click-to-front ordering,
 
 The editor's **Docs** button opens a draggable, resizable documentation window. Hold **Control** and left-click a keyword inside an Arti block to open its indexed page in that window; an already-open window is reused. Supported names are language keywords, built-in functions/namespaces, known module aliases, and RimTalk/Mod-registered variables. Qualified members retain their namespace: `core.append`, `core.string.append`, and `memory.pawn.context` open different pages. Player-declared variables, functions, constants, and parameters are excluded, including names that shadow built-ins. Comments, string text, native Scriban, and Markdown examples do not trigger navigation; expressions inside Arti interpolated strings do. Control-hover underlines supported tokens and shows a navigation hint. Ordinary clicks continue editing, and documentation lookup never executes a prompt. The floating reader keeps navigation state separate from the settings documentation page; without IrisMenus it displays selectable Markdown source.
 
-Verification covers workspace selection/transfer and cross-preset declaration isolation in `PromptChecks`, plus the compiled editor's direct writes, independent histories, saved selection, transfer identity, and external edits. Native Unity rendering, pointer/keyboard focus, resizing, and window stacking still require in-game validation; the standalone Mono check cannot exercise Unity's IMGUI runtime.
+Verification covers workspace selection/transfer and cross-preset declaration isolation in `PromptChecks`. The 1.7 editor uses the native `UnityStubs.Gui` text-layout backend for documentation hit-testing, and replaces selected text through the existing editor commit/undo path. Six production-assembly scenarios using 1.7's real `TextEditor` verified forward/reverse selections, multiline replacement, Unicode, empty text, and exact caret/selection restoration through undo/redo. Rendered glyph hit-testing, pointer/keyboard focus, resizing, and window stacking still require in-game validation.
 
-Documentation lookup checks cover qualified routes, declaration visibility, cross-block player globals, non-code boundaries, and registered-name precedence. A Mono smoke run against the production assembly exercised 16 lookup scenarios with embedded documentation. Native pointer hit-testing, hover visuals, and floating-window interaction still require in-game validation.
+Documentation lookup checks cover qualified routes, declaration visibility, cross-block player globals, non-code boundaries, and registered-name precedence. The 1.7 runtime smoke also loaded embedded documentation from the production assembly; hover visuals and floating-window interaction were not exercised.
 
 Takeover presets are stored separately from RimTalk presets. Existing takeover parts become the first preset without losing their content. The preset list supports creating, duplicating, renaming, deleting, and activating presets. Selecting a preset edits it; only Activate changes the runtime preset. Local/shared imports create a separate takeover preset instead of appending to the current parts. The redundant System document field has been removed from the main settings page.
 
@@ -122,14 +124,18 @@ For detailed Pawn data, use the read-only `pawn.info` object (or `core.pawn.info
 
 ## Build
 
-`Directory.Build.props` shares the current RimTalk/Harmony reference paths between the mod and checks, with Windows and WSL defaults. RimTalk/Harmony come from `D:\References\Rimworld\Mods`; game assemblies come from `E:\Apps\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed`. Override `RimWorldDir` to select the game installation, or `RimWorldReferencesDir`, `RimWorldManagedDir`, `RimTalkAssemblyDir`, or `HarmonyAssemblyPath` to select individual reference locations.
+Install the **.NET 10 SDK**. `Directory.Build.props` shares reference paths between the mod and checks, with Windows and WSL defaults. `Assembly-CSharp.dll` and `UnityStubs.dll` come from the RimWorld 1.7 installation root (`E:\Apps\Steam\steamapps\common\RimWorld`), not the former Unity `RimWorldWin64_Data/Managed` directory. Harmony defaults to the installed `Mods/2009463077/1.7/Assemblies/0Harmony.dll` (Harmony 3). Override `RimWorldDir` to select the installation, or `RimWorldAssemblyDir`, `RimWorldReferencesDir`, `RimTalkAssemblyDir`, and `HarmonyAssemblyPath` for individual references.
+
+The supplied RimTalk 1.3.2 reference still lives at `D:\References\Rimworld\Mods\Rimtalk\1.6\Assemblies`; the directory name is not a claim of a native 1.7 release. RimWorld 1.7's WaylithCLR redirects legacy Unity assembly references to `UnityStubs` and relaxes legacy assembly binding. Use a compatible installed RimTalk build at runtime; compiling against its API does not validate every RimTalk feature on 1.7.
 
 ```powershell
 dotnet build AdvancedRimTalk.csproj -c Release
 dotnet run --project Tests/PromptChecks.csproj -c Release
 ```
 
-With only a newer .NET runtime installed, run the net9 checks using `dotnet run --project Tests/PromptChecks.csproj -c Release --roll-forward Major`. Compatibility smoke runs installed all production Harmony patches against RimTalk 1.3.2 and exercised actual Scriban/takeover builds, preview preset assembly, session isolation, and preset JSON round-tripping. These are headless managed-assembly checks with game-only environment reads isolated, not a loaded-save, Unity UI, or live model/streaming verification.
+Both production and `PromptChecks` target `net10.0`; the checks do not require the old .NET 9 runtime or `--roll-forward Major`. `PromptChecks` covers the Arti engine, prompt transformations, preview isolation, settings, documentation, and editor document state; it substitutes game host types and is not a loaded-save or rendered-UI check.
+
+The migration was built against **RimWorld 1.7.4979 rev109** with no warnings or errors. A temporary startup hook ran inside the installed game's **.NET 10.0.10-waylithclr.dev** before game startup: production types loaded, RimTalk 1.3.2 API validation passed, all 12 production Harmony targets patched, preview session variables remained isolated, Arti/Scriban preserved emitted template-looking text, takeover produced the expected System/User messages, and map time formatting passed all 24 hours including midnight/noon. The harness supplied minimal in-memory game/language/settings state; it did not load a save, initialize rendered UI, send a model request, deploy the mod, or validate optional third-party integrations.
 
 ### Build and deploy
 

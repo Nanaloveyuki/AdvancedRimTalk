@@ -1239,7 +1239,10 @@ namespace AdvancedRimTalk.Integration
             string value = _snapshot.Hour;
             if (map != null && Find.WorldGrid != null)
             {
-                value = CommonUtil.GetInGameHour12HString(GetAbsoluteTicks(), GetLongLat(map));
+                int hour24 = GenDate.HourOfDay(GetAbsoluteTicks(), GetLongLat(map).x);
+                int hour12 = hour24 % 12;
+                value = (hour12 == 0 ? 12 : hour12).ToString(CultureInfo.InvariantCulture)
+                    + (hour24 < 12 ? "am" : "pm");
             }
 
             return ApplyEnvironmentHook(map, ContextCategories.Environment.Time, value);

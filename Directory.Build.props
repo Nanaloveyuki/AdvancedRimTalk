@@ -4,8 +4,9 @@
     <RimWorldDir Condition="'$(RimWorldDir)' == ''">/mnt/e/Apps/Steam/steamapps/common/RimWorld</RimWorldDir>
     <RimWorldReferencesDir Condition="'$(RimWorldReferencesDir)' == '' and '$(OS)' == 'Windows_NT'">D:\References\Rimworld</RimWorldReferencesDir>
     <RimWorldReferencesDir Condition="'$(RimWorldReferencesDir)' == ''">/mnt/d/References/Rimworld</RimWorldReferencesDir>
-    <RimWorldManagedDir Condition="'$(RimWorldManagedDir)' == ''">$(RimWorldDir)/RimWorldWin64_Data/Managed</RimWorldManagedDir>
+    <RimWorldAssemblyDir Condition="'$(RimWorldAssemblyDir)' == ''">$(RimWorldDir)</RimWorldAssemblyDir>
+    <!-- RimTalk 1.3.2 currently ships only legacy binaries; keep their real reference location. -->
     <RimTalkAssemblyDir Condition="'$(RimTalkAssemblyDir)' == ''">$(RimWorldReferencesDir)/Mods/Rimtalk/1.6/Assemblies</RimTalkAssemblyDir>
-    <HarmonyAssemblyPath Condition="'$(HarmonyAssemblyPath)' == ''">$(RimWorldReferencesDir)/Mods/RimIris/Assemblies/0Harmony.dll</HarmonyAssemblyPath>
+    <HarmonyAssemblyPath Condition="'$(HarmonyAssemblyPath)' == ''">$(RimWorldDir)/Mods/2009463077/1.7/Assemblies/0Harmony.dll</HarmonyAssemblyPath>
   </PropertyGroup>
 </Project>

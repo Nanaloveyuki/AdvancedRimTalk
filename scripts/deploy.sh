@@ -15,15 +15,15 @@ if [[ $# -gt 0 ]]; then
   build_only=1
 fi
 
-if [[ ! -f "$rimworld/RimWorldWin64_Data/Managed/Assembly-CSharp.dll" ]]; then
-  echo "RimWorld managed assemblies not found: $rimworld" >&2
+if [[ ! -f "$rimworld/Assembly-CSharp.dll" || ! -f "$rimworld/UnityStubs.dll" ]]; then
+  echo "RimWorld 1.7 assemblies not found in the game root: $rimworld" >&2
   exit 1
 fi
 
 check_game_stopped() {
   if command -v powershell.exe >/dev/null 2>&1; then
     local count
-    count="$(powershell.exe -NoProfile -Command '$ErrorActionPreference = "Stop"; @(Get-Process -Name RimWorldWin64,RimWorldWin64Steam,RimWorldWin,RimWorld -ErrorAction SilentlyContinue).Count' | tr -d '\r')"
+    count="$(powershell.exe -NoProfile -Command '$ErrorActionPreference = "Stop"; @(Get-Process -Name RimWorld,RimWorldWin64,RimWorldWin64Steam,RimWorldWin -ErrorAction SilentlyContinue).Count' | tr -d '\r')"
     if [[ "$count" != "0" ]]; then
       echo "Exit RimWorld before deploying." >&2
       exit 1

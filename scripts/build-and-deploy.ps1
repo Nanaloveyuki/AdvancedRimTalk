@@ -26,8 +26,9 @@ $sourceDocs = Join-Path $repoRoot "docs"
 if ([string]::IsNullOrWhiteSpace($GameModPath)) {
     $GameModPath = Join-Path $RimWorldDir "Mods\AdvancedRimTalk"
 }
-if (-not (Test-Path -LiteralPath (Join-Path $RimWorldDir "RimWorldWin64_Data\Managed\Assembly-CSharp.dll") -PathType Leaf)) {
-    throw "RimWorld managed assemblies not found: $RimWorldDir"
+if (-not (Test-Path -LiteralPath (Join-Path $RimWorldDir "Assembly-CSharp.dll") -PathType Leaf) -or
+    -not (Test-Path -LiteralPath (Join-Path $RimWorldDir "UnityStubs.dll") -PathType Leaf)) {
+    throw "RimWorld 1.7 assemblies not found in the game root: $RimWorldDir"
 }
 
 $targetFull = [System.IO.Path]::GetFullPath($GameModPath).TrimEnd([char[]]"\/")
@@ -46,7 +47,7 @@ if ([string]::Equals($targetFull, $repoRoot.TrimEnd([char[]]"\/"), [System.Strin
     throw "Deployment target must not be the source repository."
 }
 
-if (-not $BuildOnly -and (Get-Process -Name @("RimWorldWin64", "RimWorldWin64Steam", "RimWorldWin", "RimWorld") -ErrorAction SilentlyContinue)) {
+if (-not $BuildOnly -and (Get-Process -Name @("RimWorld", "RimWorldWin64", "RimWorldWin64Steam", "RimWorldWin") -ErrorAction SilentlyContinue)) {
     throw "RimWorld is running. Exit the game before deploying."
 }
 
