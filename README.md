@@ -2,7 +2,7 @@
 
 This is the prompt-focused first slice of Advanced RimTalk. It does not replace RimTalk's trigger system, request pipeline, or model client. The settings page provides two prompt integration modes: embed Arti into the existing RimTalk prompt, or let Advanced RimTalk take over prompt message construction.
 
-This branch targets **RimWorld 1.7** (Waylith / .NET 10). Its assembly is not compatible with RimWorld 1.6; use a previous build for 1.6. Harmony for 1.7 and RimTalk 1.3.2+ are required. Optional HAR, IrisMenus, and ExpandMemory integrations also depend on those mods working on 1.7.
+This branch builds **RimWorld 1.7** (Waylith / .NET 10) with Harmony for 1.7 and RimTalk 1.4.1+. The new assembly is not compatible with RimWorld 1.6. Deployment preserves the existing 1.6 build and resources; `LoadFolders.xml` selects the legacy root for 1.6 and only `1.7/` for 1.7. Optional HAR, IrisMenus, and ExpandMemory integrations also depend on those mods working on 1.7.
 
 ## Current behavior
 
@@ -67,7 +67,9 @@ Defaults include base instructions, JSONL output instructions, context, dialogue
 
 Takeover settings bound pawn context count (default 32), history count (40), and final prompt characters (24,000). Character budgeting shares space between parts, preserves short parts where possible, and logs truncation. It is not a tokenizer or a guarantee that a model's context window will fit. The synchronous build and render use a thread-local settings copy with a separate Context object, preserving RimTalk's memory and compact-history switches without replacing shared settings. Participant selection and previously stored history remain owned by RimTalk; this scope cannot recover participants or history already discarded upstream.
 
-RimTalk 1.3.2+ is required. Embed retains the native simple/advanced preset and compact/legacy history paths; its context preview uses the same preset helpers. Takeover records RimTalk's causal request summary for subsequent dialogue history. Arti `json.format` and `json.anchor` use the current social-effects, player-request, and memory switches; `is_user` and `is_from_user` identify player requests. Arti-emitted template-looking text remains literal in embed, takeover, and preview.
+RimTalk 1.4.1+ is required for the 1.7 build. Embed retains the native simple/advanced preset and compact/legacy history paths; its context preview uses the same preset helpers, including 1.4.1's alternating legacy-history filtering. Takeover records RimTalk's causal request summary for subsequent dialogue history. Arti `json.format` and `json.anchor` use the current social-effects, player-request, and memory switches; `is_user` and `is_from_user` identify player requests. Arti-emitted template-looking text remains literal in embed, takeover, and preview.
+
+Response processing still operates on the final payload. Streaming dialogue callbacks occur earlier in RimTalk; JSON repair cannot retroactively recover objects already discarded by its stream parser. Repair preserves JSONL fields such as `act`, `target`, `directive`, and `directives` rather than rebuilding dialogue objects.
 
 ## Optional HAR integration
 
@@ -124,9 +126,9 @@ For detailed Pawn data, use the read-only `pawn.info` object (or `core.pawn.info
 
 ## Build
 
-Install the **.NET 10 SDK**. `Directory.Build.props` shares reference paths between the mod and checks, with Windows and WSL defaults. `Assembly-CSharp.dll` and `UnityStubs.dll` come from the RimWorld 1.7 installation root (`E:\Apps\Steam\steamapps\common\RimWorld`), not the former Unity `RimWorldWin64_Data/Managed` directory. Harmony defaults to the installed `Mods/2009463077/1.7/Assemblies/0Harmony.dll` (Harmony 3). Override `RimWorldDir` to select the installation, or `RimWorldAssemblyDir`, `RimWorldReferencesDir`, `RimTalkAssemblyDir`, and `HarmonyAssemblyPath` for individual references.
+Install the **.NET 10 SDK**. `Directory.Build.props` shares reference paths between the mod and checks, with Windows and WSL defaults. `Assembly-CSharp.dll` and `UnityStubs.dll` come from the RimWorld 1.7 installation root (`E:\Apps\Steam\steamapps\common\RimWorld`), not the former Unity `RimWorldWin64_Data/Managed` directory. Harmony defaults to the installed `Mods/2009463077/1.7/Assemblies/0Harmony.dll` (Harmony 3). Override `RimWorldDir` to select the installation, or `RimWorldAssemblyDir`, `RimTalkModDir`, `RimTalkAssemblyDir`, and `HarmonyAssemblyPath` for individual references.
 
-The supplied RimTalk 1.3.2 reference still lives at `D:\References\Rimworld\Mods\Rimtalk\1.6\Assemblies`; the directory name is not a claim of a native 1.7 release. RimWorld 1.7's WaylithCLR redirects legacy Unity assembly references to `UnityStubs` and relaxes legacy assembly binding. Use a compatible installed RimTalk build at runtime; compiling against its API does not validate every RimTalk feature on 1.7.
+RimTalk references default to the installed `Mods/3551203752/1.6/Assemblies`. RimTalk 1.4.1 declares support for both 1.6 and 1.7 while retaining that assembly directory. RimWorld 1.7's WaylithCLR redirects legacy Unity assembly references to `UnityStubs` and relaxes legacy assembly binding; the directory name does not imply that Advanced RimTalk's new assembly supports 1.6.
 
 ```powershell
 dotnet build AdvancedRimTalk.csproj -c Release
@@ -135,11 +137,11 @@ dotnet run --project Tests/PromptChecks.csproj -c Release
 
 Both production and `PromptChecks` target `net10.0`; the checks do not require the old .NET 9 runtime or `--roll-forward Major`. `PromptChecks` covers the Arti engine, prompt transformations, preview isolation, settings, documentation, and editor document state; it substitutes game host types and is not a loaded-save or rendered-UI check.
 
-The migration was built against **RimWorld 1.7.4979 rev109** with no warnings or errors. A temporary startup hook ran inside the installed game's **.NET 10.0.10-waylithclr.dev** before game startup: production types loaded, RimTalk 1.3.2 API validation passed, all 12 production Harmony targets patched, preview session variables remained isolated, Arti/Scriban preserved emitted template-looking text, takeover produced the expected System/User messages, and map time formatting passed all 24 hours including midnight/noon. The harness supplied minimal in-memory game/language/settings state; it did not load a save, initialize rendered UI, send a model request, deploy the mod, or validate optional third-party integrations.
+The 1.4.1 adaptation built against **RimWorld 1.7.4979 rev109** with no warnings or errors; `PromptChecks` passed. A temporary startup hook ran inside the installed game's **.NET 10.0.10-waylithclr.dev** before game startup: production types and RimTalk 1.4.1 API validation loaded, all 12 production Harmony targets patched, preview session variables remained isolated, Arti/Scriban preserved emitted template-looking text, native preview followed 1.4.1's legacy-history filtering, and the actual stream parser and final-payload repair preserved directives and response metadata. Both deployment scripts ran against isolated copies, preserving legacy content and the publication ID; all 196 files in the real deployed mod remained unchanged. The harness supplied minimal in-memory game/language/settings state; it did not load a save, initialize rendered UI, send a model request, deploy into the real mod directory, or validate optional third-party integrations.
 
 ### Build and deploy
 
-The scripts build Release and copy `AdvancedRimTalk.dll`, its optional PDB, `About`, `Languages`, `docs`, `README.md`, and `LICENSE` into `Mods/AdvancedRimTalk`. They refuse deployment while RimWorld is running or when the destination belongs to another mod, and verify every copied file with SHA-256. RimTalk, Scriban, Harmony, and game assemblies are not bundled. Files outside the copy manifest, including an existing `About/PublishedFileId.txt`, are preserved.
+The scripts build Release and copy the DLL/PDB to `Mods/AdvancedRimTalk/1.7/Assemblies`, with `Languages`, `docs`, `README.md`, and `LICENSE` under `1.7/` as well. Shared `About` metadata and `LoadFolders.xml` are updated at the mod root. Existing root assemblies/resources and any `1.6/` content are neither overwritten nor moved; the scripts do not rebuild or supply the old 1.6 binary. Explicit load folders prevent 1.7 from also loading the legacy root DLL. They refuse deployment while RimWorld is running or when the destination belongs to another mod, and verify every copied file with SHA-256. RimTalk, Scriban, Harmony, and game assemblies are not bundled. Files outside the copy manifest, including an existing `About/PublishedFileId.txt`, are preserved.
 
 WSL/Linux (default game directory: `/mnt/e/Apps/Steam/steamapps/common/RimWorld`):
 

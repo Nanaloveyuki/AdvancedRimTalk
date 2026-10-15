@@ -24,6 +24,11 @@ namespace AdvancedRimTalk.PromptChecks
             Equal(null, ResponseJsonRepair.TryRepair("ordinary text"));
             Equal(null, ResponseJsonRepair.TryRepair("{a:1}\n{a:'unfinished"));
 
+            const string jsonl = "{name:'Ada',text:'Hi {Bob}',act:'Kind',target:'Bob',directive:'Stand guard',directives:['Guard [north]','Stay alert'],meta:{sequence:1,},}\n{name:'Bob',text:'Ready',directives:[],}";
+            const string repairedJsonl = "{\"name\":\"Ada\",\"text\":\"Hi {Bob}\",\"act\":\"Kind\",\"target\":\"Bob\",\"directive\":\"Stand guard\",\"directives\":[\"Guard [north]\",\"Stay alert\"],\"meta\":{\"sequence\":1}}\n{\"name\":\"Bob\",\"text\":\"Ready\",\"directives\":[]}";
+            Equal(repairedJsonl, ResponseJsonRepair.TryRepair("```jsonl\n" + jsonl + "\n```"));
+            Equal(repairedJsonl, ResponseJsonRepair.TryRepair(repairedJsonl));
+
             var settings = new AdvancedRimTalkSettings { EnableJsonFormatting = true };
             settings.IgnoreByInterval = true;
             settings.IgnoreIntervalSeconds = 3600;

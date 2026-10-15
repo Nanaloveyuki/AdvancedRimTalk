@@ -13,7 +13,7 @@ namespace AdvancedRimTalk.Integration
 {
     internal static class RimTalkCompatibility
     {
-        internal const string MinimumVersion = "1.3.2";
+        internal const string MinimumVersion = "1.4.1";
 
         internal static void Validate()
         {

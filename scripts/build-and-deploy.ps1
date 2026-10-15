@@ -22,6 +22,7 @@ $sourceLanguages = Join-Path $repoRoot "Languages"
 $sourceAssembly = Join-Path $repoRoot "tmp\build\AdvancedRimTalk.dll"
 $sourcePdb = Join-Path $repoRoot "tmp\build\AdvancedRimTalk.pdb"
 $sourceDocs = Join-Path $repoRoot "docs"
+$sourceLoadFolders = Join-Path $repoRoot "LoadFolders.xml"
 
 if ([string]::IsNullOrWhiteSpace($GameModPath)) {
     $GameModPath = Join-Path $RimWorldDir "Mods\AdvancedRimTalk"
@@ -51,7 +52,7 @@ if (-not $BuildOnly -and (Get-Process -Name @("RimWorld", "RimWorldWin64", "RimW
     throw "RimWorld is running. Exit the game before deploying."
 }
 
-foreach ($requiredFile in @($projectPath, $sourceAbout, (Join-Path $repoRoot "README.md"), (Join-Path $repoRoot "LICENSE"))) {
+foreach ($requiredFile in @($projectPath, $sourceAbout, $sourceLoadFolders, (Join-Path $repoRoot "README.md"), (Join-Path $repoRoot "LICENSE"))) {
     if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
         throw "Required source file not found: $requiredFile"
     }
@@ -125,9 +126,13 @@ if ($languageFiles.Count -eq 0) {
 $targetFiles = @(
     [pscustomobject]@{
         SourcePath = $sourceAssembly
-        RelativePath = "Assemblies\AdvancedRimTalk.dll"
+        RelativePath = "1.7\Assemblies\AdvancedRimTalk.dll"
     }
 )
+$targetFiles += [pscustomobject]@{
+    SourcePath = $sourceLoadFolders
+    RelativePath = "LoadFolders.xml"
+}
 
 foreach ($aboutFile in @(Get-ChildItem -LiteralPath (Split-Path -Parent $sourceAbout) -File -Recurse)) {
     $targetFiles += [pscustomobject]@{
@@ -139,14 +144,14 @@ foreach ($aboutFile in @(Get-ChildItem -LiteralPath (Split-Path -Parent $sourceA
 foreach ($rootFile in @("README.md", "LICENSE")) {
     $targetFiles += [pscustomobject]@{
         SourcePath = Join-Path $repoRoot $rootFile
-        RelativePath = $rootFile
+        RelativePath = Join-Path "1.7" $rootFile
     }
 }
 
 if (Test-Path -LiteralPath $sourcePdb -PathType Leaf) {
     $targetFiles += [pscustomobject]@{
         SourcePath = $sourcePdb
-        RelativePath = "Assemblies\AdvancedRimTalk.pdb"
+        RelativePath = "1.7\Assemblies\AdvancedRimTalk.pdb"
     }
 }
 
@@ -154,7 +159,7 @@ foreach ($languageFile in $languageFiles) {
     $relativeLanguagePath = $languageFile.FullName.Substring($sourceLanguages.Length).TrimStart([char[]]"\/")
     $targetFiles += [pscustomobject]@{
         SourcePath = $languageFile.FullName
-        RelativePath = Join-Path "Languages" $relativeLanguagePath
+        RelativePath = Join-Path "1.7\Languages" $relativeLanguagePath
     }
 }
 
@@ -162,7 +167,7 @@ foreach ($docFile in @(Get-ChildItem -LiteralPath $sourceDocs -File -Recurse)) {
     $relativeDocPath = $docFile.FullName.Substring($sourceDocs.Length).TrimStart([char[]]"/\")
     $targetFiles += [pscustomobject]@{
         SourcePath = $docFile.FullName
-        RelativePath = Join-Path "docs" $relativeDocPath
+        RelativePath = Join-Path "1.7\docs" $relativeDocPath
     }
 }
 

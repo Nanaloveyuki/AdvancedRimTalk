@@ -1,5 +1,6 @@
 using System.Reflection;
 using System;
+using System.IO;
 using AdvancedRimTalk.Integration;
 using AdvancedRimTalk.Settings;
 using AdvancedRimTalk.UI;
@@ -47,7 +48,7 @@ namespace AdvancedRimTalk
         public AdvancedRimTalkMod(ModContentPack content)
             : base(content)
         {
-            _documentationPage = new DocumentationPage(content.RootDir);
+            _documentationPage = new DocumentationPage(Path.Combine(content.RootDir, "1.7"));
             Settings = GetSettings<AdvancedRimTalkSettings>();
             var harmony = new Harmony("advancedrimtalk.prompt");
             try

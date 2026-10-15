@@ -54,7 +54,7 @@ from pathlib import Path
 root = Path(sys.argv[1]).resolve()
 target = Path(sys.argv[2])
 package_id = "advancedrimtalk.prompt"
-folders = ("About", "Languages", "docs")
+folders = ("Languages", "docs")
 files = ("README.md", "LICENSE")
 assembly = root / "tmp/build/AdvancedRimTalk.dll"
 pdb = assembly.with_suffix(".pdb")
@@ -79,15 +79,17 @@ if target.exists():
 if target.resolve() == root:
     raise SystemExit("Deployment target must not be the source repository.")
 
-sources = [(assembly, Path("Assemblies/AdvancedRimTalk.dll"))]
+sources = [(assembly, Path("1.7/Assemblies/AdvancedRimTalk.dll")),
+           (root / "LoadFolders.xml", Path("LoadFolders.xml"))]
 if pdb.is_file():
-    sources.append((pdb, Path("Assemblies/AdvancedRimTalk.pdb")))
+    sources.append((pdb, Path("1.7/Assemblies/AdvancedRimTalk.pdb")))
 for folder in folders:
     path = root / folder
     if not path.is_dir():
         raise SystemExit(f"Required source directory not found: {path}")
-    sources.extend((item, item.relative_to(root)) for item in sorted(path.rglob("*")) if item.is_file())
-sources.extend((root / file, Path(file)) for file in files)
+    sources.extend((item, Path("1.7") / item.relative_to(root)) for item in sorted(path.rglob("*")) if item.is_file())
+sources.extend((root / file, Path("1.7") / file) for file in files)
+sources.extend((item, item.relative_to(root)) for item in sorted((root / "About").rglob("*")) if item.is_file())
 
 # Validate the complete manifest before writing into the game directory.
 for source, relative in sources:
